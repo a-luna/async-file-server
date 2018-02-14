@@ -38,7 +38,7 @@
             return Result.Ok();
         }
 
-        public static async Task<Result<Socket>> AL_AcceptAsync(this Socket socket)
+        public static async Task<Result<Socket>> AcceptTaskAsync(this Socket socket)
         {
             Socket transferSocket;
             try

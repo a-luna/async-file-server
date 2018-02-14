@@ -29,8 +29,6 @@ namespace TplSocketServer
         MessageUnwrapper _messageUnwrapper;
         FileHelper _fileHelper;
 
-        private DateTime _start;
-
         public TplSocketServer()
         {
             _maxConnections = 5;
@@ -97,6 +95,7 @@ namespace TplSocketServer
 
         private async Task<Result> WaitForConnectionsAsync(CancellationToken token)
         {
+            // Main loop. Server handles incoming connections until encountering an error
             while (true)
             {
                 if (token.IsCancellationRequested)
@@ -104,21 +103,21 @@ namespace TplSocketServer
                     token.ThrowIfCancellationRequested();
                 }
 
-                var acceptResult = await AcceptNextConnection(token).ConfigureAwait(false);
+                var acceptConnectionResult = await AcceptNextConnection(token).ConfigureAwait(false);
 
-                if (acceptResult.Success)
+                if (acceptConnectionResult.Success)
                 {
-                    var transferResult = await ProcessRequestAsync(token).ConfigureAwait(false);
+                    var requestResult = await ProcessRequestAsync(token).ConfigureAwait(false);
 
-                    if (transferResult.Failure)
+                    if (requestResult.Failure)
                     {
                         EventOccurred?.Invoke(new ServerEvent
                         {
                             EventType = ServerEventType.ErrorOccurred,
-                            ErrorMessage = transferResult.Error
+                            ErrorMessage = requestResult.Error
                         });
 
-                        return transferResult;
+                        return requestResult;
                     }
                 }
             }
@@ -128,10 +127,10 @@ namespace TplSocketServer
         {
             EventOccurred?.Invoke(new ServerEvent { EventType = ServerEventType.ConnectionAttemptStarted });
 
-            var acceptResult = await _listenSocket.AL_AcceptAsync().ConfigureAwait(false);
+            var acceptResult = await _listenSocket.AcceptTaskAsync().ConfigureAwait(false);
             if (acceptResult.Failure)
             {
-                return Result.Fail(acceptResult.Error);
+                return acceptResult;
             }
 
             if (token.IsCancellationRequested)
@@ -149,8 +148,6 @@ namespace TplSocketServer
         private async Task<Result> ProcessRequestAsync(CancellationToken token)
         {
             EventOccurred?.Invoke(new ServerEvent { EventType = ServerEventType.DetermineTransferTypeStarted });
-
-            _start = DateTime.Now;
             
             if (token.IsCancellationRequested)
             {
@@ -162,7 +159,7 @@ namespace TplSocketServer
             var determineTransferTypeResult = await DetermineTransferType(buffer).ConfigureAwait(false);
             if (determineTransferTypeResult.Failure)
             {
-                return Result.Fail(determineTransferTypeResult.Error);
+                return determineTransferTypeResult;
             }
 
             var transferType = determineTransferTypeResult.Value;
@@ -203,8 +200,7 @@ namespace TplSocketServer
 
                 default:
 
-                    var error = "Could not read request flag from transfer socket, value of " + "'" + transferType
-                                + "' is invalid.";
+                    var error = "Unable to determine transfer type, value of " + "'" + transferType + "' is invalid.";
                     return Result.Fail(error);
             }
         }
@@ -222,6 +218,10 @@ namespace TplSocketServer
 
                 bytesReceived = receiveResult.Value;
             }
+            catch (SocketException ex)
+            {
+                return Result.Fail<TransferType>($"{ex.Message} ({ex.GetType()})");
+            }
             catch (TimeoutException ex)
             {
                 return Result.Fail<TransferType>($"{ex.Message} ({ex.GetType()})");
@@ -237,10 +237,10 @@ namespace TplSocketServer
                 return Result.Fail<TransferType>("Error reading request from client, no data was received");
             }
 
-            var transferType = (TransferType)Enum.Parse(
-                typeof(TransferType), MessageUnwrapper.DetermineTransferType(buffer).ToString());
+            var transferType = MessageUnwrapper.DetermineTransferType(buffer).ToString();
+            var transferTypeEnum = (TransferType)Enum.Parse(typeof(TransferType), transferType);
 
-            return Result.Ok(transferType);
+            return Result.Ok(transferTypeEnum);
         }
 
         private Result ReceiveTextMessage(byte[] buffer, CancellationToken token)
@@ -294,15 +294,12 @@ namespace TplSocketServer
                     FileSizeInBytes = fileSizeBytes
                 });
 
-            var span = DateTime.Now - _start;
-
-            var fileTransferStartTime = DateTime.Now;
+            var startTime = DateTime.Now;
 
             EventOccurred?.Invoke(new ServerEvent
             {
                 EventType = ServerEventType.ReceiveFileBytesStarted,
-                FileTransferStartTime = fileTransferStartTime,
-                ErrorMessage = span.ToFormattedString()
+                FileTransferStartTime = startTime            
             });
 
             var receiveFileResult = 
@@ -317,11 +314,12 @@ namespace TplSocketServer
             EventOccurred?.Invoke(new ServerEvent
             {
                 EventType = ServerEventType.ReceiveFileBytesCompleted,
-                FileTransferStartTime = fileTransferStartTime,
+                FileTransferStartTime = startTime,
                 FileTransferCompleteTime = DateTime.Now,
                 FileSizeInBytes = fileSizeBytes
             });
 
+            //TODO: This is a hack to separate the file read and handshake steps to ensure that all data is read correcty by the client server. I know how to fix by keeping track of the buffer between steps.
             await Task.Delay(OneSecondInMilliseconds);
 
             EventOccurred?.Invoke(
@@ -359,9 +357,12 @@ namespace TplSocketServer
         {
             long totalBytesReceived = 0;
             float percentComplete = 0;
-            int receiveBytesCount = 0;
+            int receiveCount = 0;
 
-            // Read file bytes from transfer socket until the entire file has been received
+            // Read file bytes from transfer socket until 
+            //      1. the entire file has been received OR 
+            //      2. Data is no longer being received OR
+            //      3, Transfer is cancelled by server receiving the file
             while (true)
             {
                 if (totalBytesReceived == fileSizeInBytes)
@@ -395,6 +396,10 @@ namespace TplSocketServer
 
                     bytesReceived = receiveBytesResult.Value;
                 }
+                catch (SocketException ex)
+                {
+                    return Result.Fail($"{ex.Message} ({ex.GetType()})");
+                }
                 catch (TimeoutException ex)
                 {
                     return Result.Fail($"{ex.Message} ({ex.GetType()})");
@@ -406,14 +411,15 @@ namespace TplSocketServer
                 }
 
                 totalBytesReceived += bytesReceived;
-                await _fileHelper.WriteBytesToFileTask(localFilePath, buffer, bytesReceived).ConfigureAwait(false);
+                await _fileHelper.WriteBytesToFileAsync(localFilePath, buffer, bytesReceived).ConfigureAwait(false);
 
                 if (_fileHelper.ErrorOccurred)
                 {
                     return Result.Fail($"An error occurred writing the file to disk: {_fileHelper.ErrorMessage}");
                 }
 
-                receiveBytesCount++;
+                // THese two lines and the event raised are used to debug issues with receiving the file
+                receiveCount++;
                 long bytesRemaining = fileSizeInBytes - totalBytesReceived;
 
                 //EventOccurred?.Invoke(new ServerEvent
@@ -428,7 +434,8 @@ namespace TplSocketServer
 
                 var checkPercentComplete = totalBytesReceived / (float)fileSizeInBytes;
                 var changeSinceLastUpdate = checkPercentComplete - percentComplete;
-                
+
+                // Report progress only if at least 1% of file has been received since the last update
                 if (changeSinceLastUpdate > (float).01)
                 {
                     percentComplete = checkPercentComplete;
@@ -480,7 +487,13 @@ namespace TplSocketServer
                     .ConfigureAwait(false);
         }
 
-        public async Task<Result> SendTextMessageAsync(string message, string remoteServerIpAddress, int remoteServerPort, string localIpAddress, int localPort, CancellationToken token)
+        public async Task<Result> SendTextMessageAsync(
+            string message, 
+            string remoteServerIpAddress, 
+            int remoteServerPort, 
+            string localIpAddress, 
+            int localPort, 
+            CancellationToken token)
         {
             if (string.IsNullOrEmpty(message))
             {
@@ -578,17 +591,18 @@ namespace TplSocketServer
                         RemoteFolder = remoteFolderPath
                     });
 
-            var sendMessageWrapperResult = 
+            var sendRequest = 
                 await transferSocket.SendWithTimeoutAsync(messageWrapper, 0, messageWrapper.Length, 0, _sendTimeoutMs)
                     .ConfigureAwait(false);
 
-            if (sendMessageWrapperResult.Failure)
+            if (sendRequest.Failure)
             {
-                return sendMessageWrapperResult;
+                return sendRequest;
             }
 
             EventOccurred?.Invoke(new ServerEvent { EventType = ServerEventType.SendOutboundFileTransferInfoCompleted });
 
+            //TODO: This is a hack to separate the transfer request and file transfer steps to ensure that all data is read correcty by the client server. I know how to fix by keeping track of the buffer between steps.
             await Task.Delay(OneSecondInMilliseconds);
 
             EventOccurred?.Invoke(new ServerEvent { EventType = ServerEventType.SendFileBytesStarted });
@@ -644,7 +658,7 @@ namespace TplSocketServer
 
             if (confirmationMessage != ConfirmationMessage)
             {
-                return Result.Fail($"Confirmation message doesn't match:\n\tExpected:\t{ConfirmationMessage}\n\tAcrual:\t{confirmationMessage}");
+                return Result.Fail($"Confirmation message doesn't match:\n\tExpected:\t{ConfirmationMessage}\n\tActual:\t{confirmationMessage}");
             }
 
             EventOccurred?.Invoke(
@@ -681,7 +695,7 @@ namespace TplSocketServer
 
             var connectResult = 
                 await transferSocket.ConnectWithTimeoutAsync(remoteServerIpAddress, remoteServerPort, _connectTimeoutMs)
-                            .ConfigureAwait(false);
+                    .ConfigureAwait(false);
 
             if (connectResult.Failure)
             {
@@ -708,13 +722,13 @@ namespace TplSocketServer
                         LocalFolder = localFolderPath,
                     });
 
-            var sendHeaderResult = 
+            var requestResult = 
                 await transferSocket.SendWithTimeoutAsync(messageHeaderData, 0, messageHeaderData.Length, 0, _sendTimeoutMs)
                     .ConfigureAwait(false);
 
-            if (sendHeaderResult.Failure)
+            if (requestResult.Failure)
             {
-                return sendHeaderResult;
+                return requestResult;
             }
 
             EventOccurred?.Invoke(new ServerEvent { EventType = ServerEventType.SendInboundFileTransferInfoCompleted });

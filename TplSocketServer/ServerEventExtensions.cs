@@ -110,7 +110,7 @@
                     break;
 
                 case ServerEventType.ReceiveFileBytesStarted:
-                    report += $"Started Process: Receive file bytes\n\tTransfer Start Time:\t{serverEvent.FileTransferStartTime.ToLongTimeString()}\n\tProcess Transfer Request Time:\t{serverEvent.ErrorMessage}";
+                    report += $"Started Process: Receive file bytes\n\tTransfer Start Time:\t{serverEvent.FileTransferStartTime.ToLongTimeString()}";
                     break;
 
                 case ServerEventType.ReceivedDataFromSocket:

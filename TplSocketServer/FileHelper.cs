@@ -30,7 +30,7 @@
             }
         }
 
-        public async Task WriteBytesToFileTask(string filePath, byte[] buffer, int length)
+        public async Task WriteBytesToFileAsync(string filePath, byte[] buffer, int length)
         {
             await Task.Factory.StartNew(() =>
             {

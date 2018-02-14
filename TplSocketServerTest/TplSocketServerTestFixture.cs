@@ -13,7 +13,6 @@ namespace TplSocketServerTest
     public class TplSocketServerTestFixture
     {
         const string FileName = "smallFile.jpg";
-        //const string FileName = "mediumFile.zip";
 
         CancellationTokenSource _tokenSource;
 
@@ -49,7 +48,7 @@ namespace TplSocketServerTest
         [TestInitialize]
         public void Setup()
         {
-            this._tokenSource = new CancellationTokenSource();
+            _tokenSource = new CancellationTokenSource();
 
             _server = new TplSocketServer();
             _server.EventOccurred += HandleServerEvent;

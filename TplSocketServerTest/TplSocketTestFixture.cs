@@ -147,7 +147,7 @@ namespace TplSocketsTest
 
         async Task<Result<Socket>> AcceptConnectionTask()
         {
-            return await _listenSocket.AL_AcceptAsync().ConfigureAwait(false);
+            return await _listenSocket.AcceptTaskAsync().ConfigureAwait(false);
         }
 
         async Task<Result<int>> ReceiveMessageAsync()
