@@ -1,0 +1,42 @@
+﻿namespace TplSocketServer
+{
+    public enum ServerEventType
+    {
+        None,
+        ListenOnLocalPortStarted,
+        ListenOnLocalPortCompleted,
+        ConnectionAttemptStarted,
+        ConnectionAttemptCompleted,
+        ConnectToRemoteServerStarted,
+        ConnectToRemoteServerCompleted,
+        DetermineTransferTypeStarted,
+        DetermineTransferTypeCompleted,
+        ShutdownListenSocketStarted,
+        ShutdownListenSocketCompleted,
+        SendTextMessageStarted,
+        SendTextMessageCompleted,
+        SendInboundFileTransferInfoStarted,
+        SendInboundFileTransferInfoCompleted,
+        SendOutboundFileTransferInfoStarted,
+        SendOutboundFileTransferInfoCompleted,
+        ReceiveTextMessageStarted,
+        ReceiveTextMessageCompleted,
+        ReceiveInboundFileTransferInfoStarted,
+        ReceiveInboundFileTransferInfoCompleted,
+        ReceiveOutboundFileTransferInfoStarted,
+        ReceiveOutboundFileTransferInfoCompleted,
+        SendFileBytesStarted,
+        SendFileBytesCompleted,
+        ReceiveFileBytesStarted,
+        ReceivedDataFromSocket,
+        ReceiveFileBytesCompleted,
+        FileTransferProgress,
+        SendConfirmationMessageStarted,
+        SendConfirmationMessageCompleted,
+        ReceiveConfirmationMessageStarted,
+        ReceiveConfirmationMessageCompleted,
+        CloseTransferSocketStarted,
+        CloseTransferSocketCompleted,
+        ErrorOccurred
+    }
+}
