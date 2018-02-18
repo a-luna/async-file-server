@@ -1,10 +1,9 @@
-﻿using System.Linq;
-
-namespace ServerConsole
+﻿namespace ServerConsole
 {
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using TplSocketServer;
@@ -23,7 +22,7 @@ namespace ServerConsole
             {
                 IpAddress = IpAddressHelper.GetLocalIpV4Address().ToString(),
                 Port = ListenPort,
-                TransferFolder = $"{Directory.GetCurrentDirectory()}\\transfer"
+                TransferFolder = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}transfer"
             };
 
             var getListOfClientsResult = GetListOfClientsFromFile(myInfo);
@@ -49,7 +48,7 @@ namespace ServerConsole
 
         private static Result<List<ServerInfo>> GetListOfClientsFromFile(ServerInfo myInfo)
         {
-            var clientInfoFilePath = $"{Directory.GetCurrentDirectory()}\\{SavedClientsFileName}";
+            var clientInfoFilePath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SavedClientsFileName}";
             string[] fileLines = null;            
 
             try

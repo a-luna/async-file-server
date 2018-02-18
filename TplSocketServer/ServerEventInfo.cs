@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-namespace TplSocketServer
+﻿namespace TplSocketServer
 {
     using System;
 

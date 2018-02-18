@@ -57,10 +57,10 @@ namespace TplSocketServerTest
 
             var currentPath = Directory.GetCurrentDirectory();
             var index = currentPath.IndexOf(@"bin", StringComparison.Ordinal);
-            _restoreFolder = $"{currentPath.Remove(index - 1)}/TestFiles/";
+            _restoreFolder = $"{currentPath.Remove(index - 1)}{Path.DirectorySeparatorChar}TestFiles{Path.DirectorySeparatorChar}";
 
-            _localFolder = _restoreFolder + @"Client/";
-            _remoteFolder = _restoreFolder + @"Server/";
+            _localFolder = _restoreFolder + $"Client{Path.DirectorySeparatorChar}";
+            _remoteFolder = _restoreFolder + $"Server{Path.DirectorySeparatorChar}";
 
             _localFilePath = _localFolder + FileName;
             _remoteFilePath = _remoteFolder + FileName;
