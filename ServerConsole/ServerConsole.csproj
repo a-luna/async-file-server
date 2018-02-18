@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TplSocketServer\TplSocketServer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="AaronLuna.Common">
+      <HintPath>..\..\..\..\Documents\Visual Studio 2017\Projects\AaronLuna.Common\AaronLuna.Common\bin\Release\netcoreapp2.0\AaronLuna.Common.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

@@ -2,58 +2,46 @@
 {
     using System;
     using System.IO;
-    using System.Threading.Tasks;
 
-    public class FileHelper
+    public static class FileHelper
     {
-        public bool ErrorOccurred { get; set; }
-        public string ErrorMessage { get; set; }
-
-        public FileHelper()
+        public static Result DeleteFileIfAlreadyExists(string filePath)
         {
-            ErrorOccurred = false;
-            ErrorMessage = string.Empty;
-        }
-
-        public void DeleteFileIfAlreadyExists(string filePath)
-        {
-            var fi = new FileInfo(filePath);
-            if (!fi.Exists) return;
-
             try
             {
+                var fi = new FileInfo(filePath);
+                if (!fi.Exists)
+                {
+                    return Result.Ok();
+                }
+
                 fi.Delete();
             }
             catch (IOException ex)
             {
-                HandleException(ex);
+                return Result.Fail($"{ex.Message} ({ex.GetType()} raised in method FileHelper.DeleteFileIfAlreadyExists)");
             }
+
+            return Result.Ok();
         }
 
-        public async Task WriteBytesToFileAsync(string filePath, byte[] buffer, int length)
+        public static Result WriteBytesToFile(string filePath, byte[] buffer, int length)
         {
-            await Task.Factory.StartNew(() =>
+            try
             {
-                try
+                using (var fs = new FileStream(filePath, FileMode.Append))
+                using (var bw = new BinaryWriter(fs))
                 {
-                    using (var fs = new FileStream(filePath, FileMode.Append))
-                    using (var bw = new BinaryWriter(fs))
-                    {
-                        bw.Write(buffer, 0, length);
-                        bw.Close();
-                    }
+                    bw.Write(buffer, 0, length);
+                    bw.Close();
                 }
-                catch (UnauthorizedAccessException ex)
-                {
-                    HandleException(ex);
-                }
-            });
-        }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Result.Fail($"{ex.Message} ({ex.GetType()} raised in method FileHelper.DeleteFileIfAlreadyExists)");
+            }
 
-        private void HandleException(Exception ex)
-        {
-            ErrorOccurred = true;
-            ErrorMessage = ex.Message;
+            return Result.Ok();
         }
     }
 }

@@ -4,10 +4,8 @@ namespace TplSocketServerTest
     using System.IO;
     using System.Threading;
     using System.Threading.Tasks;
-
-    using TplSocketServer;
-
     using Microsoft.VisualStudio.TestTools.UnitTesting;
+    using TplSocketServer;
 
     [TestClass]
     public class TplSocketServerTestFixture
@@ -18,8 +16,6 @@ namespace TplSocketServerTest
 
         TplSocketServer _server;
         TplSocketServer _client;
-
-        FileHelper _fileHelper;
 
         string _serverIpAddress;
         string _localFolder;
@@ -55,9 +51,7 @@ namespace TplSocketServerTest
 
             _client = new TplSocketServer();
             _client.EventOccurred += HandleClientEvent;
-
-            _fileHelper = new FileHelper();
-
+            
             var myIp = IpAddressHelper.GetLocalIpV4Address();
             _serverIpAddress = myIp.ToString();
 
@@ -89,14 +83,14 @@ namespace TplSocketServerTest
             _clientReceivedAllFileBytes = false;
             _clientErrorOccurred = false;
             
-            _fileHelper.DeleteFileIfAlreadyExists(_localFilePath);
+            FileHelper.DeleteFileIfAlreadyExists(_localFilePath);
 
             if (File.Exists(_restoreFilePath))
             {
                 File.Copy(_restoreFilePath, _localFilePath);
             }
 
-            _fileHelper.DeleteFileIfAlreadyExists(_remoteFilePath);
+            FileHelper.DeleteFileIfAlreadyExists(_remoteFilePath);
 
             if (File.Exists(_restoreFilePath))
             {
@@ -235,12 +229,18 @@ namespace TplSocketServerTest
             }
 
             long sizeOfFileToSend = new FileInfo(sendFilePath).Length;
-            _fileHelper.DeleteFileIfAlreadyExists(receiveFilePath);
+            FileHelper.DeleteFileIfAlreadyExists(receiveFilePath);
             Assert.IsFalse(File.Exists(receiveFilePath));
 
             var sendFileTask =
-                Task.Run(() =>
-                        _client.SendFileAsync(_serverIpAddress, remoteServerPort, sendFilePath, receiveFilePath, token), token);
+                Task.Run(
+                    () => _client.SendFileAsync(
+                                    _serverIpAddress, 
+                                    remoteServerPort,
+                                    sendFilePath, 
+                                    receiveFilePath,
+                                    token), 
+                    token);
 
             while (!_serverReceivedAllFileBytes)
             {
@@ -320,7 +320,7 @@ namespace TplSocketServerTest
             {
             }
             
-            _fileHelper.DeleteFileIfAlreadyExists(receivedFilePath);
+            FileHelper.DeleteFileIfAlreadyExists(receivedFilePath);
             Assert.IsFalse(File.Exists(receivedFilePath));
 
             var getFileResult = 
@@ -411,11 +411,11 @@ namespace TplSocketServerTest
             }
         }
 
-        private void HandleClientEvent(ServerEvent serverEvent)
+        private void HandleClientEvent(ServerEventInfo serverEventInfo)
         {
-            Console.WriteLine("(client) " + serverEvent.Report());
+            Console.WriteLine("(client) " + serverEventInfo.Report());
 
-            switch (serverEvent.EventType)
+            switch (serverEventInfo.EventType)
             {
                 case ServerEventType.ListenOnLocalPortCompleted:
                     _clientIsListening = true;
@@ -423,7 +423,7 @@ namespace TplSocketServerTest
 
                 case ServerEventType.ReceiveTextMessageCompleted:
                     _clientReceivedTextMessage = true;
-                    _messageFromServer = serverEvent.TextMessage;
+                    _messageFromServer = serverEventInfo.TextMessage;
                     break;
 
                 case ServerEventType.ReceiveFileBytesCompleted:
@@ -444,7 +444,7 @@ namespace TplSocketServerTest
             }
         }
 
-        private void HandleServerEvent(ServerEvent serverevent)
+        private void HandleServerEvent(ServerEventInfo serverevent)
         {
             Console.WriteLine("(server) " + serverevent.Report());
 
