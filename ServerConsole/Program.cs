@@ -82,7 +82,7 @@
         {
             var myInfo = new ServerInfo
             {
-                LocalIpAddress = IpAddressHelper.GetLocalIpV4Address().ToString(),
+                LocalIpAddress = GetLocalIpToBindTo(),
                 Port = settings.PortNumber,
                 TransferFolder = settings.TransferFolderPath
             };
@@ -100,6 +100,41 @@
             return myInfo;
         }
 
+        private static string GetLocalIpToBindTo()
+        {
+            var localIps = IpAddressHelper.GetAllLocalIpv4Addresses();
+            if (localIps.Count == 1)
+            {
+                return localIps[0].ToString();
+            }
+
+            var ipChoice = 0;
+            int totalMenuChoices = localIps.Count;
+            while (ipChoice == 0)
+            {
+                Console.WriteLine("There are multiple IPv4 addresses available on this machine, choose the most appropriate local address:");
+
+                foreach (var i in Enumerable.Range(0, localIps.Count))
+                {
+                    Console.WriteLine($"{i + 1}. {localIps[i]}");
+                }
+
+                var input = Console.ReadLine();
+                Console.WriteLine(string.Empty);
+
+                var validationResult = ValidateNumberIsWithinRange(input, 1, totalMenuChoices);
+                if (validationResult.Failure)
+                {
+                    Console.WriteLine(validationResult.Error);
+                    continue;
+                }
+
+                ipChoice = validationResult.Value;
+            }
+
+            return localIps[ipChoice - 1].ToString();
+        }
+
         private static async Task<Result> ServerMenu(TplSocketServer server, ServerInfo myInfo, ServerSettings settings, CancellationToken token)
         {
             Console.WriteLine(string.Empty);
@@ -108,7 +143,7 @@
             {
                 Console.WriteLine($"Server is ready to handle incoming requests. My endpoint is {myInfo.GetLocalEndPoint()}\n");
 
-                var menuResult = GetMenuChoice(myInfo);
+                var menuResult = GetMenuChoice();
                 if (menuResult.Failure)
                 {
                     Console.WriteLine(menuResult.Error);
@@ -155,7 +190,7 @@
             return Result.Ok();
         }
 
-        private static Result<int> GetMenuChoice(ServerInfo myInfo)
+        private static Result<int> GetMenuChoice()
         {
             WriteMenuToScreen();
             var input = Console.ReadLine();
@@ -362,7 +397,7 @@
 
         private static Result<string> SelectFileFromTransferFolder(string transferFolderPath)
         {
-            var listOfFiles = new List<string>();
+            List<string> listOfFiles;
             try
             {
                 listOfFiles = Directory.GetFiles(transferFolderPath).ToList();

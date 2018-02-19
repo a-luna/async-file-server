@@ -9,6 +9,18 @@
 
     public static class IpAddressHelper
     {
+        public static List<IPAddress> GetAllLocalIpv4Addresses()
+        {
+            var ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
+
+            var ips = 
+                ipHostInfo.AddressList.Select(ip => ip)
+                    .Where(ip => ip.AddressFamily == AddressFamily.InterNetwork).ToList();
+
+            return ips;
+
+        }
+
         public static IPAddress GetLocalIpV4Address()
         {
             var ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
