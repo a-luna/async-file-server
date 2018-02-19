@@ -1,1 +1,0 @@
-192.168.2.2*50815*/Users/aaronluna/Projects/tpl-sockets/ServerConsole/bin/Debug/netcoreapp2.0/transfer

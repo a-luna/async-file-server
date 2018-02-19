@@ -1,3 +1,8 @@
+******Specific for this project*****
+*/settings.xml
+*/transfer/*.*
+
+
 ******MAC OS********
 
 # General
@@ -377,3 +382,5 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+
+ServerConsole/settings.xml
