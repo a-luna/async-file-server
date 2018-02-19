@@ -1,4 +1,7 @@
-﻿namespace TplSocketServer
+﻿using System.Collections.Generic;
+using System.Linq;
+
+namespace TplSocketServer
 {
     using System;
     using System.Globalization;
@@ -33,30 +36,24 @@
 
         public byte[] ConstuctTextMessageRequest(string message, string localIpAddress, int localPort)
         {
-            byte[] requestFlag = BitConverter.GetBytes((int)TransferType.TextMessage);
-            byte[] messageData = Encoding.UTF8.GetBytes(message);
-            byte[] messageDataLen = BitConverter.GetBytes(messageData.Length);
-            byte[] thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
-            byte[] thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
-            byte[] thisServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));
-            byte[] thisServerPortLen = BitConverter.GetBytes(thisServerPortData.Length);
+            var requestFlag = BitConverter.GetBytes((int)TransferType.TextMessage);
+            var messageData = Encoding.UTF8.GetBytes(message);
+            var messageDataLen = BitConverter.GetBytes(messageData.Length);
+            var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
+            var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
+            var thisServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));
+            var thisServerPortLen = BitConverter.GetBytes(thisServerPortData.Length);
 
-            var messageWrapper = new byte[requestFlag.Length + messageDataLen.Length + messageData.Length +
-                                          thisServerIpLen.Length + thisServerIpData.Length + thisServerPortLen.Length +
-                                          thisServerPortData.Length];
+            var messageWrapper = new List<byte>();
+            messageWrapper.AddRange(requestFlag);
+            messageWrapper.AddRange(messageDataLen);
+            messageWrapper.AddRange(messageData);
+            messageWrapper.AddRange(thisServerIpLen);
+            messageWrapper.AddRange(thisServerIpData);
+            messageWrapper.AddRange(thisServerPortLen);
+            messageWrapper.AddRange(thisServerPortData);
 
-            requestFlag.CopyTo(messageWrapper, 0);
-
-            messageDataLen.CopyTo(messageWrapper, SizeOfInt32InBytes);
-            messageData.CopyTo(messageWrapper, SizeOfInt32InBytes + messageDataLen.Length);
-
-            thisServerIpLen.CopyTo(messageWrapper, SizeOfInt32InBytes + messageDataLen.Length + messageData.Length);
-            thisServerIpData.CopyTo(messageWrapper, SizeOfInt32InBytes + messageDataLen.Length + messageData.Length + thisServerIpLen.Length);
-
-            thisServerPortLen.CopyTo(messageWrapper, SizeOfInt32InBytes + messageDataLen.Length + messageData.Length + thisServerIpLen.Length + thisServerIpData.Length);
-            thisServerPortData.CopyTo(messageWrapper, SizeOfInt32InBytes + messageDataLen.Length + messageData.Length + thisServerIpLen.Length + thisServerIpData.Length + thisServerPortLen.Length);
-
-            return messageWrapper;
+            return messageWrapper.ToArray();
         }
 
         public byte[] ConstructInboundFileTransferRequest(string remoteFilePath, string localIpAddress, int localPort, string localFolderPath)
