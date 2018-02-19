@@ -108,8 +108,8 @@ namespace TplSocketServerTest
 
             var token = _tokenSource.Token;
 
-            var runServerTask1 = Task.Run(() => _server.RunServerAsync(remoteServerPort, token), token);
-            var runServerTask2 = Task.Run(() => _client.RunServerAsync(localPort, token), token);
+            var runServerTask1 = Task.Run(() => _server.HandleIncomingConnectionsAsync(remoteServerPort, token), token);
+            var runServerTask2 = Task.Run(() => _client.HandleIncomingConnectionsAsync(localPort, token), token);
 
             while (!_serverIsListening)
             {
@@ -223,7 +223,7 @@ namespace TplSocketServerTest
 
             var token = _tokenSource.Token;
 
-            var listenTask = Task.Run(() => _server.RunServerAsync(remoteServerPort, token), token);
+            var listenTask = Task.Run(() => _server.HandleIncomingConnectionsAsync(remoteServerPort, token), token);
             while (!_serverIsListening)
             {
             }
@@ -309,8 +309,8 @@ namespace TplSocketServerTest
 
             var token = _tokenSource.Token;
 
-            var runServerTask1 = Task.Run(() => _server.RunServerAsync(remoteServerPort, token), token);
-            var runServerTask2 = Task.Run(() => _client.RunServerAsync(localPort, token), token);
+            var runServerTask1 = Task.Run(() => _server.HandleIncomingConnectionsAsync(remoteServerPort, token), token);
+            var runServerTask2 = Task.Run(() => _client.HandleIncomingConnectionsAsync(localPort, token), token);
 
             while (!_serverIsListening)
             {

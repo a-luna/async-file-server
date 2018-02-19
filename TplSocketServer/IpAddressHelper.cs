@@ -18,9 +18,9 @@
             return ipAddress;
         }
 
-        public static Result<string> GetSingleIpv4AddressFromString(this string input)
+        public static Result<string> GetSingleIpv4AddressFromString(string input)
         {
-            var parsedIpsResult = input.GetAllIPv4AddressesInString();
+            var parsedIpsResult = GetAllIPv4AddressesInString(input);
             if (parsedIpsResult.Failure)
             {
                 return Result.Fail<string>($"Unable tp parse IPv4 addressf rom input string: {parsedIpsResult.Error}");
@@ -32,7 +32,7 @@
             return Result.Ok(firstIp);
         }
 
-        public static Result<List<string>> GetAllIPv4AddressesInString(this string input)
+        public static Result<List<string>> GetAllIPv4AddressesInString(string input)
         {
             if (input == null)
             {

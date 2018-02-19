@@ -58,7 +58,7 @@ namespace TplSocketServer
         
         public event ServerEventDelegate EventOccurred;
 
-        public async Task<Result> RunServerAsync(int localPort, CancellationToken token)
+        public async Task<Result> HandleIncomingConnectionsAsync(int localPort, CancellationToken token)
         {
             return (await Task.Factory.StartNew(() => Listen(localPort), token).ConfigureAwait(false))
                 .OnSuccess(() => WaitForConnectionsAsync(token));
