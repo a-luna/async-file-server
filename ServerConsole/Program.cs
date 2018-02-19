@@ -102,8 +102,12 @@
 
         private static async Task<Result> ServerMenu(TplSocketServer server, ServerInfo myInfo, ServerSettings settings, CancellationToken token)
         {
+            Console.WriteLine(string.Empty);
+
             while (true)
             {
+                Console.WriteLine($"Server is ready to handle incoming requests. My endpoint is {myInfo.GetLocalEndPoint()}\n");
+
                 var menuResult = GetMenuChoice(myInfo);
                 if (menuResult.Failure)
                 {
@@ -153,13 +157,7 @@
 
         private static Result<int> GetMenuChoice(ServerInfo myInfo)
         {
-            Console.WriteLine($"Server is ready to handle incoming requests. My endpoint: {myInfo.GetLocalEndPoint()}");
-            Console.WriteLine("Please make a choice from the menu below:");
-            Console.WriteLine("1. Send Text Message");
-            Console.WriteLine("2. Send File");
-            Console.WriteLine("3. Get File");
-            Console.WriteLine("4. Shutdown");
-
+            WriteMenuToScreen();
             var input = Console.ReadLine();
             Console.WriteLine(string.Empty);
 
@@ -170,6 +168,15 @@
             }
             
             return Result.Ok(validationResult.Value);
+        }
+
+        private static void WriteMenuToScreen()
+        {   
+            Console.WriteLine("Please make a choice from the menu below:");
+            Console.WriteLine("1. Send Text Message");
+            Console.WriteLine("2. Send File");
+            Console.WriteLine("3. Get File");
+            Console.WriteLine("4. Shutdown");
         }
         
         private static Result<ServerInfo> ChooseClient(ServerSettings settings)
@@ -186,7 +193,7 @@
                 foreach (var i in Enumerable.Range(0, settings.RemoteServers.Count))
                 {
                     var thisClient = settings.RemoteServers[i];
-                    Console.WriteLine($"{i + 1}. Public IP: {thisClient.GetPublicEndPoint()} Local IP: {thisClient.GetLocalEndPoint()}");
+                    Console.WriteLine($"{i + 1}. Local IP: [{thisClient.GetPublicEndPoint()}]\tPublic IP: [{thisClient.GetLocalEndPoint()}]");
                 }                
 
                 Console.WriteLine($"{addNewClient}. Add New Client");
@@ -290,6 +297,8 @@
                 Console.WriteLine($"2. Local IP ({serverInfo.LocalIpAddress})");
 
                 var input = Console.ReadLine();
+                Console.WriteLine(string.Empty);
+
                 var validationResult = ValidateNumberIsWithinRange(input, 1, 2);
                 if (validationResult.Failure)
                 {
@@ -459,18 +468,21 @@
             switch (serverEvent.EventType)
             {
                 case ServerEventType.ReceiveTextMessageCompleted:
-                    Console.WriteLine($"Message received from client {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}:");
-                    Console.WriteLine(serverEvent.TextMessage);
+                    Console.WriteLine($"\nMessage received from client {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}:");
+                    Console.WriteLine($"{serverEvent.TextMessage}\n");
+                    WriteMenuToScreen();
                     break;
 
                 case ServerEventType.ReceiveOutboundFileTransferInfoCompleted:
-                    Console.WriteLine("Received Outbound File Transfer Request");
+                    Console.WriteLine("\nReceived Outbound File Transfer Request");
                     Console.WriteLine($"\tFile Requested:\t\t{serverEvent.FileName}\n\tFile Size:\t\t\t{serverEvent.FileSizeString}\n\tRemote Endpoint:\t{serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}\n\tTarget Directory:\t{serverEvent.RemoteFolder}\n");
+                    WriteMenuToScreen();
                     break;
 
                 case ServerEventType.ReceiveInboundFileTransferInfoCompleted:
-                    Console.WriteLine("Received Inbound File Transfer Request");
-                    Console.WriteLine($"\tDownload Location:\t{serverEvent.LocalFolder}\n\tFile Name:\t\t\t{serverEvent.FileName}\n\tFile Size:\t\t\t{serverEvent.FileSizeString}\n");
+                    Console.WriteLine("\nReceived Inbound File Transfer Request");
+                    Console.WriteLine($"\tFile Name:\t\t\t{serverEvent.FileName}\n\tFile Size:\t\t\t{serverEvent.FileSizeString}\n");
+                    WriteMenuToScreen();
                     break;
 
                 case ServerEventType.SendFileBytesStarted:
@@ -486,11 +498,13 @@
                     break;
 
                 case ServerEventType.ReceiveConfirmationMessageCompleted:
-                    Console.WriteLine("Client confirmed file transfer successfully completed");
+                    Console.WriteLine("Client confirmed file transfer successfully completed\n");
+                    WriteMenuToScreen();
                     break;
 
                 case ServerEventType.ReceiveFileBytesCompleted:
                     Console.WriteLine("Successfully received file from client");
+                    WriteMenuToScreen();
                     break;
 
                 case ServerEventType.ShutdownListenSocketCompleted:
