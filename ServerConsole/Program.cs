@@ -120,7 +120,6 @@
                 }
 
                 var input = Console.ReadLine();
-                Console.WriteLine(string.Empty);
 
                 var validationResult = ValidateNumberIsWithinRange(input, 1, totalMenuChoices);
                 if (validationResult.Failure)
