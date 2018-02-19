@@ -468,7 +468,7 @@
 
         private static Result<string> ValidateIpV4Address(string input)
         {
-            var parseIpResult = IpAddressHelper.GetSingleIpv4AddressFromString(input);
+            var parseIpResult = IpAddressHelper.ParseSingleIPv4Address(input);
             if (parseIpResult.Failure)
             {
                 return Result.Fail<string>($"Unable tp parse IPv4 address from input string: {parseIpResult.Error}");
@@ -524,7 +524,7 @@
                     break;
 
                 case ServerEventType.ReceiveFileBytesStarted:
-                    Console.WriteLine("Receving file from client...");
+                    Console.WriteLine("\nReceving file from client...");
                     break;
 
                 case ServerEventType.FileTransferProgress:
@@ -538,6 +538,7 @@
 
                 case ServerEventType.ReceiveFileBytesCompleted:
                     Console.WriteLine("Successfully received file from client");
+                    Console.WriteLine($"\tTransfer Start Time:\t{serverEvent.FileTransferStartTime.ToLongTimeString()}\n\tTransfer Complete Time:\t{serverEvent.FileTransferCompleteTime.ToLongTimeString()}\n\tElapsed Time:\t\t\t{serverEvent.FileTransferElapsedTimeString}\n\tTransfer Rate:\t\t\t{serverEvent.FileTransferRate}\n");
                     WriteMenuToScreen();
                     break;
 

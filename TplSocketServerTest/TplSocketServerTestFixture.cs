@@ -220,6 +220,7 @@ namespace TplSocketServerTest
             int remoteServerPort = 8003;
             string sendFilePath = _localFilePath;
             string receiveFilePath = _remoteFilePath;
+            string receiveFolderPath = _remoteFolder;
 
             var token = _tokenSource.Token;
 
@@ -238,7 +239,7 @@ namespace TplSocketServerTest
                                     _serverIpAddress, 
                                     remoteServerPort,
                                     sendFilePath, 
-                                    receiveFilePath,
+                                    receiveFolderPath,
                                     token), 
                     token);
 

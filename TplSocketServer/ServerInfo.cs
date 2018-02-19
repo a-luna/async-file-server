@@ -15,7 +15,7 @@
         {
             var urlContent = await HttpHelper.GetUrlContentAsStringAsync("http://icanhazip.com/").ConfigureAwait(false);
 
-            var publicIpResult = IpAddressHelper.GetSingleIpv4AddressFromString(urlContent);
+            var publicIpResult = IpAddressHelper.ParseSingleIPv4Address(urlContent);
             if (publicIpResult.Failure)
             {
                 return Result.Fail<string>("Unable to determine public IP address, please verify this machine has access to the internet");

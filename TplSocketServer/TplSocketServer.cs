@@ -25,9 +25,6 @@ namespace TplSocketServer
         Socket _listenSocket;
         Socket _transferSocket;
 
-        MessageWrapper _messageWrapper;
-        MessageUnwrapper _messageUnwrapper;
-
         public TplSocketServer()
         {
             _maxConnections = 5;
@@ -37,9 +34,6 @@ namespace TplSocketServer
             _sendTimeoutMs = 5000;
 
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-            _messageWrapper = new MessageWrapper();
-            _messageUnwrapper = new MessageUnwrapper();
         }
 
         public TplSocketServer(int maxConnections, int bufferSize, int connectTimeoutMs, int receiveTimeoutMs, int sendTimeoutMs)
@@ -51,9 +45,6 @@ namespace TplSocketServer
             _sendTimeoutMs = sendTimeoutMs;
 
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-            _messageWrapper = new MessageWrapper();
-            _messageUnwrapper = new MessageUnwrapper();
         }
         
         public event ServerEventDelegate EventOccurred;
@@ -244,10 +235,9 @@ namespace TplSocketServer
         {
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ReceiveTextMessageStarted });
 
-            _messageUnwrapper.ReadTextMessageRequest(buffer);
-            var message = _messageUnwrapper.Message;
-            var senderIpAddress = _messageUnwrapper.ClientIpAddress;
-            var senderPortNumber = _messageUnwrapper.ClientPortNumber;
+            var(message, 
+                remoteIpAddress, 
+                remotePortNumber) = MessageUnwrapper.ReadTextMessageRequest(buffer);
 
             if (token.IsCancellationRequested)
             {
@@ -259,8 +249,8 @@ namespace TplSocketServer
                 {
                     EventType = ServerEventType.ReceiveTextMessageCompleted,
                     TextMessage = message,
-                    RemoteServerIpAddress = senderIpAddress,
-                    RemoteServerPortNumber = senderPortNumber
+                    RemoteServerIpAddress = remoteIpAddress,
+                    RemoteServerPortNumber = remotePortNumber
                 });
 
             return Result.Ok();
@@ -271,9 +261,8 @@ namespace TplSocketServer
             EventOccurred?.Invoke(
                 new ServerEventInfo { EventType = ServerEventType.ReceiveInboundFileTransferInfoStarted });
 
-            _messageUnwrapper.ReadInboundFileTransferRequest(buffer);
-            var localFilePath = _messageUnwrapper.LocalFilePath;
-            var fileSizeBytes = _messageUnwrapper.FileSizeInBytes;
+            var(localFilePath, 
+                fileSizeBytes) = MessageUnwrapper.ReadInboundFileTransferRequest(buffer);
 
             if (token.IsCancellationRequested)
             {
@@ -455,11 +444,10 @@ namespace TplSocketServer
             EventOccurred?.Invoke(
                 new ServerEventInfo { EventType = ServerEventType.ReceiveOutboundFileTransferInfoStarted });
 
-            _messageUnwrapper.ReadOutboundFileTransferRequest(buffer);
-            var requestedFilePath = _messageUnwrapper.LocalFilePath;
-            var remoteServerIpAddress = _messageUnwrapper.ClientIpAddress;
-            var remoteServerPort = _messageUnwrapper.ClientPortNumber;
-            var remoteFolderPath = _messageUnwrapper.RemoteFolderPath;
+            var(requestedFilePath, 
+                remoteServerIpAddress, 
+                remoteServerPort, 
+                remoteFolderPath) = MessageUnwrapper.ReadOutboundFileTransferRequest(buffer);
 
             EventOccurred?.Invoke(
                 new ServerEventInfo
@@ -529,7 +517,7 @@ namespace TplSocketServer
                     RemoteServerPortNumber = remoteServerPort
                 });
 
-            var messageWrapperAndData = _messageWrapper.ConstuctTextMessageRequest(message, localIpAddress, localPort);
+            var messageWrapperAndData = MessageWrapper.ConstuctTextMessageRequest(message, localIpAddress, localPort);
 
             var sendMessageResult = 
                 await transferSocket.SendWithTimeoutAsync(messageWrapperAndData, 0, messageWrapperAndData.Length, 0, _sendTimeoutMs)
@@ -578,7 +566,7 @@ namespace TplSocketServer
             var fileSizeBytes = new FileInfo(localFilePath).Length;
 
             var messageWrapper = 
-                _messageWrapper.ConstructOutboundFileTransferRequest(localFilePath, fileSizeBytes, remoteFolderPath);
+                MessageWrapper.ConstructOutboundFileTransferRequest(localFilePath, fileSizeBytes, remoteFolderPath);
 
             EventOccurred?.Invoke(
                 new ServerEventInfo
@@ -706,7 +694,7 @@ namespace TplSocketServer
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerCompleted });
 
             var messageHeaderData = 
-                _messageWrapper.ConstructInboundFileTransferRequest(
+                MessageWrapper.ConstructInboundFileTransferRequest(
                     remoteFilePath,
                     localIpAddress,
                     localPort,
