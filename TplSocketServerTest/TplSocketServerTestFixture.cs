@@ -1,3 +1,5 @@
+using System.Net;
+
 namespace TplSocketServerTest
 {
     using AaronLuna.Common.IO;
@@ -22,7 +24,8 @@ namespace TplSocketServerTest
         TplSocketServer _server;
         TplSocketServer _client;
 
-        string _serverIpAddress;
+        IPAddress _ipAddress;
+
         string _localFolder;
         string _remoteFolder;
         string _restoreFolder;
@@ -56,9 +59,8 @@ namespace TplSocketServerTest
 
             _client = new TplSocketServer();
             _client.EventOccurred += HandleClientEvent;
-            
-            var myIp = IpAddressHelper.GetLocalIpV4Address();
-            _serverIpAddress = myIp.ToString();
+
+            _ipAddress = IpAddressHelper.GetLocalIPv4Address();
 
             var currentPath = Directory.GetCurrentDirectory();
             var index = currentPath.IndexOf(@"bin", StringComparison.Ordinal);
@@ -113,22 +115,30 @@ namespace TplSocketServerTest
 
             var token = _tokenSource.Token;
 
-            var runServerTask1 = Task.Run(() => _server.HandleIncomingConnectionsAsync(remoteServerPort, token), token);
-            var runServerTask2 = Task.Run(() => _client.HandleIncomingConnectionsAsync(localPort, token), token);
+            var runServerTask1 = 
+                Task.Run(() => 
+                    _server.HandleIncomingConnectionsAsync(
+                        _ipAddress, 
+                        remoteServerPort, 
+                        token), 
+                    token);
 
-            while (!_serverIsListening)
-            {
-            }
+            var runServerTask2 = 
+                Task.Run(() => 
+                    _client.HandleIncomingConnectionsAsync(
+                        _ipAddress, 
+                        localPort, 
+                        token), 
+                    token);
 
-            while (!_clientIsListening)
-            {
-            }
+            while (!_serverIsListening) { }
+            while (!_clientIsListening) { }
 
             Assert.AreEqual(string.Empty, _messageFromClient);
             Assert.AreEqual(string.Empty, _messageFromServer);
 
             var sendMessageResult1 = 
-                await _client.SendTextMessageAsync(messageForServer, _serverIpAddress, remoteServerPort, _serverIpAddress, localPort, token)
+                await _client.SendTextMessageAsync(messageForServer, _ipAddress.ToString(), remoteServerPort, _ipAddress.ToString(), localPort, token)
                     .ConfigureAwait(false);
 
             if (sendMessageResult1.Failure)
@@ -136,15 +146,13 @@ namespace TplSocketServerTest
                 Assert.Fail($"There was an error sending a text message to the server: {sendMessageResult1.Error}");
             }
 
-            while (!_serverReceivedTextMessage)
-            {
-            }
+            while (!_serverReceivedTextMessage) { }
 
             Assert.AreEqual(messageForServer, _messageFromClient);
             Assert.AreEqual(string.Empty, _messageFromServer);
 
             var sendMessageResult2 =
-                await _server.SendTextMessageAsync(messageForClient, _serverIpAddress, localPort, _serverIpAddress, remoteServerPort, token)
+                await _server.SendTextMessageAsync(messageForClient, _ipAddress.ToString(), localPort, _ipAddress.ToString(), remoteServerPort, token)
                     .ConfigureAwait(false);
 
             if (sendMessageResult2.Failure)
@@ -152,9 +160,7 @@ namespace TplSocketServerTest
                 Assert.Fail($"There was an error sending a text message to the client: {sendMessageResult2.Error}");
             }
 
-            while (!_clientReceivedTextMessage)
-            {
-            }
+            while (!_clientReceivedTextMessage) { }
 
             Assert.AreEqual(messageForServer, _messageFromClient);
             Assert.AreEqual(messageForClient, _messageFromServer);
@@ -185,9 +191,7 @@ namespace TplSocketServerTest
                 _server.CloseListenSocket();
             }
 
-            while (!_serverListenSocketIsShutdown)
-            {
-            }
+            while (!_serverListenSocketIsShutdown) { }
 
             try
             {
@@ -214,9 +218,7 @@ namespace TplSocketServerTest
                 _client.CloseListenSocket();
             }
 
-            while (!_clientListenSocketIsShutdown)
-            {
-            }
+            while (!_clientListenSocketIsShutdown) { }
         }
 
         [TestMethod]
@@ -229,10 +231,15 @@ namespace TplSocketServerTest
 
             var token = _tokenSource.Token;
 
-            var listenTask = Task.Run(() => _server.HandleIncomingConnectionsAsync(remoteServerPort, token), token);
-            while (!_serverIsListening)
-            {
-            }
+            var listenTask = 
+                Task.Run(() => 
+                    _server.HandleIncomingConnectionsAsync(
+                        _ipAddress, 
+                        remoteServerPort, 
+                        token),
+                    token);
+
+            while (!_serverIsListening) { }
 
             long sizeOfFileToSend = new FileInfo(sendFilePath).Length;
             FileHelper.DeleteFileIfAlreadyExists(receiveFilePath);
@@ -241,7 +248,7 @@ namespace TplSocketServerTest
             var sendFileTask =
                 Task.Run(
                     () => _client.SendFileAsync(
-                                    _serverIpAddress, 
+                                    _ipAddress.ToString(), 
                                     remoteServerPort,
                                     sendFilePath, 
                                     receiveFolderPath,
@@ -256,9 +263,7 @@ namespace TplSocketServerTest
                 }
             }
 
-            while (!_clientReceivedConfirmationMessage)
-            {
-            }
+            while (!_clientReceivedConfirmationMessage) { }
 
             var sendFileResult = await sendFileTask.ConfigureAwait(false);
             if (sendFileResult.Failure)
@@ -298,9 +303,7 @@ namespace TplSocketServerTest
                 _server.CloseListenSocket();
             }
 
-            while (!_serverListenSocketIsShutdown)
-            {
-            }
+            while (!_serverListenSocketIsShutdown) { }
 
             Assert.IsTrue(_serverListenSocketIsShutdown);
         }
@@ -315,22 +318,30 @@ namespace TplSocketServerTest
 
             var token = _tokenSource.Token;
 
-            var runServerTask1 = Task.Run(() => _server.HandleIncomingConnectionsAsync(remoteServerPort, token), token);
-            var runServerTask2 = Task.Run(() => _client.HandleIncomingConnectionsAsync(localPort, token), token);
+            var runServerTask1 = 
+                Task.Run(() => 
+                    _server.HandleIncomingConnectionsAsync(
+                        _ipAddress, 
+                        remoteServerPort, 
+                        token), 
+                    token);
 
-            while (!_serverIsListening)
-            {
-            }
+            var runServerTask2 = 
+                Task.Run(() => 
+                    _client.HandleIncomingConnectionsAsync(
+                        _ipAddress, 
+                        localPort, 
+                        token), 
+                    token);
 
-            while (!_clientIsListening)
-            {
-            }
-            
+            while (!_serverIsListening) { }
+            while (!_clientIsListening) { }
+
             FileHelper.DeleteFileIfAlreadyExists(receivedFilePath);
             Assert.IsFalse(File.Exists(receivedFilePath));
 
             var getFileResult = 
-                await _client.GetFileAsync(_serverIpAddress, remoteServerPort, getFilePath, _serverIpAddress, localPort, _localFolder, token)
+                await _client.GetFileAsync(_ipAddress.ToString(), remoteServerPort, getFilePath, _ipAddress.ToString(), localPort, _localFolder, token)
                             .ConfigureAwait(false);
 
             if (getFileResult.Failure)
@@ -346,9 +357,7 @@ namespace TplSocketServerTest
                 }
             }
 
-            while (!_serverReceivedConfirmationMessage)
-            {
-            }
+            while (!_serverReceivedConfirmationMessage) { }
 
             Assert.IsTrue(File.Exists(receivedFilePath));
             Assert.AreEqual(FileName, Path.GetFileName(receivedFilePath));
@@ -383,9 +392,7 @@ namespace TplSocketServerTest
                 _server.CloseListenSocket();
             }
 
-            while (!_serverListenSocketIsShutdown)
-            {
-            }
+            while (!_serverListenSocketIsShutdown) { }
 
             try
             {
@@ -412,13 +419,12 @@ namespace TplSocketServerTest
                 _client.CloseListenSocket();
             }
 
-            while (!_clientListenSocketIsShutdown)
-            {
-            }
+            while (!_clientListenSocketIsShutdown) { }
         }
 
         private void HandleClientEvent(ServerEventInfo serverEventInfo)
         {
+
             Console.WriteLine("(client) " + serverEventInfo.Report());
 
             switch (serverEventInfo.EventType)
@@ -450,11 +456,11 @@ namespace TplSocketServerTest
             }
         }
 
-        private void HandleServerEvent(ServerEventInfo serverevent)
+        private void HandleServerEvent(ServerEventInfo serverEventInfo)
         {
-            Console.WriteLine("(server) " + serverevent.Report());
+            Console.WriteLine("(server) " + serverEventInfo.Report());
 
-            switch (serverevent.EventType)
+            switch (serverEventInfo.EventType)
             {
                 case ServerEventType.ListenOnLocalPortCompleted:
                     _serverIsListening = true;
@@ -462,7 +468,7 @@ namespace TplSocketServerTest
 
                 case ServerEventType.ReceiveTextMessageCompleted:
                     _serverReceivedTextMessage = true;
-                    _messageFromClient = serverevent.TextMessage;
+                    _messageFromClient = serverEventInfo.TextMessage;
                     break;
 
                 case ServerEventType.ReceiveFileBytesCompleted:

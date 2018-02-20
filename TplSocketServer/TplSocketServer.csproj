@@ -10,4 +10,8 @@
   <ItemGroup>
     <Compile Remove="Class1.cs" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\aaronluna-common\AaronLuna.Common\AaronLuna.Common.csproj" />
+  </ItemGroup>
 </Project>

@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\aaronluna-common\AaronLuna.Common\AaronLuna.Common.csproj" />
     <ProjectReference Include="..\TplSocketServer\TplSocketServer.csproj" />
   </ItemGroup>
   <ItemGroup>

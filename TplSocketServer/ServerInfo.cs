@@ -1,4 +1,6 @@
-﻿namespace TplSocketServer
+﻿using System.Net;
+
+namespace TplSocketServer
 {
     using AaronLuna.Common.Http;
     using AaronLuna.Common.Network;
@@ -12,21 +14,6 @@
         public int Port { get; set; }
         public string TransferFolder { get; set; }
         
-        public static async Task<Result<string>> GetPublicIpAddressAsync()
-        {
-            var urlContent = await HttpHelper.GetUrlContentAsStringAsync("http://icanhazip.com/").ConfigureAwait(false);
-
-            var publicIpResult = IpAddressHelper.ParseSingleIPv4Address(urlContent);
-            if (publicIpResult.Failure)
-            {
-                return Result.Fail<string>("Unable to determine public IP address, please verify this machine has access to the internet");
-            }
-
-            var publicIp = publicIpResult.Value;
-
-            return Result.Ok(publicIp);
-        }
-    
         public string GetLocalEndPoint()
         {
             return $"{LocalIpAddress}:{Port}";
@@ -35,6 +22,16 @@
         public string GetPublicEndPoint()
         {
             return $"{PublicIpAddress}:{Port}";
+        }
+
+        public IPAddress GetLocalIpAddress()
+        {
+            return IPAddress.Parse(LocalIpAddress);
+        }
+
+        public IPAddress GetPublicIpAddress()
+        {
+            return IPAddress.Parse(PublicIpAddress);
         }
     }
 

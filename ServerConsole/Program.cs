@@ -1,4 +1,6 @@
-﻿namespace ServerConsole
+﻿using System.Net;
+
+namespace ServerConsole
 {
     using AaronLuna.Common.Network;
     using AaronLuna.Common.Numeric;
@@ -15,7 +17,9 @@
 
     class Program
     {
-        const string SavedClientsFileName = "settings.xml";
+        const string SettingsFileName = "settings.xml";
+        const string DefaultTransferFolderName = "transfer";
+        const string IpChoiceClient = "Which IP address would you like to use for this request?";
 
         const int SendTextMessage = 1;
         const int SendFile = 2;
@@ -27,37 +31,29 @@
 
         const int PortRangeMin = 49152;
         const int PortRangeMax = 65535;
+        const int DefaultPort = 50815;
 
         static async Task Main()
         {
-            var settingsFilePath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SavedClientsFileName}";
-            var settings = ServerSettings.Deserialize(settingsFilePath);
-            
             var cts = new CancellationTokenSource();
             var token = cts.Token;
 
-            var server = 
-                new TplSocketServer(
-                    settings.SocketSettings.MaxNumberOfConections,
-                    settings.SocketSettings.BufferSize,
-                    settings.SocketSettings.ConnectTimeoutMs,
-                    settings.SocketSettings.ReceiveTimeoutMs,
-                    settings.SocketSettings.SendTimeoutMs);
-
-            server.EventOccurred += HandleServerEvent;
-
+            TplSocketServer server = new TplSocketServer();
             try
             {
-                var myInfo = await GetThisServerInfo(settings);
-                var listenTask = Task.Run(() => server.HandleIncomingConnectionsAsync(myInfo.Port, token), token);
+                ServerSettings settings;
+                ServerInfo myInfo;
+
+                (server, settings, myInfo) = await InitializeServerAsync();
+                server.EventOccurred += HandleServerEvent;
+
+                var listenTask = Task.Run(() => server.HandleIncomingConnectionsAsync(myInfo.GetLocalIpAddress(), myInfo.Port, token), token);
 
                 var menuTask = await ServerMenu(server, myInfo, settings, token);
                 if (menuTask.Failure)
                 {
                     Console.WriteLine(menuTask.Error);
                 }
-
-                ServerSettings.Serialize(settings, settingsFilePath);
 
                 cts.Cancel();
                 var serverShutdown = await listenTask;
@@ -83,38 +79,74 @@
             Console.ReadLine();
         }
 
-        private static async Task<ServerInfo> GetThisServerInfo(ServerSettings settings)
+        private static async Task<(TplSocketServer server, ServerSettings settings, ServerInfo myInfo)> InitializeServerAsync()
         {
-            var myInfo = new ServerInfo
-            {
-                LocalIpAddress = GetLocalIpToBindTo(),
-                Port = settings.PortNumber,
-                TransferFolder = settings.TransferFolderPath
-            };
+            var settingsFilePath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}";
+            TplSocketServer server;
+            ServerSettings settings;
 
-            var getPublicIpResult = await ServerInfo.GetPublicIpAddressAsync();
-            if (getPublicIpResult.Failure)
+            if (File.Exists(settingsFilePath))
+            {
+                settings = ServerSettings.Deserialize(settingsFilePath);
+            }
+            else
+            {
+                settings = new ServerSettings
+                {
+                    PortNumber = DefaultPort,
+                    TransferFolderPath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{DefaultTransferFolderName}"
+                };
+
+            }
+
+            var localIp = GetLocalIpToBindTo();
+            var publicIp = IPAddress.None;
+
+            var retrievePublicIp = await IpAddressHelper.GetPublicIPv4AddressAsync();
+            if (retrievePublicIp.Failure)
             {
                 Console.WriteLine("Unable to determine public IP address, this server will only be able to communicate with machines in the same local network.");
             }
             else
             {
-                myInfo.PublicIpAddress = getPublicIpResult.Value;
+                publicIp = retrievePublicIp.Value;
             }
 
-            return myInfo;
+            var myInfo = new ServerInfo
+            {
+                LocalIpAddress = localIp,
+                PublicIpAddress = publicIp.ToString(),
+                Port = settings.PortNumber,
+                TransferFolder = settings.TransferFolderPath
+            };
+
+            if (settings.SocketSettings.IsInitialized())
+            {
+                server = new TplSocketServer(
+                    settings.SocketSettings.MaxNumberOfConections,
+                    settings.SocketSettings.BufferSize,
+                    settings.SocketSettings.ConnectTimeoutMs,
+                    settings.SocketSettings.ReceiveTimeoutMs,
+                    settings.SocketSettings.SendTimeoutMs);
+            }
+            else
+            {
+                server = new TplSocketServer();
+            }
+
+            return (server, settings, myInfo);
         }
 
         private static string GetLocalIpToBindTo()
         {
-            var localIps = IpAddressHelper.GetAllLocalIpv4Addresses();
+            var localIps = IpAddressHelper.GetLocalIPv4AddressList();
             if (localIps.Count == 1)
             {
                 return localIps[0].ToString();
             }
 
             var ipChoice = 0;
-            int totalMenuChoices = localIps.Count;
+            var totalMenuChoices = localIps.Count;
             while (ipChoice == 0)
             {
                 Console.WriteLine("There are multiple IPv4 addresses available on this machine, choose the most appropriate local address:");
@@ -168,7 +200,7 @@
                 }
 
                 var clientInfo = chooseClientResult.Value;
-                var ipChoice = ChoosePublicOrLocalIpAddress(clientInfo);
+                var ipChoice = ChoosePublicOrLocalIpAddress(clientInfo, IpChoiceClient);
 
                 var result = Result.Ok();
                 switch (menuChoice)
@@ -232,7 +264,7 @@
                 foreach (var i in Enumerable.Range(0, settings.RemoteServers.Count))
                 {
                     var thisClient = settings.RemoteServers[i];
-                    Console.WriteLine($"{i + 1}. Local IP: [{thisClient.GetPublicEndPoint()}]\tPublic IP: [{thisClient.GetLocalEndPoint()}]");
+                    Console.WriteLine($"{i + 1}. Local IP: [{thisClient.GetLocalEndPoint()}]\tPublic IP: [{thisClient.GetPublicEndPoint()}]");
                 }                
 
                 Console.WriteLine($"{addNewClient}. Add New Client");
@@ -326,12 +358,12 @@
             return Result.Ok(clientInfo);
         }
 
-        private static int ChoosePublicOrLocalIpAddress(ServerInfo serverInfo)
+        private static int ChoosePublicOrLocalIpAddress(ServerInfo serverInfo, string userPrompt)
         {
             var ipChoice = 0;
             while (ipChoice == 0)
             {
-                Console.WriteLine("Which IP address would you like to use for this request?");
+                Console.WriteLine(userPrompt);
                 Console.WriteLine($"1. Public IP ({serverInfo.PublicIpAddress})");
                 Console.WriteLine($"2. Local IP ({serverInfo.LocalIpAddress})");
 
@@ -455,20 +487,20 @@
             return Result.Ok(listOfFiles[fileMenuChoice - 1]);
         }
 
-        private static string GetChosenIpAddress(ServerInfo clientInfo, int ipChoice)
+        private static string GetChosenIpAddress(ServerInfo serverInfo, int ipChoice)
         {
-            var clientIp = string.Empty;
+            var ip = string.Empty;
             if (ipChoice == PublicIpAddress)
             {
-                clientIp = clientInfo.PublicIpAddress;
+                ip = serverInfo.PublicIpAddress;
             }
 
             if (ipChoice == LocalIpAddress)
             {
-                clientIp = clientInfo.LocalIpAddress;
+                ip = serverInfo.LocalIpAddress;
             }
 
-            return clientIp;
+            return ip;
         }
 
         private static Result<string> ValidateIpV4Address(string input)
@@ -479,7 +511,7 @@
                 return Result.Fail<string>($"Unable tp parse IPv4 address from input string: {parseIpResult.Error}");
             }
 
-            return Result.Ok(parseIpResult.Value);
+            return Result.Ok(parseIpResult.Value.ToString());
         }
 
         private static Result<int> ValidateNumberIsWithinRange(string input, int rangeMin, int rangeMax)
@@ -500,6 +532,11 @@
             }
 
             return Result.Ok(parsedNum);
+        }
+
+        private static void SaveSettingsToFile(ServerSettings settings)
+        {
+            ServerSettings.Serialize(settings, $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}");
         }
 
         private static void HandleServerEvent(ServerEventInfo serverEvent)

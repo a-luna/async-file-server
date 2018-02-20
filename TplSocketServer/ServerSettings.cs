@@ -7,6 +7,13 @@ namespace TplSocketServer
 
     public class ServerSettings
     {
+        public ServerSettings()
+        {
+            TransferFolderPath = string.Empty;
+            SocketSettings = new SocketSettings();
+            RemoteServers = new List<ServerInfo>();
+        }
+
         public int PortNumber { get; set; }
         public string TransferFolderPath { get; set; }
         public SocketSettings SocketSettings { get; set; }

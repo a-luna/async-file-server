@@ -5,7 +5,6 @@
 
     using System;
     using System.IO;
-    using System.Linq;
     using System.Net;
     using System.Net.Sockets;
     using System.Text;
@@ -17,12 +16,12 @@
         const string ConfirmationMessage = "handshake";
         const int OneSecondInMilliseconds = 1000;
 
-        int _maxConnections;
-        int _bufferSize;
-        
-        int _connectTimeoutMs;
-        int _receiveTimeoutMs;
-        int _sendTimeoutMs;
+        readonly int _maxConnections;
+        readonly int _bufferSize;
+
+        readonly int _connectTimeoutMs;
+        readonly int _receiveTimeoutMs;
+        readonly int _sendTimeoutMs;
 
         Socket _listenSocket;
         Socket _transferSocket;
@@ -51,22 +50,17 @@
         
         public event ServerEventDelegate EventOccurred;
 
-        public async Task<Result> HandleIncomingConnectionsAsync(int localPort, CancellationToken token)
+        public async Task<Result> HandleIncomingConnectionsAsync(IPAddress ipAddress, int localPort, CancellationToken token)
         {
-            return (await Task.Factory.StartNew(() => Listen(localPort), token).ConfigureAwait(false))
+            return (await Task.Factory.StartNew(() => Listen(ipAddress, localPort), token).ConfigureAwait(false))
                 .OnSuccess(() => WaitForConnectionsAsync(token));
         }
 
-        private Result Listen(int localPort)
+        private Result Listen(IPAddress ipAddress, int localPort)
         { 
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ListenOnLocalPortStarted });
             
-            var ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
-            var ipAddress = ipHostInfo.AddressList.Select(ip => ip)
-                .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
-
-            var ipEndPoint = new IPEndPoint(ipAddress, localPort);
-            
+            var ipEndPoint = new IPEndPoint(ipAddress, localPort);            
             try
             {
                 _listenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
@@ -410,7 +404,7 @@
                     return writeBytesResult;
                 }
 
-                // THese two lines and the event raised are used to debug issues with receiving the file
+                // THese two lines and the event raised below are useful when debugging socket errors
                 receiveCount++;
                 long bytesRemaining = fileSizeInBytes - totalBytesReceived;
 

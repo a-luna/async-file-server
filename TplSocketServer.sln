@@ -6,7 +6,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TplSocketServer", "TplSocke
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TplSocketServerTest", "TplSocketServerTest\TplSocketServerTest.csproj", "{0AC8BE80-3D69-496F-865F-F4168396FF65}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerConsole", "ServerConsole\ServerConsole.csproj", "{60EFC6B8-5E4D-420E-BE87-D6AB9FA5F7CE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerConsole", "ServerConsole\ServerConsole.csproj", "{60EFC6B8-5E4D-420E-BE87-D6AB9FA5F7CE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AaronLuna.Common", "aaronluna-common\AaronLuna.Common\AaronLuna.Common.csproj", "{D1939085-6902-463D-822D-9D154B3EFC81}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,6 +28,10 @@ Global
 		{60EFC6B8-5E4D-420E-BE87-D6AB9FA5F7CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{60EFC6B8-5E4D-420E-BE87-D6AB9FA5F7CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{60EFC6B8-5E4D-420E-BE87-D6AB9FA5F7CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1939085-6902-463D-822D-9D154B3EFC81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1939085-6902-463D-822D-9D154B3EFC81}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1939085-6902-463D-822D-9D154B3EFC81}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1939085-6902-463D-822D-9D154B3EFC81}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
