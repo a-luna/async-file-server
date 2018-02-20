@@ -591,7 +591,7 @@ namespace TplSocketServer
                 MessageWrapper.ConstructFileListResponse(
                     fileInfoList,
                     '*',
-                    '?',
+                    '|',
                     remoteIpAddress,
                     remotePortNumber);
 

@@ -1,4 +1,7 @@
-﻿namespace TplSocketServer
+﻿using System.Linq;
+using AaronLuna.Common.Numeric;
+
+namespace TplSocketServer
 {
     using System;
     using System.Collections.Generic;
@@ -109,8 +112,8 @@
 
         public static byte[] ConstructFileListResponse(
             List<(string filePath, long fileSizeBytes)> fileInfoList, 
+            char fileInfoSeparator,
             char fileSeparator,
-            char fileSizeSeparator,
             string remoteIpAddress, 
             int remotePort)
         {
@@ -128,21 +131,26 @@
             messageWrapper.AddRange(remoteServerPortData);
 
             var allFileInfo = string.Empty;
-            foreach (var fileInfo in fileInfoList)
+            foreach (var i in Enumerable.Range(0, fileInfoList.Count))
             {           
-                var fileInfoString = $"{fileInfo.filePath}{fileSeparator}{fileInfo.fileSizeBytes}{fileSizeSeparator}";
+                var fileInfoString = $"{fileInfoList[i].filePath}{fileInfoSeparator}{fileInfoList[i].fileSizeBytes}";
 
                 allFileInfo += fileInfoString;
+
+                if (!i.IsLastIteration(fileInfoList.Count))
+                {
+                    allFileInfo += $"{fileSeparator}";
+                }
             }
             var fileInfoListData = Encoding.UTF8.GetBytes(allFileInfo);
             var fileInfoListLen = BitConverter.GetBytes(fileInfoListData.Length);
+            var fileInfoSeparatorData = Encoding.UTF8.GetBytes(new[] {fileInfoSeparator});
             var fileSeparatorData = Encoding.UTF8.GetBytes(new[] {fileSeparator});
-            var fileSizeSeparatorData = Encoding.UTF8.GetBytes(new[] {fileSizeSeparator});
 
             messageWrapper.AddRange(fileInfoListLen);
             messageWrapper.AddRange(fileInfoListData);
+            messageWrapper.AddRange(fileInfoSeparatorData);
             messageWrapper.AddRange(fileSeparatorData);
-            messageWrapper.AddRange(fileSizeSeparatorData);
 
             return messageWrapper.ToArray();
         }
