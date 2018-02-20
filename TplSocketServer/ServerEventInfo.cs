@@ -1,4 +1,6 @@
-﻿namespace TplSocketServer
+﻿using System.Collections.Generic;
+
+namespace TplSocketServer
 {
     using AaronLuna.Common.Extensions;
     using AaronLuna.Common.Numeric;
@@ -9,7 +11,7 @@
     {
         public ServerEventType EventType { get; set; } = ServerEventType.None;
 
-        public TransferType TransferType { get; set; }
+        public RequestType RequestType { get; set; }
         public string TextMessage { get; set; }
         public string RemoteServerIpAddress { get; set; }
         public int RemoteServerPortNumber { get; set; }
@@ -18,6 +20,7 @@
         public string FileName { get; set; }
         public long FileSizeInBytes { get; set; }
         public string FileSizeString => FileSizeInBytes.ConvertBytesForDisplay();
+        public List<(string, long)> FileInfoList { get; set; }
         public DateTime FileTransferStartTime { get; set; }
         public DateTime FileTransferCompleteTime { get; set; }
         public TimeSpan FileTransferElapsedTime => FileTransferCompleteTime - FileTransferStartTime;

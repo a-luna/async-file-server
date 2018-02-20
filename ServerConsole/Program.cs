@@ -47,20 +47,19 @@ namespace ServerConsole
                 (server, settings, myInfo) = await InitializeServerAsync();
                 server.EventOccurred += HandleServerEvent;
 
-                var listenTask = Task.Run(() => server.HandleIncomingConnectionsAsync(myInfo.GetLocalIpAddress(), myInfo.Port, token), token);
+                var listenTask =
+                    Task.Run(
+                        () => server.HandleIncomingConnectionsAsync(myInfo.GetLocalIpAddress(), myInfo.Port, token),
+                        token);
 
-                var menuTask = await ServerMenu(server, myInfo, settings, token);
-                if (menuTask.Failure)
-                {
-                    Console.WriteLine(menuTask.Error);
-                }
+                await ServerMenu(server, myInfo, settings, token);
 
                 cts.Cancel();
                 var serverShutdown = await listenTask;
                 if (serverShutdown.Failure)
                 {
                     Console.WriteLine($"There was an error shutting down the server: {serverShutdown.Error}");
-                }                
+                }
             }
             catch (AggregateException ex)
             {
@@ -69,6 +68,10 @@ namespace ServerConsole
                 {
                     Console.WriteLine($"\t{ie.GetType().Name}: {ie.Message}");
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{ex.Message} ({ex.GetType()}) raised in method Program.Main");
             }
             finally
             {
@@ -120,19 +123,9 @@ namespace ServerConsole
                 TransferFolder = settings.TransferFolderPath
             };
 
-            if (settings.SocketSettings.IsInitialized())
-            {
-                server = new TplSocketServer(
-                    settings.SocketSettings.MaxNumberOfConections,
-                    settings.SocketSettings.BufferSize,
-                    settings.SocketSettings.ConnectTimeoutMs,
-                    settings.SocketSettings.ReceiveTimeoutMs,
-                    settings.SocketSettings.SendTimeoutMs);
-            }
-            else
-            {
-                server = new TplSocketServer();
-            }
+            server = settings.SocketSettings.IsInitialized() 
+                ? new TplSocketServer(settings) 
+                : new TplSocketServer();
 
             return (server, settings, myInfo);
         }
@@ -214,10 +207,14 @@ namespace ServerConsole
                         break;
 
                     case GetFile:
+                        result = await GetFileFromClientAsync(server, myInfo, clientInfo, ipChoice, token);
                         break;
                 }
 
-                if (result.Failure)
+                if (result.Success) continue;
+
+                Console.WriteLine(result.Error);
+                if (UserWantsToShutdownServer())
                 {
                     return result;
                 }
@@ -318,12 +315,14 @@ namespace ServerConsole
                 clientInfoIsValid = true;
             }
 
+            SaveSettingsToFile(settings);
             return Result.Ok(newClientInfo);
         }
 
         private static Result<ServerInfo> GetNewClientInfoFromUser()
         {
-            Console.WriteLine("Enter the server's public IPv4 address:");
+            var clientInfo = new ServerInfo();
+            Console.WriteLine("Enter the server's IPv4 address:");
             var input = Console.ReadLine();
 
             var ipValidationResult = ValidateIpV4Address(input);
@@ -333,7 +332,28 @@ namespace ServerConsole
             }
 
             var clientIp = ipValidationResult.Value;
+            Console.WriteLine($"Is {clientIp} a local or public IP address?");
+            Console.WriteLine("1. Public/External");
+            Console.WriteLine("2. Local");
+            input = Console.ReadLine();
 
+            var ipTypeValidationResult = ValidateNumberIsWithinRange(input, 1, 2);
+            if (ipTypeValidationResult.Failure)
+            {
+                return Result.Fail<ServerInfo>(ipTypeValidationResult.Error);
+            }
+
+            switch (ipTypeValidationResult.Value)
+            {
+                case PublicIpAddress:
+                    clientInfo.PublicIpAddress = clientIp;
+                    break;
+
+                case LocalIpAddress:
+                    clientInfo.LocalIpAddress = clientIp;
+                    break;
+            }
+                
             Console.WriteLine($"Enter the server's port number that handles incoming requests (range {PortRangeMin}-{PortRangeMax}):");
             input = Console.ReadLine();
 
@@ -343,17 +363,11 @@ namespace ServerConsole
                 return Result.Fail<ServerInfo>(ipValidationResult.Error);
             }
 
-            var clientPort = portValidationResult.Value;
+            clientInfo.Port = portValidationResult.Value;
 
             Console.WriteLine("Enter the path of the transfer folder on the server:");
             input = Console.ReadLine();
-
-            var clientInfo = new ServerInfo
-            {
-                PublicIpAddress = clientIp,
-                Port = clientPort,
-                TransferFolder = input
-            };
+            clientInfo.TransferFolder = input;
 
             return Result.Ok(clientInfo);
         }
@@ -485,6 +499,52 @@ namespace ServerConsole
             }
 
             return Result.Ok(listOfFiles[fileMenuChoice - 1]);
+        }
+
+        private static async Task<Result> GetFileFromClientAsync(
+            TplSocketServer server,
+            ServerInfo myInfo,
+            ServerInfo clientInfo,
+            int ipChoice,
+            CancellationToken token)
+        {
+            var clientIp = GetChosenIpAddress(clientInfo, ipChoice);
+
+            Console.WriteLine($"Requesting list of files from {clientIp}:{clientInfo.Port}...");
+            Console.WriteLine(string.Empty);
+
+            var requestFileListResult =
+                 await server.RequestFileListAsync(
+                    clientIp,
+                    clientInfo.Port,
+                    myInfo.LocalIpAddress,
+                    myInfo.Port,
+                    token);
+
+            return requestFileListResult.Failure ? requestFileListResult : Result.Ok();
+        }
+
+        private static bool UserWantsToShutdownServer()
+        {
+            int shutdownChoice = 0;
+            while (shutdownChoice is 0)
+            {
+                Console.WriteLine("Shutdown server?");
+                Console.WriteLine("1. Yes");
+                Console.WriteLine("2. No");
+
+                var input = Console.ReadLine();
+                var validationResult = ValidateNumberIsWithinRange(input, 1, 2);
+                if (validationResult.Failure)
+                {
+                    Console.WriteLine(validationResult.Error);
+                    continue;
+                }
+
+                shutdownChoice = validationResult.Value;
+            }
+
+            return shutdownChoice == 1;
         }
 
         private static string GetChosenIpAddress(ServerInfo serverInfo, int ipChoice)

@@ -13,7 +13,7 @@
 
         public static byte[] ConstuctTextMessageRequest(string message, string localIpAddress, int localPort)
         {
-            var requestFlag = BitConverter.GetBytes((int)TransferType.TextMessage);
+            var requestFlag = BitConverter.GetBytes((int)RequestType.TextMessage);
             var messageData = Encoding.UTF8.GetBytes(message);
             var messageDataLen = BitConverter.GetBytes(messageData.Length);
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
@@ -33,9 +33,13 @@
             return messageWrapper.ToArray();
         }
 
-        public static byte[] ConstructInboundFileTransferRequest(string remoteFilePath, string localIpAddress, int localPort, string localFolderPath)
+        public static byte[] ConstructInboundFileTransferRequest(
+            string remoteFilePath, 
+            string localIpAddress, 
+            int localPort, 
+            string localFolderPath)
         {
-            var requestFlag = BitConverter.GetBytes((int)TransferType.OutboundFileTransfer);
+            var requestFlag = BitConverter.GetBytes((int)RequestType.OutboundFileTransfer);
             var remoteFilePathData = Encoding.UTF8.GetBytes(remoteFilePath);
             var remoteFilePathLen = BitConverter.GetBytes(remoteFilePathData.Length);
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
@@ -59,9 +63,12 @@
             return messageWrapper.ToArray();
         }
 
-        public static byte[] ConstructOutboundFileTransferRequest(string localFilePath, long fileSizeBytes, string remoteFolderPath)
+        public static byte[] ConstructOutboundFileTransferRequest(
+            string localFilePath, 
+            long fileSizeBytes, 
+            string remoteFolderPath)
         {
-            var requestFlag = BitConverter.GetBytes((int)TransferType.InboundFileTransfer);
+            var requestFlag = BitConverter.GetBytes((int)RequestType.InboundFileTransfer);
             var fileName = Path.GetFileName(localFilePath);
             var fileNameData = Encoding.UTF8.GetBytes(fileName);
             var fileNameLen = BitConverter.GetBytes(fileNameData.Length);
@@ -78,6 +85,64 @@
             messageWrapper.AddRange(sizeBytesData);
             messageWrapper.AddRange(targetDirLen);
             messageWrapper.AddRange(targetDirData);
+
+            return messageWrapper.ToArray();
+        }
+
+        public static byte[] ConstructFileListRequest(string localIpAddress, int localPort)
+        {
+            var requestFlag = BitConverter.GetBytes((int) RequestType.GetFileList);
+            var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
+            var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
+            var thisServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));
+            var thisServerPortLen = BitConverter.GetBytes(thisServerPortData.Length);
+
+            var messageWrapper = new List<byte>();
+            messageWrapper.AddRange(requestFlag);
+            messageWrapper.AddRange(thisServerIpLen);
+            messageWrapper.AddRange(thisServerIpData);
+            messageWrapper.AddRange(thisServerPortLen);
+            messageWrapper.AddRange(thisServerPortData);
+
+            return messageWrapper.ToArray();
+        }
+
+        public static byte[] ConstructFileListResponse(
+            List<(string filePath, long fileSizeBytes)> fileInfoList, 
+            char fileSeparator,
+            char fileSizeSeparator,
+            string remoteIpAddress, 
+            int remotePort)
+        {
+            var requestFlag = BitConverter.GetBytes((int)RequestType.ReceiveFileList);
+            var remoteServerIpData = Encoding.UTF8.GetBytes(remoteIpAddress);
+            var remoteServerIpLen = BitConverter.GetBytes(remoteServerIpData.Length);
+            var remoteServerPortData = Encoding.UTF8.GetBytes(remotePort.ToString(CultureInfo.InvariantCulture));
+            var remoteServerPortLen = BitConverter.GetBytes(remoteServerPortData.Length);
+
+            var messageWrapper = new List<byte>();
+            messageWrapper.AddRange(requestFlag);
+            messageWrapper.AddRange(remoteServerIpLen);
+            messageWrapper.AddRange(remoteServerIpData);
+            messageWrapper.AddRange(remoteServerPortLen);
+            messageWrapper.AddRange(remoteServerPortData);
+
+            var allFileInfo = string.Empty;
+            foreach (var fileInfo in fileInfoList)
+            {           
+                var fileInfoString = $"{fileInfo.filePath}{fileSeparator}{fileInfo.fileSizeBytes}{fileSizeSeparator}";
+
+                allFileInfo += fileInfoString;
+            }
+            var fileInfoListData = Encoding.UTF8.GetBytes(allFileInfo);
+            var fileInfoListLen = BitConverter.GetBytes(fileInfoListData.Length);
+            var fileSeparatorData = Encoding.UTF8.GetBytes(new[] {fileSeparator});
+            var fileSizeSeparatorData = Encoding.UTF8.GetBytes(new[] {fileSizeSeparator});
+
+            messageWrapper.AddRange(fileInfoListLen);
+            messageWrapper.AddRange(fileInfoListData);
+            messageWrapper.AddRange(fileSeparatorData);
+            messageWrapper.AddRange(fileSizeSeparatorData);
 
             return messageWrapper.ToArray();
         }

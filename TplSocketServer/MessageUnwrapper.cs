@@ -1,4 +1,7 @@
-﻿namespace TplSocketServer
+﻿using System.Collections.Generic;
+using System.Linq;
+
+namespace TplSocketServer
 {
     using System;
     using System.IO;
@@ -82,6 +85,57 @@
                 clientFolderLen);
 
             return (localFilePath, clientIpAddress, clientPortNumber, remoteFolderPath);
+        }
+
+        public static (string remoteIpAddress, int remotePortNumber) ReadFileListRequest(byte[] buffer)
+        {
+            int remoteIpAddressLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
+            var remoteIpAddress = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, remoteIpAddressLen);
+
+            int remotePortNumberLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + remoteIpAddressLen);
+            var remotePortNumber = int.Parse(Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + remoteIpAddressLen, remotePortNumberLen));
+
+            return (remoteIpAddress, remotePortNumber);
+        }
+
+        public static (string remoteServerIp, int remoteServerPort, List<(string filePath, long fileSize)> fileInfo) ReadFileListResponse(byte[] buffer)
+        {
+            int remoteServerIpLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
+            var remoteServerIp = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, remoteServerIpLen);
+
+            int remoteServerPortLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + remoteServerIpLen);
+            var remoteServerPort = int.Parse(Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + remoteServerIpLen, remoteServerPortLen));
+
+            int fileInfoLen =
+                BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 3) + remoteServerIpLen + remoteServerPortLen);
+
+            var fileInfo = Encoding.UTF8.GetString(buffer,
+                (SizeOfInt32InBytes * 4) + remoteServerIpLen + remoteServerPortLen, fileInfoLen);
+
+            var fileSeparaorChar = Encoding.UTF8.GetChars(buffer,
+                (SizeOfInt32InBytes * 4) + remoteServerIpLen + remoteServerPortLen + fileInfoLen, 1);
+
+            var fileSizeSeparatorChar = Encoding.UTF8.GetChars(buffer,
+                (SizeOfInt32InBytes * 4) + remoteServerIpLen + remoteServerPortLen + fileInfoLen + SizeOfCharInBytes,
+                1);
+
+            var fileInfoList = new List<(string filePath, long fileSize)>();
+            var fileInfoSplit = fileInfo.Split(fileSizeSeparatorChar).ToList();
+
+            foreach (var info in fileInfoSplit)
+            {
+                var infoSplit = info.Split(fileSeparaorChar);
+                if (infoSplit.Length == 2)
+                {
+                    var filePath = infoSplit[0];
+                    if (long.TryParse(infoSplit[1], out long fileSizeBytes))
+                    {
+                        fileInfoList.Add((filePath, fileSizeBytes));
+                    }
+                }
+            }
+
+            return (remoteServerIp, remoteServerPort, fileInfoList);
         }
     }
 }

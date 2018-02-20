@@ -39,7 +39,7 @@
                     break;
 
                 case ServerEventType.DetermineTransferTypeCompleted:
-                    report += $"Completed Process: Determine transfer typee\n\n\tTransfer Type:\t{serverEventInfo.TransferType}\n";
+                    report += $"Completed Process: Determine transfer typee\n\n\tTransfer Type:\t{serverEventInfo.RequestType}\n";
                     break;
 
                 case ServerEventType.ShutdownListenSocketStarted:
@@ -56,6 +56,38 @@
 
                 case ServerEventType.SendTextMessageCompleted:
                     report += "Completed Process: Send Text Message";
+                    break;
+
+                case ServerEventType.SendFileListRequestStarted:
+                    report += $"Started Process: Send File List Request\n\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n";
+                    break;
+
+                case ServerEventType.SendFileListRequestCompleted:
+                    report += "Completed Process: Send File List Request";
+                    break;
+
+                case ServerEventType.ReceiveFileListRequestStarted:
+                    report += "Started Process: Receive File List Request";
+                    break;
+
+                case ServerEventType.ReceiveFileListRequestCompleted:
+                    report += $"Completed Process: Receive File List Request\n\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n";
+                    break;
+
+                case ServerEventType.SendFileListResponseStarted:
+                    report += $"Started Process: Send File List Response\n\n\tFile Info List:\t\t{serverEventInfo.FileInfoList.Count} files available\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n";
+                    break;
+
+                case ServerEventType.SendFileListResponseCompleted:
+                    report += "Completed Process: Send File List Response";
+                    break;
+
+                case ServerEventType.ReceiveFileListResponseStarted:
+                    report += "Started Process: Receive File List Response";
+                    break;
+
+                case ServerEventType.ReceiveFileListResponseCompleted:
+                    report += $"Completed Process: Receive File List Response\n\n\tFile Info List:\t\t{serverEventInfo.FileInfoList.Count} files available\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n";
                     break;
 
                 case ServerEventType.SendInboundFileTransferInfoStarted:
