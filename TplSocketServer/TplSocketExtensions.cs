@@ -1,5 +1,9 @@
-﻿namespace TplSocketServer
+﻿
+
+namespace TplSocketServer
 {
+    using AaronLuna.Common.Result;
+
     using System;
     using System.Net.Sockets;
     using System.Threading.Tasks;

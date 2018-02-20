@@ -1,15 +1,17 @@
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-
-namespace TplSocketsTest
+namespace TplSocketServerTest
 {
+    using AaronLuna.Common.Network;
+    using AaronLuna.Common.Result;
+
+    using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+    using System.Linq;
+    using System.Net;
+    using System.Net.Sockets;
     using System.Text;
     using System.Threading.Tasks;
 
     using TplSocketServer;
-
-    using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     [TestClass]
     public class TplSocketTestFixture
