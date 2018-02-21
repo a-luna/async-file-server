@@ -42,6 +42,7 @@
                 var settings = InitializeAppSettings();
                 var myInfo = await ConfigureListenServerAsync();
                 listenServer = new TplSocketServer(settings);
+                listenServer.EventOccurred += HandleServerEvent;
 
                 var cts = new CancellationTokenSource();
                 var token = cts.Token;
