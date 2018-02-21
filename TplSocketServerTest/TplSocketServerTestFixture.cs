@@ -108,8 +108,8 @@ namespace TplSocketServerTest
         [TestMethod]
         public async Task VerifySendTextMessage()
         {
-            int localPort = 8001;
-            int remoteServerPort = 8002;
+            var localPort = 8001;
+            var remoteServerPort = 8002;
             var messageForServer = "Hello, fellow TPL $ocket Server! This is a text message with a few special ch@r@cters. `~/|\\~'";
             var messageForClient = "I don't know who or what you are referring to. I am a normal human, sir, and most definitely NOT some type of server. Good day.";
 
@@ -224,10 +224,10 @@ namespace TplSocketServerTest
         [TestMethod]
         public async Task VerifySendFileAsync()
         {
-            int remoteServerPort = 8003;
-            string sendFilePath = _localFilePath;
-            string receiveFilePath = _remoteFilePath;
-            string receiveFolderPath = _remoteFolder;
+            var remoteServerPort = 8003;
+            var sendFilePath = _localFilePath;
+            var receiveFilePath = _remoteFilePath;
+            var receiveFolderPath = _remoteFolder;
 
             var token = _tokenSource.Token;
 
@@ -241,7 +241,7 @@ namespace TplSocketServerTest
 
             while (!_serverIsListening) { }
 
-            long sizeOfFileToSend = new FileInfo(sendFilePath).Length;
+            var sizeOfFileToSend = new FileInfo(sendFilePath).Length;
             FileHelper.DeleteFileIfAlreadyExists(receiveFilePath);
             Assert.IsFalse(File.Exists(receiveFilePath));
 
@@ -274,7 +274,7 @@ namespace TplSocketServerTest
             Assert.IsTrue(File.Exists(receiveFilePath));
             Assert.AreEqual(FileName, Path.GetFileName(receiveFilePath));
 
-            long receivedFileSize = new FileInfo(receiveFilePath).Length;
+            var receivedFileSize = new FileInfo(receiveFilePath).Length;
             Assert.AreEqual(sizeOfFileToSend, receivedFileSize);
 
             try
@@ -311,10 +311,10 @@ namespace TplSocketServerTest
         [TestMethod]
         public async Task VerifyGetFileAsync()
         {
-            int localPort = 8004;
-            int remoteServerPort = 8005;
-            string getFilePath = _remoteFilePath;
-            string receivedFilePath = _localFilePath;
+            var localPort = 8004;
+            var remoteServerPort = 8005;
+            var getFilePath = _remoteFilePath;
+            var receivedFilePath = _localFilePath;
 
             var token = _tokenSource.Token;
 
@@ -362,8 +362,8 @@ namespace TplSocketServerTest
             Assert.IsTrue(File.Exists(receivedFilePath));
             Assert.AreEqual(FileName, Path.GetFileName(receivedFilePath));
 
-            long sentFileSize = new FileInfo(getFilePath).Length;
-            long receivedFileSize = new FileInfo(receivedFilePath).Length;
+            var sentFileSize = new FileInfo(getFilePath).Length;
+            var receivedFileSize = new FileInfo(receivedFilePath).Length;
             Assert.AreEqual(sentFileSize, receivedFileSize);
 
             try

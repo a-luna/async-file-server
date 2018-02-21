@@ -17,6 +17,8 @@ namespace TplSocketServer
     public class TplSocketServer
     {
         const string ConfirmationMessage = "handshake";
+        const string ServerIsNotListeningError = "Server's listening port is unbound, cannot accept inbound file transfers";
+
         const int OneSecondInMilliseconds = 1000;
 
         readonly int _maxConnections;
@@ -47,15 +49,15 @@ namespace TplSocketServer
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         }
 
-        public TplSocketServer(ServerSettings serverSettings)
+        public TplSocketServer(AppSettings appSettings)
         {
-            _transferFolderPath = serverSettings.TransferFolderPath;
+            _transferFolderPath = appSettings.TransferFolderPath;
 
-            _maxConnections = serverSettings.SocketSettings.MaxNumberOfConections;
-            _bufferSize = serverSettings.SocketSettings.BufferSize;
-            _connectTimeoutMs = serverSettings.SocketSettings.ConnectTimeoutMs;
-            _receiveTimeoutMs = serverSettings.SocketSettings.ReceiveTimeoutMs;
-            _sendTimeoutMs = serverSettings.SocketSettings.SendTimeoutMs;
+            _maxConnections = appSettings.SocketSettings.MaxNumberOfConections;
+            _bufferSize = appSettings.SocketSettings.BufferSize;
+            _connectTimeoutMs = appSettings.SocketSettings.ConnectTimeoutMs;
+            _receiveTimeoutMs = appSettings.SocketSettings.ReceiveTimeoutMs;
+            _sendTimeoutMs = appSettings.SocketSettings.SendTimeoutMs;
 
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         }
@@ -380,7 +382,7 @@ namespace TplSocketServer
         {
             long totalBytesReceived = 0;
             float percentComplete = 0;
-            int receiveCount = 0;
+            var receiveCount = 0;
 
             // Read file bytes from transfer socket until 
             //      1. the entire file has been received OR 
@@ -443,7 +445,7 @@ namespace TplSocketServer
 
                 // THese two lines and the event raised below are useful when debugging socket errors
                 receiveCount++;
-                long bytesRemaining = fileSizeInBytes - totalBytesReceived;
+                var bytesRemaining = fileSizeInBytes - totalBytesReceived;
 
                 //EventOccurred?.Invoke(new ServerEventInfo
                 //{
@@ -513,8 +515,18 @@ namespace TplSocketServer
         {
             EventOccurred?.Invoke(new ServerEventInfo{ EventType = ServerEventType.ReceiveFileListRequestStarted});
 
-            (string remoteIpAddress, 
-                int remotePortNumber) = MessageUnwrapper.ReadFileListRequest(buffer);
+            (string requestorIpAddress, 
+                int requestorPortNumber,
+                string targetFolderPath) = MessageUnwrapper.ReadFileListRequest(buffer);
+
+            EventOccurred?.Invoke(
+                new ServerEventInfo
+                {
+                    EventType = ServerEventType.ReceiveFileListRequestCompleted,
+                    RemoteServerIpAddress = requestorIpAddress,
+                    RemoteServerPortNumber = requestorPortNumber,
+                    RemoteFolder = targetFolderPath
+                });
 
             List<string> listOfFiles;
             try
@@ -532,8 +544,8 @@ namespace TplSocketServer
 
                 var sendResult = await SendTextMessageAsync(
                         message, 
-                        remoteIpAddress, 
-                        remotePortNumber, 
+                        requestorIpAddress, 
+                        requestorPortNumber, 
                         _localIpAddress,
                         _localPort, 
                         token)
@@ -555,21 +567,13 @@ namespace TplSocketServer
                 var fileSize = new FileInfo(file).Length;
                 fileInfoList.Add((file, fileSize));
             }
-
-            EventOccurred?.Invoke(
-                new ServerEventInfo
-                {
-                    EventType = ServerEventType.ReceiveFileListRequestCompleted,
-                    RemoteServerIpAddress = remoteIpAddress,
-                    RemoteServerPortNumber = remotePortNumber
-                });
-
+            
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerStarted });
 
             var transferSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
             var connectResult =
-                await transferSocket.ConnectWithTimeoutAsync(remoteIpAddress, remotePortNumber, _connectTimeoutMs)
+                await transferSocket.ConnectWithTimeoutAsync(requestorIpAddress, requestorPortNumber, _connectTimeoutMs)
                     .ConfigureAwait(false);
 
             if (connectResult.Failure)
@@ -582,18 +586,22 @@ namespace TplSocketServer
             EventOccurred?.Invoke(new ServerEventInfo
             {
                 EventType = ServerEventType.SendFileListResponseStarted,
-                RemoteServerIpAddress = remoteIpAddress,
-                RemoteServerPortNumber = remotePortNumber,
-                FileInfoList = fileInfoList
+                RemoteServerIpAddress = _localIpAddress,
+                RemoteServerPortNumber = _localPort,
+                FileInfoList = fileInfoList,
+                LocalFolder = targetFolderPath,
             });
 
             var fileListData =
                 MessageWrapper.ConstructFileListResponse(
                     fileInfoList,
-                    '*',
-                    '|',
-                    remoteIpAddress,
-                    remotePortNumber);
+                    "*",
+                    "|",
+                    _localIpAddress,
+                    _localPort,
+                    requestorIpAddress,
+                    requestorPortNumber,
+                    targetFolderPath);
 
             var sendRequest =
                 await transferSocket.SendWithTimeoutAsync(fileListData, 0, fileListData.Length, 0, _sendTimeoutMs)
@@ -618,6 +626,9 @@ namespace TplSocketServer
 
             var(remoteServerIp, 
                 remoteServerPort,
+                localIp,
+                localPort,
+                transferFolder,
                 fileInfoList) = MessageUnwrapper.ReadFileListResponse(buffer);
 
             if (token.IsCancellationRequested)
@@ -631,6 +642,9 @@ namespace TplSocketServer
                     EventType = ServerEventType.ReceiveFileListResponseCompleted,
                     RemoteServerIpAddress = remoteServerIp,
                     RemoteServerPortNumber = remoteServerPort,
+                    LocalIpAddress = localIp,
+                    LocalPortNumber = localPort,
+                    LocalFolder = transferFolder,
                     FileInfoList = fileInfoList
                 });
 
@@ -830,11 +844,6 @@ namespace TplSocketServer
             string localFolderPath,
             CancellationToken token)
         {
-            if (!_listenSocket.IsBound)
-            {
-                return Result.Fail("Server's listening port is unbound, cannot accept inbound file transfers");
-            }
-
             if (token.IsCancellationRequested)
             {
                 token.ThrowIfCancellationRequested();
@@ -894,13 +903,9 @@ namespace TplSocketServer
             int remoteServerPort,
             string localIpAddress,
             int localPort,
+            string targetFolder,
             CancellationToken token)
         {
-            if (!_listenSocket.IsBound)
-            {
-                return Result.Fail("Server's listening port is unbound, cannot accept inbound file transfers");
-            }
-
             if (token.IsCancellationRequested)
             {
                 token.ThrowIfCancellationRequested();
@@ -921,14 +926,15 @@ namespace TplSocketServer
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerCompleted });
 
             var requestData =
-                MessageWrapper.ConstructFileListRequest(localIpAddress, localPort);
+                MessageWrapper.ConstructFileListRequest(localIpAddress, localPort, targetFolder);
 
             EventOccurred?.Invoke(
                 new ServerEventInfo
                 {
                     EventType = ServerEventType.SendFileListRequestStarted,
                     RemoteServerIpAddress = localIpAddress,
-                    RemoteServerPortNumber = localPort
+                    RemoteServerPortNumber = localPort,
+                    RemoteFolder = targetFolder
                 });
 
             var requestResult =

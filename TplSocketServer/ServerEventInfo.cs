@@ -15,6 +15,8 @@ namespace TplSocketServer
         public string TextMessage { get; set; }
         public string RemoteServerIpAddress { get; set; }
         public int RemoteServerPortNumber { get; set; }
+        public string LocalIpAddress { get; set; }
+        public int LocalPortNumber { get; set; }
         public string LocalFolder { get; set; }
         public string RemoteFolder { get; set; }
         public string FileName { get; set; }

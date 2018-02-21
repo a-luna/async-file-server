@@ -5,36 +5,35 @@ namespace TplSocketServer
 {
     using System.Collections.Generic;
 
-    public class ServerSettings
+    public class AppSettings
     {
-        public ServerSettings()
+        public AppSettings()
         {
             TransferFolderPath = string.Empty;
             SocketSettings = new SocketSettings();
-            RemoteServers = new List<ServerInfo>();
+            RemoteServers = new List<ConnectionInfo>();
         }
 
-        public int PortNumber { get; set; }
         public string TransferFolderPath { get; set; }
         public SocketSettings SocketSettings { get; set; }
-        public List<ServerInfo> RemoteServers { get; set; }
+        public List<ConnectionInfo> RemoteServers { get; set; }
 
-        public static void Serialize(ServerSettings settings, string filePath)
+        public static void Serialize(AppSettings settings, string filePath)
         {
-            var serializer = new XmlSerializer(typeof(ServerSettings));
+            var serializer = new XmlSerializer(typeof(AppSettings));
             using (var writer = new StreamWriter(filePath))
             {
                 serializer.Serialize(writer, settings);
             }
         }
 
-        public static ServerSettings Deserialize(string filePath)
+        public static AppSettings Deserialize(string filePath)
         {
-            ServerSettings settings = new ServerSettings();
-            var deserializer = new XmlSerializer(typeof(ServerSettings));
+            AppSettings settings;
+            var deserializer = new XmlSerializer(typeof(AppSettings));
             using (var reader = new StreamReader(filePath))
             {
-                settings = (ServerSettings) deserializer.Deserialize(reader);
+                settings = (AppSettings) deserializer.Deserialize(reader);
             }
 
             return settings;

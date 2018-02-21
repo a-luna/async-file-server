@@ -1,18 +1,13 @@
-﻿using System.Net;
-
-namespace TplSocketServer
+﻿namespace TplSocketServer
 {
-    using AaronLuna.Common.Http;
     using AaronLuna.Common.Network;
-    using AaronLuna.Common.Result;
-    using System.Threading.Tasks;
+    using System.Net;
 
-    public struct ServerInfo
+    public struct ConnectionInfo
     {
         public string LocalIpAddress { get; set; }
         public string PublicIpAddress { get; set; }
-        public int Port { get; set; }
-        public string TransferFolder { get; set; }
+        public int Port { get; set; }       
         
         public string GetLocalEndPoint()
         {
@@ -26,18 +21,26 @@ namespace TplSocketServer
 
         public IPAddress GetLocalIpAddress()
         {
-            return IPAddress.Parse(LocalIpAddress);
+            var parse = IpAddressHelper.ParseSingleIPv4Address(LocalIpAddress);
+
+            return parse.Success
+                ? parse.Value
+                : IPAddress.None;
         }
 
         public IPAddress GetPublicIpAddress()
         {
-            return IPAddress.Parse(PublicIpAddress);
+            var parse = IpAddressHelper.ParseSingleIPv4Address(PublicIpAddress);
+
+            return parse.Success
+                ? parse.Value
+                : IPAddress.None;
         }
     }
 
     public static class ServerInfoExtensions
     {
-        public static bool IsEqualTo(this ServerInfo myInfo, ServerInfo otherInfo)
+        public static bool IsEqualTo(this ConnectionInfo myInfo, ConnectionInfo otherInfo)
         {
             //// Transfer Folder not used to determine equality, ip address
             //// and port number combination  must be unique 

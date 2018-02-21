@@ -75,7 +75,7 @@
                     break;
 
                 case ServerEventType.SendFileListResponseStarted:
-                    report += $"Started Process: Send File List Response\n\n\tFile Info List:\t\t{serverEventInfo.FileInfoList.Count} files available\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n";
+                    report += $"Started Process: Send File List Response\n\n\tFile Info List:\t\t{serverEventInfo.FileInfoList.Count} files available\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n\tTarget Folder:\t\t{serverEventInfo.LocalFolder}";
                     break;
 
                 case ServerEventType.SendFileListResponseCompleted:
@@ -87,7 +87,7 @@
                     break;
 
                 case ServerEventType.ReceiveFileListResponseCompleted:
-                    report += $"Completed Process: Receive File List Response\n\n\tFile Info List:\t\t{serverEventInfo.FileInfoList.Count} files available\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n";
+                    report += $"Completed Process: Receive File List Response\n\n\tFile Info List:\t\t{serverEventInfo.FileInfoList.Count} files available\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n\tTarget Folder:\t\t{serverEventInfo.LocalFolder}";
                     break;
 
                 case ServerEventType.SendInboundFileTransferInfoStarted:

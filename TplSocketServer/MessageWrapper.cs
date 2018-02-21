@@ -92,13 +92,15 @@ namespace TplSocketServer
             return messageWrapper.ToArray();
         }
 
-        public static byte[] ConstructFileListRequest(string localIpAddress, int localPort)
+        public static byte[] ConstructFileListRequest(string localIpAddress, int localPort, string targetFolder)
         {
             var requestFlag = BitConverter.GetBytes((int) RequestType.GetFileList);
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
             var thisServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));
             var thisServerPortLen = BitConverter.GetBytes(thisServerPortData.Length);
+            var targetFolderData = Encoding.UTF8.GetBytes(targetFolder);
+            var targetFolderLen = BitConverter.GetBytes(targetFolderData.Length);
 
             var messageWrapper = new List<byte>();
             messageWrapper.AddRange(requestFlag);
@@ -106,29 +108,51 @@ namespace TplSocketServer
             messageWrapper.AddRange(thisServerIpData);
             messageWrapper.AddRange(thisServerPortLen);
             messageWrapper.AddRange(thisServerPortData);
+            messageWrapper.AddRange(targetFolderLen);
+            messageWrapper.AddRange(targetFolderData);
 
             return messageWrapper.ToArray();
         }
 
         public static byte[] ConstructFileListResponse(
             List<(string filePath, long fileSizeBytes)> fileInfoList, 
-            char fileInfoSeparator,
-            char fileSeparator,
-            string remoteIpAddress, 
-            int remotePort)
+            string fileInfoSeparator,
+            string fileSeparator,
+            string localIpAddress, 
+            int localPort,
+            string requestorIpAddress,
+            int requestorPort,
+            string remoteFolderPath)
         {
             var requestFlag = BitConverter.GetBytes((int)RequestType.ReceiveFileList);
-            var remoteServerIpData = Encoding.UTF8.GetBytes(remoteIpAddress);
-            var remoteServerIpLen = BitConverter.GetBytes(remoteServerIpData.Length);
-            var remoteServerPortData = Encoding.UTF8.GetBytes(remotePort.ToString(CultureInfo.InvariantCulture));
-            var remoteServerPortLen = BitConverter.GetBytes(remoteServerPortData.Length);
+
+            var localServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
+            var localServerIpLen = BitConverter.GetBytes(localServerIpData.Length);
+
+            var localServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));
+            var localServerPortLen = BitConverter.GetBytes(localServerPortData.Length);
+
+            var requestorIpData = Encoding.UTF8.GetBytes(requestorIpAddress);
+            var requestorIpLen = BitConverter.GetBytes(requestorIpData.Length);
+
+            var requestorPortData = Encoding.UTF8.GetBytes(requestorPort.ToString(CultureInfo.InvariantCulture));
+            var requestorPortLen = BitConverter.GetBytes(requestorPortData.Length);
+
+            var requestorFolderPathData = Encoding.UTF8.GetBytes(remoteFolderPath);
+            var requestorFolderPathLen = BitConverter.GetBytes(requestorFolderPathData.Length);
 
             var messageWrapper = new List<byte>();
             messageWrapper.AddRange(requestFlag);
-            messageWrapper.AddRange(remoteServerIpLen);
-            messageWrapper.AddRange(remoteServerIpData);
-            messageWrapper.AddRange(remoteServerPortLen);
-            messageWrapper.AddRange(remoteServerPortData);
+            messageWrapper.AddRange(localServerIpLen);
+            messageWrapper.AddRange(localServerIpData);
+            messageWrapper.AddRange(localServerPortLen);
+            messageWrapper.AddRange(localServerPortData);
+            messageWrapper.AddRange(requestorIpLen);
+            messageWrapper.AddRange(requestorIpData);
+            messageWrapper.AddRange(requestorPortLen);
+            messageWrapper.AddRange(requestorPortData);
+            messageWrapper.AddRange(requestorFolderPathLen);
+            messageWrapper.AddRange(requestorFolderPathData);
 
             var allFileInfo = string.Empty;
             foreach (var i in Enumerable.Range(0, fileInfoList.Count))
@@ -142,14 +166,19 @@ namespace TplSocketServer
                     allFileInfo += $"{fileSeparator}";
                 }
             }
+
             var fileInfoListData = Encoding.UTF8.GetBytes(allFileInfo);
             var fileInfoListLen = BitConverter.GetBytes(fileInfoListData.Length);
-            var fileInfoSeparatorData = Encoding.UTF8.GetBytes(new[] {fileInfoSeparator});
-            var fileSeparatorData = Encoding.UTF8.GetBytes(new[] {fileSeparator});
+            var fileInfoSeparatorData = Encoding.UTF8.GetBytes(fileInfoSeparator);
+            var fileInfoSeparatorLen = BitConverter.GetBytes(fileInfoSeparatorData.Length);
+            var fileSeparatorData = Encoding.UTF8.GetBytes(fileSeparator);
+            var fileSeparatorLen = BitConverter.GetBytes(fileSeparatorData.Length);
 
             messageWrapper.AddRange(fileInfoListLen);
             messageWrapper.AddRange(fileInfoListData);
+            messageWrapper.AddRange(fileInfoSeparatorLen);
             messageWrapper.AddRange(fileInfoSeparatorData);
+            messageWrapper.AddRange(fileSeparatorLen);
             messageWrapper.AddRange(fileSeparatorData);
 
             return messageWrapper.ToArray();

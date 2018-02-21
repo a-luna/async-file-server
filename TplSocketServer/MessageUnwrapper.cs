@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿
 
 namespace TplSocketServer
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Text;
 
     internal class MessageUnwrapper
@@ -19,123 +20,107 @@ namespace TplSocketServer
 
         public static (string message, string remoteIpAddress, int remotePortNumber) ReadTextMessageRequest(byte[] buffer)
         {
-            int messageDataLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
-            var message = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, messageDataLen);
+            var messageLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
+            var message = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, messageLen);
 
-            int clientIpLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + messageDataLen);
-            var clientIpAddress = Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + messageDataLen, clientIpLen);
+            var clientIpLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + messageLen);
+            var clientIp = Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + messageLen, clientIpLen);
 
-            int clientPortLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 3) + messageDataLen + clientIpLen);
-            var clientPortNumber = int.Parse(Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 4) + messageDataLen + clientIpLen, clientPortLen));
+            var clientPortLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 3) + messageLen + clientIpLen);
+            var clientPort = int.Parse(Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 4) + messageLen + clientIpLen, clientPortLen));
 
-            return (message, clientIpAddress, clientPortNumber);
+            return (message, clientIp, clientPort);
         }
 
         public static (string filePath, long fileSizeInBytes) ReadInboundFileTransferRequest(byte[] buffer)
         {
-            int fileNameLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
+            var fileNameLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
             var fileName = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, fileNameLen);
 
-            int fileSizeLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + fileNameLen);
-            var fileSizeInBytes = Convert.ToInt64(
-                Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + fileNameLen, fileSizeLen));
+            var fileSizeLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + fileNameLen);
+            var fileSize = Convert.ToInt64( Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + fileNameLen, fileSizeLen));
 
-            int targetDirLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 3) + fileNameLen + fileSizeLen);
-            var localFolderPath = Encoding.UTF8.GetString(
-                buffer,
-                (SizeOfInt32InBytes * 4) + fileNameLen + fileSizeLen,
-                targetDirLen);
+            var targetFolderLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 3) + fileNameLen + fileSizeLen);
+            var targerFolder = Encoding.UTF8.GetString( buffer, (SizeOfInt32InBytes * 4) + fileNameLen + fileSizeLen, targetFolderLen);
 
-            var localFilePath = Path.Combine(localFolderPath, fileName);
+            var localFilePath = Path.Combine(targerFolder, fileName);
 
-            return (localFilePath, fileSizeInBytes);
+            return (localFilePath, fileSize);
         }
 
         public static (string localFilePath, string remoteIpAddress, int remotePortNumber, string remoteFilePath) ReadOutboundFileTransferRequest(byte[] buffer)
         {
-            int requestedFilePathLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
-            var localFilePath = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, requestedFilePathLen);
-            
-            var fileName = Path.GetFileName(localFilePath);
+            var localFilePathLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
+            var localFilePath = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, localFilePathLen);
 
-            int clientIpLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + requestedFilePathLen);
+            var clientIpLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + localFilePathLen);
+            var clientIp = Encoding.UTF8.GetString( buffer, (SizeOfInt32InBytes * 3) + localFilePathLen, clientIpLen);
 
-            var clientIpAddress = Encoding.UTF8.GetString(
-                buffer,
-                (SizeOfInt32InBytes * 3) + requestedFilePathLen,
-                clientIpLen);
+            var clientPortLen = BitConverter.ToInt32( buffer, (SizeOfInt32InBytes * 3) + localFilePathLen + clientIpLen);
+            var clientPort = int.Parse( Encoding.UTF8.GetString( buffer, (SizeOfInt32InBytes * 4) + localFilePathLen + clientIpLen, clientPortLen));
 
-            int clientPortLen = BitConverter.ToInt32(
-                buffer,
-                (SizeOfInt32InBytes * 3) + requestedFilePathLen + clientIpLen);
+            var remoteFolderData = BitConverter.ToInt32( buffer, (SizeOfInt32InBytes * 4) + localFilePathLen + clientIpLen + clientPortLen);
+            var remoteFolder = Encoding.UTF8.GetString( buffer, (SizeOfInt32InBytes * 5) + localFilePathLen + clientIpLen + clientPortLen, remoteFolderData);
 
-            var clientPortNumber = int.Parse(
-                Encoding.UTF8.GetString(
-                    buffer,
-                    (SizeOfInt32InBytes * 4) + requestedFilePathLen + clientIpLen,
-                    clientPortLen));
-
-            int clientFolderLen = BitConverter.ToInt32(
-                buffer,
-                (SizeOfInt32InBytes * 4) + requestedFilePathLen + clientIpLen + clientPortLen);
-
-            var remoteFolderPath = Encoding.UTF8.GetString(
-                buffer,
-                (SizeOfInt32InBytes * 5) + requestedFilePathLen + clientIpLen + clientPortLen,
-                clientFolderLen);
-
-            return (localFilePath, clientIpAddress, clientPortNumber, remoteFolderPath);
+            return (localFilePath, clientIp, clientPort, remoteFolder);
         }
 
-        public static (string remoteIpAddress, int remotePortNumber) ReadFileListRequest(byte[] buffer)
+        public static (string remoteIpAddress, int remotePortNumber, string remoteFolderPath) ReadFileListRequest(byte[] buffer)
         {
-            int remoteIpAddressLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
-            var remoteIpAddress = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, remoteIpAddressLen);
+            var remoteIpAddressLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
+            var remoteIp = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, remoteIpAddressLen);
 
-            int remotePortNumberLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + remoteIpAddressLen);
-            var remotePortNumber = int.Parse(Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + remoteIpAddressLen, remotePortNumberLen));
+            var remotePortNumberLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + remoteIpAddressLen);
+            var remotePort = int.Parse(Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + remoteIpAddressLen, remotePortNumberLen));
 
-            return (remoteIpAddress, remotePortNumber);
+            var remoteFolderPathLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 3) + remoteIpAddressLen + remotePortNumberLen);
+            var remoteFolder = Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 4) + remoteIpAddressLen + remotePortNumberLen, remoteFolderPathLen);
+
+            return (remoteIp, remotePort, remoteFolder);
         }
 
-        public static (string remoteServerIp, int remoteServerPort, List<(string filePath, long fileSize)> fileInfo) ReadFileListResponse(byte[] buffer)
+        public static (string requestorIpAddress, int requestortPort, string clientIpAddress, int clientPort, string targetFolder, List<(string filePath, long fileSize)> fileInfo) ReadFileListResponse(byte[] buffer)
         {
-            int remoteServerIpLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
-            var remoteServerIp = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, remoteServerIpLen);
+            var remoteServerIpLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
+            var remoteIp = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, remoteServerIpLen);
 
-            int remoteServerPortLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + remoteServerIpLen);
-            var remoteServerPort = int.Parse(Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + remoteServerIpLen, remoteServerPortLen));
+            var remoteServerPortLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + remoteServerIpLen);
+            var remotePort = int.Parse(Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + remoteServerIpLen, remoteServerPortLen));
 
-            int fileInfoLen =
-                BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 3) + remoteServerIpLen + remoteServerPortLen);
+            var localIpLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 3) + remoteServerIpLen + remoteServerPortLen);
+            var localIp = Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 4) + remoteServerIpLen + remoteServerPortLen, localIpLen);
 
-            var fileInfo = Encoding.UTF8.GetString(buffer,
-                (SizeOfInt32InBytes * 4) + remoteServerIpLen + remoteServerPortLen, fileInfoLen);
+            var localPortLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 4) + remoteServerIpLen + remoteServerPortLen + localIpLen);
+            var localPort = int.Parse(Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 5) + remoteServerIpLen + remoteServerPortLen + localIpLen, localPortLen));
 
-            var fileSeparaorChar = Encoding.UTF8.GetChars(buffer,
-                (SizeOfInt32InBytes * 4) + remoteServerIpLen + remoteServerPortLen + fileInfoLen, 1);
+            var targetFolderLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 5) + remoteServerIpLen + remoteServerPortLen + localIpLen + localPortLen);
+            var targetFolder = Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 6) + remoteServerIpLen + remoteServerPortLen + localIpLen + localPortLen, targetFolderLen);
 
-            var fileSizeSeparatorChar = Encoding.UTF8.GetChars(buffer,
-                (SizeOfInt32InBytes * 4) + remoteServerIpLen + remoteServerPortLen + fileInfoLen + SizeOfCharInBytes,
-                1);
+            var fileInfoLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 6) + remoteServerIpLen + remoteServerPortLen + localIpLen + localPortLen + targetFolderLen);
+            var fileInfo = Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 7) + remoteServerIpLen + remoteServerPortLen + localIpLen + localPortLen + targetFolderLen, fileInfoLen);
+
+            var fileInfoSeparatorLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 7) + remoteServerIpLen + remoteServerPortLen + localIpLen + localPortLen + targetFolderLen + fileInfoLen);
+            var fileInfoSeparator = Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 8) + remoteServerIpLen + remoteServerPortLen + localIpLen + localPortLen + targetFolderLen + fileInfoLen, fileInfoSeparatorLen);
+
+            var fileSeparatorLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 8) + remoteServerIpLen + remoteServerPortLen + localIpLen + localPortLen + targetFolderLen + fileInfoLen + fileInfoSeparatorLen);
+            var fileSeparator = Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 9) + remoteServerIpLen + remoteServerPortLen + localIpLen + localPortLen + targetFolderLen + fileInfoLen + fileInfoSeparatorLen, fileSeparatorLen);
 
             var fileInfoList = new List<(string filePath, long fileSize)>();
-            var fileInfoSplit = fileInfo.Split(fileSizeSeparatorChar).ToList();
+            var split = fileInfo.Split(fileSeparator).ToList();
 
-            foreach (var info in fileInfoSplit)
+            foreach (var infoString in split)
             {
-                var infoSplit = info.Split(fileSeparaorChar);
+                var infoSplit = infoString.Split(fileInfoSeparator);
                 if (infoSplit.Length == 2)
                 {
                     var filePath = infoSplit[0];
-                    if (long.TryParse(infoSplit[1], out long fileSizeBytes))
-                    {
-                        fileInfoList.Add((filePath, fileSizeBytes));
-                    }
+                    fileInfoList.Add(long.TryParse(infoSplit[1], out var fileSizeBytes)
+                        ? (filePath, fileSizeBytes)
+                        : (filePath, 0));
                 }
             }
 
-            return (remoteServerIp, remoteServerPort, fileInfoList);
+            return (remoteIp, remotePort, localIp, localPort, targetFolder, fileInfoList);
         }
     }
 }
