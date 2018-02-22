@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using AaronLuna.Common.Network;
 
 namespace TplSocketServer
 {
@@ -17,8 +18,6 @@ namespace TplSocketServer
     public class TplSocketServer
     {
         const string ConfirmationMessage = "handshake";
-        const string ServerIsNotListeningError = "Server's listening port is unbound, cannot accept inbound file transfers";
-
         const int OneSecondInMilliseconds = 1000;
 
         readonly int _maxConnections;
@@ -126,7 +125,7 @@ namespace TplSocketServer
 
         private async Task<Result> AcceptNextConnection(CancellationToken token)
         {
-            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectionAttemptStarted });
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.AcceptConnectionAttemptStarted });
 
             var acceptResult = await _listenSocket.AcceptTaskAsync().ConfigureAwait(false);
             if (acceptResult.Failure)
@@ -141,7 +140,7 @@ namespace TplSocketServer
 
             _transferSocket = acceptResult.Value;
 
-            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectionAttemptCompleted });
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.AcceptConnectionAttemptCompleted });
 
             return Result.Ok();
         }
@@ -221,6 +220,50 @@ namespace TplSocketServer
 
                     return ReceiveFileList(buffer, token);
 
+                case RequestType.TransferFolderPathRequest:
+
+                    EventOccurred?.Invoke(
+                        new ServerEventInfo
+                        {
+                            EventType = ServerEventType.DetermineTransferTypeCompleted,
+                            RequestType = RequestType.TransferFolderPathRequest
+                        });
+
+                    return await SendTransferFolderResponseAsync(buffer, token).ConfigureAwait(false);
+
+                case RequestType.TransferFolderPathResponse:
+
+                    EventOccurred?.Invoke(
+                        new ServerEventInfo
+                        {
+                            EventType = ServerEventType.DetermineTransferTypeCompleted,
+                            RequestType = RequestType.TransferFolderPathResponse
+                        });
+
+                    return ReceiveTransferFolderResponse(buffer, token);
+                    
+                case RequestType.PublicIpAddressRequest:
+
+                    EventOccurred?.Invoke(
+                        new ServerEventInfo
+                        {
+                            EventType = ServerEventType.DetermineTransferTypeCompleted,
+                            RequestType = RequestType.PublicIpAddressRequest
+                        });
+
+                    return await SendPublicIpAddress(buffer, token).ConfigureAwait(false);
+
+                case RequestType.PublicIpAddressResponse:
+
+                    EventOccurred?.Invoke(
+                        new ServerEventInfo
+                        {
+                            EventType = ServerEventType.DetermineTransferTypeCompleted,
+                            RequestType = RequestType.PublicIpAddressResponse
+                        });
+
+                    return ReceivePublicIpAddress(buffer, token);
+
                 default:
 
                     var error = "Unable to determine transfer type, value of " + "'" + transferType + "' is invalid.";
@@ -272,7 +315,7 @@ namespace TplSocketServer
 
             var(message, 
                 remoteIpAddress, 
-                remotePortNumber) = MessageUnwrapper.ReadTextMessageRequest(buffer);
+                remotePortNumber) = MessageUnwrapper.ReadTextMessage(buffer);
 
             if (token.IsCancellationRequested)
             {
@@ -651,6 +694,195 @@ namespace TplSocketServer
             return Result.Ok();
         }
 
+        public async Task<Result> SendTransferFolderResponseAsync(byte[] buffer, CancellationToken token)
+        {
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ReceiveTransferFolderRequestStarted });
+
+            (string requestorIpAddress,
+                int requestorPortNumber) = MessageUnwrapper.ReadTransferFolderRequest(buffer);
+
+            EventOccurred?.Invoke(
+                new ServerEventInfo
+                {
+                    EventType = ServerEventType.ReceiveTransferFolderRequestCompleted,
+                    RemoteServerIpAddress = requestorIpAddress,
+                    RemoteServerPortNumber = requestorPortNumber
+                });
+
+            if (token.IsCancellationRequested)
+            {
+                token.ThrowIfCancellationRequested();
+            }
+            
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerStarted });
+
+            var transferSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+            var connectResult =
+                await transferSocket.ConnectWithTimeoutAsync(requestorIpAddress, requestorPortNumber, _connectTimeoutMs)
+                    .ConfigureAwait(false);
+
+            if (connectResult.Failure)
+            {
+                return connectResult;
+            }
+
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerCompleted });
+
+            EventOccurred?.Invoke(new ServerEventInfo
+            {
+                EventType = ServerEventType.SendTransferFolderResponseStarted,
+                RemoteServerIpAddress = _localIpAddress,
+                RemoteServerPortNumber = _localPort,
+                LocalFolder = _transferFolderPath
+            });
+
+            var transferFolderData =
+                MessageWrapper.ConstructTransferFolderResponse(
+                    _localIpAddress,
+                    _localPort,
+                    _transferFolderPath);
+
+            var sendRequest =
+                await transferSocket.SendWithTimeoutAsync(transferFolderData, 0, transferFolderData.Length, 0, _sendTimeoutMs)
+                    .ConfigureAwait(false);
+
+            if (sendRequest.Failure)
+            {
+                return sendRequest;
+            }
+
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.SendTransferFolderRequestCompleted });
+
+            transferSocket.Shutdown(SocketShutdown.Both);
+            transferSocket.Close();
+
+            return Result.Ok();
+        }
+
+        private Result ReceiveTransferFolderResponse(byte[] buffer, CancellationToken token)
+        {
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ReceiveTransferFolderResponseStarted });
+
+            var (remoteServerIp,
+                remoteServerPort,
+                transferFolder) = MessageUnwrapper.ReadTransferFolderResponse(buffer);
+
+            if (token.IsCancellationRequested)
+            {
+                token.ThrowIfCancellationRequested();
+            }
+
+            EventOccurred?.Invoke(
+                new ServerEventInfo
+                {
+                    EventType = ServerEventType.ReceiveTransferFolderResponseCompleted,
+                    RemoteServerIpAddress = remoteServerIp,
+                    RemoteServerPortNumber = remoteServerPort,
+                    RemoteFolder = transferFolder
+                });
+
+            return Result.Ok();
+        }
+
+        public async Task<Result> SendPublicIpAddress(byte[] buffer, CancellationToken token)
+        {
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ReceiveTransferFolderRequestStarted });
+
+            (string requestorIpAddress,
+                int requestorPortNumber) = MessageUnwrapper.ReadPublicIpAddressRequest(buffer);
+
+            EventOccurred?.Invoke(
+                new ServerEventInfo
+                {
+                    EventType = ServerEventType.ReceivePublicIpRequestCompleted,
+                    RemoteServerIpAddress = requestorIpAddress,
+                    RemoteServerPortNumber = requestorPortNumber
+                });
+
+            if (token.IsCancellationRequested)
+            {
+                token.ThrowIfCancellationRequested();
+            }
+
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerStarted });
+
+            var transferSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+            var connectResult =
+                await transferSocket.ConnectWithTimeoutAsync(requestorIpAddress, requestorPortNumber, _connectTimeoutMs)
+                    .ConfigureAwait(false);
+
+            if (connectResult.Failure)
+            {
+                return connectResult;
+            }
+
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerCompleted });
+
+            var publicIp = string.Empty;
+            var publicIpResult = await IpAddressHelper.GetPublicIPv4AddressAsync().ConfigureAwait(false);
+            if (publicIpResult.Success)
+            {
+                publicIp = publicIpResult.Value.ToString();
+            }
+
+            EventOccurred?.Invoke(new ServerEventInfo
+            {
+                EventType = ServerEventType.SendPublicIpResponseStarted,
+                RemoteServerIpAddress = _localIpAddress,
+                RemoteServerPortNumber = _localPort,
+                PublicIpAddress = publicIp
+            });
+
+            var publicIpData =
+                MessageWrapper.ConstructPublicIpAddressResponse(
+                    _localIpAddress,
+                    _localPort,
+                    publicIp);
+
+            var sendRequest =
+                await transferSocket.SendWithTimeoutAsync(publicIpData, 0, publicIpData.Length, 0, _sendTimeoutMs)
+                    .ConfigureAwait(false);
+
+            if (sendRequest.Failure)
+            {
+                return sendRequest;
+            }
+
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.SendPublicIpResponseCompleted });
+
+            transferSocket.Shutdown(SocketShutdown.Both);
+            transferSocket.Close();
+
+            return Result.Ok();
+        }
+
+        private Result ReceivePublicIpAddress(byte[] buffer, CancellationToken token)
+        {
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ReceivePublicIpResponseStarted });
+
+            var (remoteServerIp,
+                remoteServerPort,
+                publicIpAddress) = MessageUnwrapper.ReadPublicIpAddressResponse(buffer);
+
+            if (token.IsCancellationRequested)
+            {
+                token.ThrowIfCancellationRequested();
+            }
+
+            EventOccurred?.Invoke(
+                new ServerEventInfo
+                {
+                    EventType = ServerEventType.ReceivePublicIpRequestCompleted,
+                    RemoteServerIpAddress = remoteServerIp,
+                    RemoteServerPortNumber = remoteServerPort,
+                    PublicIpAddress = publicIpAddress
+                });
+
+            return Result.Ok();
+        }
+
         public async Task<Result> SendTextMessageAsync(
             string message, 
             string remoteServerIpAddress, 
@@ -947,6 +1179,114 @@ namespace TplSocketServer
             }
 
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.SendFileListRequestCompleted });
+
+            transferSocket.Shutdown(SocketShutdown.Both);
+            transferSocket.Close();
+
+            return Result.Ok();
+        }
+
+        public async Task<Result> RequestTransferFolderPath(
+            string remoteServerIpAddress,
+            int remoteServerPort,
+            string localIpAddress,
+            int localPort,
+            CancellationToken token)
+        {
+            if (token.IsCancellationRequested)
+            {
+                token.ThrowIfCancellationRequested();
+            }
+
+            var transferSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerStarted });
+
+            var connectResult =
+                await transferSocket.ConnectWithTimeoutAsync(remoteServerIpAddress, remoteServerPort, _connectTimeoutMs)
+                    .ConfigureAwait(false);
+
+            if (connectResult.Failure)
+            {
+                return connectResult;
+            }
+
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerCompleted });
+
+            var requestData =
+                MessageWrapper.ConstructTransferFolderRequest(localIpAddress, localPort);
+
+            EventOccurred?.Invoke(
+                new ServerEventInfo
+                {
+                    EventType = ServerEventType.SendTransferFolderRequestStarted,
+                    RemoteServerIpAddress = localIpAddress,
+                    RemoteServerPortNumber = localPort
+                });
+
+            var requestResult =
+                await transferSocket.SendWithTimeoutAsync(requestData, 0, requestData.Length, 0, _sendTimeoutMs)
+                    .ConfigureAwait(false);
+
+            if (requestResult.Failure)
+            {
+                return requestResult;
+            }
+
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.SendTransferFolderRequestCompleted });
+
+            transferSocket.Shutdown(SocketShutdown.Both);
+            transferSocket.Close();
+
+            return Result.Ok();
+        }
+
+        public async Task<Result> RequestPublicIp(
+            string remoteServerIpAddress,
+            int remoteServerPort,
+            string localIpAddress,
+            int localPort,
+            CancellationToken token)
+        {
+            if (token.IsCancellationRequested)
+            {
+                token.ThrowIfCancellationRequested();
+            }
+
+            var transferSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerStarted });
+
+            var connectResult =
+                await transferSocket.ConnectWithTimeoutAsync(remoteServerIpAddress, remoteServerPort, _connectTimeoutMs)
+                    .ConfigureAwait(false);
+
+            if (connectResult.Failure)
+            {
+                return connectResult;
+            }
+
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerCompleted });
+
+            var requestData =
+                MessageWrapper.ConstructPublicIpAddressRequest(localIpAddress, localPort);
+
+            EventOccurred?.Invoke(
+                new ServerEventInfo
+                {
+                    EventType = ServerEventType.SendPublicIpRequestStarted,
+                    RemoteServerIpAddress = localIpAddress,
+                    RemoteServerPortNumber = localPort
+                });
+
+            var requestResult =
+                await transferSocket.SendWithTimeoutAsync(requestData, 0, requestData.Length, 0, _sendTimeoutMs)
+                    .ConfigureAwait(false);
+
+            if (requestResult.Failure)
+            {
+                return requestResult;
+            }
+
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.SendPublicIpRequestCompleted });
 
             transferSocket.Shutdown(SocketShutdown.Both);
             transferSocket.Close();

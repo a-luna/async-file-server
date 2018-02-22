@@ -11,12 +11,12 @@ namespace TplSocketServer
         {
             TransferFolderPath = string.Empty;
             SocketSettings = new SocketSettings();
-            RemoteServers = new List<ConnectionInfo>();
+            RemoteServers = new List<RemoteServer>();
         }
 
         public string TransferFolderPath { get; set; }
         public SocketSettings SocketSettings { get; set; }
-        public List<ConnectionInfo> RemoteServers { get; set; }
+        public List<RemoteServer> RemoteServers { get; set; }
 
         public static void Serialize(AppSettings settings, string filePath)
         {

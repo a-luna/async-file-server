@@ -5,26 +5,49 @@
         None,
         ListenOnLocalPortStarted,
         ListenOnLocalPortCompleted,
-        ConnectionAttemptStarted,
-        ConnectionAttemptCompleted,
+
+        AcceptConnectionAttemptStarted,
+        AcceptConnectionAttemptCompleted,
+
         ConnectToRemoteServerStarted,
         ConnectToRemoteServerCompleted,
+
         DetermineTransferTypeStarted,
         DetermineTransferTypeCompleted,
-        ShutdownListenSocketStarted,
-        ShutdownListenSocketCompleted,
+
         SendTextMessageStarted,
         SendTextMessageCompleted,
-        SendInboundFileTransferInfoStarted,
-        SendInboundFileTransferInfoCompleted,
-        SendOutboundFileTransferInfoStarted,
-        SendOutboundFileTransferInfoCompleted,
         ReceiveTextMessageStarted,
         ReceiveTextMessageCompleted,
+
+        SendInboundFileTransferInfoStarted,
+        SendInboundFileTransferInfoCompleted,
         ReceiveInboundFileTransferInfoStarted,
         ReceiveInboundFileTransferInfoCompleted,
+
+        SendOutboundFileTransferInfoStarted,
+        SendOutboundFileTransferInfoCompleted,
         ReceiveOutboundFileTransferInfoStarted,
         ReceiveOutboundFileTransferInfoCompleted,
+
+        SendTransferFolderRequestStarted,
+        SendTransferFolderRequestCompleted,
+        ReceiveTransferFolderRequestStarted,
+        ReceiveTransferFolderRequestCompleted,
+        SendTransferFolderResponseStarted,
+        SendTransferFolderResponseCompleted,
+        ReceiveTransferFolderResponseStarted,
+        ReceiveTransferFolderResponseCompleted,
+
+        SendPublicIpRequestStarted,
+        SendPublicIpRequestCompleted,
+        ReceivePublicIpRequestStarted,
+        ReceivePublicIpRequestCompleted,
+        SendPublicIpResponseStarted,
+        SendPublicIpResponseCompleted,
+        ReceivePublicIpResponseStarted,
+        ReceivePublicIpResponseCompleted,
+
         ReceiveFileListRequestStarted,
         ReceiveFileListRequestCompleted,
         SendFileListResponseStarted,
@@ -33,18 +56,25 @@
         ReceiveFileListResponseCompleted,
         SendFileListRequestStarted,
         SendFileListRequestCompleted,
+
         SendFileBytesStarted,
         SendFileBytesCompleted,
+
         ReceiveFileBytesStarted,
         ReceivedDataFromSocket,
-        ReceiveFileBytesCompleted,
         FileTransferProgress,
+        ReceiveFileBytesCompleted,
+        
         SendConfirmationMessageStarted,
         SendConfirmationMessageCompleted,
         ReceiveConfirmationMessageStarted,
         ReceiveConfirmationMessageCompleted,
-        CloseTransferSocketStarted,
-        CloseTransferSocketCompleted,
+
+        ShutdownListenSocketStarted,
+        ShutdownListenSocketCompleted,
+        ShutdownTransferSocketStarted,
+        ShutdownTransferSocketCompleted,
+
         ErrorOccurred
     }
 }

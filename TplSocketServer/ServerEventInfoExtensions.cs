@@ -18,11 +18,11 @@
                     report += "Completed Process: Listen on local port";
                     break;
 
-                case ServerEventType.ConnectionAttemptStarted:
+                case ServerEventType.AcceptConnectionAttemptStarted:
                     report += "Started Process: Accept connection";
                     break;
 
-                case ServerEventType.ConnectionAttemptCompleted:
+                case ServerEventType.AcceptConnectionAttemptCompleted:
                     report += "Completed Process: Accept connection";
                     break;
 
@@ -56,6 +56,72 @@
 
                 case ServerEventType.SendTextMessageCompleted:
                     report += "Completed Process: Send Text Message";
+                    break;
+
+
+                case ServerEventType.SendPublicIpRequestStarted:
+                    report += $"Started Process: Send Public IP Request\n\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n";
+                    break;
+
+                case ServerEventType.SendPublicIpRequestCompleted:
+                    report += "Completed Process: Send Public IP Request";
+                    break;
+
+                case ServerEventType.ReceivePublicIpRequestStarted:
+                    report += "Started Process: Receive Public IP Request";
+                    break;
+
+                case ServerEventType.ReceivePublicIpRequestCompleted:
+                    report += $"Completed Process: Receive Public IP Request\n\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n";
+                    break;
+
+                case ServerEventType.SendPublicIpResponseStarted:
+                    report += $"Started Process: Send Public IP Response\n\n\tPublic IP:\t\t{serverEventInfo.PublicIpAddress} files available\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}";
+                    break;
+
+                case ServerEventType.SendPublicIpResponseCompleted:
+                    report += "Completed Process: Send Public IP Response";
+                    break;
+
+                case ServerEventType.ReceivePublicIpResponseStarted:
+                    report += "Started Process: Receive Public IP Response";
+                    break;
+
+                case ServerEventType.ReceivePublicIpResponseCompleted:
+                    report += $"Completed Process: Receive Public IP Response\n\n\tPublic IP:\t\t{serverEventInfo.PublicIpAddress} files available\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}";
+                    break;
+
+
+                case ServerEventType.SendTransferFolderRequestStarted:
+                    report += $"Started Process: Send Transfer Folder Request\n\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n";
+                    break;
+
+                case ServerEventType.SendTransferFolderRequestCompleted:
+                    report += "Completed Process: Send Transfer Folder Request";
+                    break;
+
+                case ServerEventType.ReceiveTransferFolderRequestStarted:
+                    report += "Started Process: Receive Transfer Folder Request";
+                    break;
+
+                case ServerEventType.ReceiveTransferFolderRequestCompleted:
+                    report += $"Completed Process: Receive Transfer Folder Request\n\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n";
+                    break;
+
+                case ServerEventType.SendTransferFolderResponseStarted:
+                    report += $"Started Process: Send Transfer Folder Response\n\n\tTransfer Folder Path:\t\t{serverEventInfo.LocalFolder} files available\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}";
+                    break;
+
+                case ServerEventType.SendTransferFolderResponseCompleted:
+                    report += "Completed Process: Send Transfer Folder Response";
+                    break;
+
+                case ServerEventType.ReceiveTransferFolderResponseStarted:
+                    report += "Started Process: Receive Transfer Folder Response";
+                    break;
+
+                case ServerEventType.ReceiveTransferFolderResponseCompleted:
+                    report += $"Completed Process: Receive Transfer Folder Response\n\n\tTransfer Folder Path:\t\t{serverEventInfo.LocalFolder} files available\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}";
                     break;
 
                 case ServerEventType.SendFileListRequestStarted:
@@ -173,11 +239,11 @@
                     report += $"Completed Process: Receive confirmation message\n\tConfirmation Message:\t{serverEventInfo.ConfirmationMessage}";
                     break;
 
-                case ServerEventType.CloseTransferSocketStarted:
+                case ServerEventType.ShutdownTransferSocketStarted:
                     report += "Started Process: Close transfer socket";
                     break;
 
-                case ServerEventType.CloseTransferSocketCompleted:
+                case ServerEventType.ShutdownTransferSocketCompleted:
                     report += "Completed Process: Close transfer socket";
                     break;
 

@@ -3,7 +3,7 @@
     using AaronLuna.Common.Network;
     using System.Net;
 
-    public struct ConnectionInfo
+    public class ConnectionInfo
     {
         public string LocalIpAddress { get; set; }
         public string PublicIpAddress { get; set; }

@@ -18,7 +18,7 @@ namespace TplSocketServer
             return BitConverter.ToInt32(buffer, 0);
         }
 
-        public static (string message, string remoteIpAddress, int remotePortNumber) ReadTextMessageRequest(byte[] buffer)
+        public static (string message, string remoteIpAddress, int remotePortNumber) ReadTextMessage(byte[] buffer)
         {
             var messageLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
             var message = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, messageLen);
@@ -121,6 +121,56 @@ namespace TplSocketServer
             }
 
             return (remoteIp, remotePort, localIp, localPort, targetFolder, fileInfoList);
+        }
+
+        public static (string remoteIpAddress, int remotePortNumber) ReadTransferFolderRequest(byte[] buffer)
+        {
+            var remoteIpAddressLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
+            var remoteIp = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, remoteIpAddressLen);
+
+            var remotePortNumberLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + remoteIpAddressLen);
+            var remotePort = int.Parse(Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + remoteIpAddressLen, remotePortNumberLen));
+            
+            return (remoteIp, remotePort);
+        }
+
+        public static (string remoteIpAddress, int remotePortNumber, string remoteFolderPath) ReadTransferFolderResponse(byte[] buffer)
+        {
+            var remoteIpAddressLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
+            var remoteIp = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, remoteIpAddressLen);
+
+            var remotePortNumberLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + remoteIpAddressLen);
+            var remotePort = int.Parse(Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + remoteIpAddressLen, remotePortNumberLen));
+
+            var remoteFolderPathLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 3) + remoteIpAddressLen + remotePortNumberLen);
+            var remoteFolder = Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 4) + remoteIpAddressLen + remotePortNumberLen, remoteFolderPathLen);
+
+            return (remoteIp, remotePort, remoteFolder);
+        }
+
+        public static (string remoteIpAddress, int remotePortNumber) ReadPublicIpAddressRequest(byte[] buffer)
+        {
+            var remoteIpAddressLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
+            var remoteIp = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, remoteIpAddressLen);
+
+            var remotePortNumberLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + remoteIpAddressLen);
+            var remotePort = int.Parse(Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + remoteIpAddressLen, remotePortNumberLen));
+
+            return (remoteIp, remotePort);
+        }
+
+        public static (string remoteIpAddress, int remotePortNumber, string publicIpAddress) ReadPublicIpAddressResponse(byte[] buffer)
+        {
+            var remoteIpAddressLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
+            var remoteIp = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, remoteIpAddressLen);
+
+            var remotePortNumberLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + remoteIpAddressLen);
+            var remotePort = int.Parse(Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + remoteIpAddressLen, remotePortNumberLen));
+
+            var publicIpLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 3) + remoteIpAddressLen + remotePortNumberLen);
+            var publicIp = Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 4) + remoteIpAddressLen + remotePortNumberLen, publicIpLen);
+
+            return (remoteIp, remotePort, publicIp);
         }
     }
 }
