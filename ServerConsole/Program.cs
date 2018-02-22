@@ -1,6 +1,5 @@
 ﻿namespace ServerConsole
 {
-    using AaronLuna.Common.Console;
     using AaronLuna.Common.Network;
     using AaronLuna.Common.Numeric;
     using AaronLuna.Common.Result;

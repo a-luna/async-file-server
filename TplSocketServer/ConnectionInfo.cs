@@ -5,6 +5,12 @@
 
     public class ConnectionInfo
     {
+        public ConnectionInfo()
+        {
+            LocalIpAddress = string.Empty;
+            PublicIpAddress = string.Empty;
+        }
+
         public string LocalIpAddress { get; set; }
         public string PublicIpAddress { get; set; }
         public int Port { get; set; }       

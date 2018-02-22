@@ -116,7 +116,6 @@
         private Result<RemoteServer> GetNewClientInfoFromUser()
         {
             var clientInfo = new RemoteServer();
-            var connectionInfo = clientInfo.ConnectionInfo;
 
             Console.WriteLine("Enter the server's IPv4 address:");
             var input = Console.ReadLine();
@@ -142,15 +141,15 @@
             switch (ipTypeValidationResult.Value)
             {
                 case Program.PublicIpAddress:
-                    connectionInfo.PublicIpAddress = clientIp;
+                    clientInfo.ConnectionInfo.PublicIpAddress = clientIp;
                     break;
 
                 case Program.LocalIpAddress:
-                    connectionInfo.LocalIpAddress = clientIp;
+                    clientInfo.ConnectionInfo.LocalIpAddress = clientIp;
                     break;
             }
 
-            connectionInfo.Port =
+            clientInfo.ConnectionInfo.Port =
                 Program.GetPortNumberFromUser("Enter the server's port number that handles incoming requests", false);
 
             return Result.Ok(clientInfo);
