@@ -6,7 +6,7 @@
     using AaronLuna.Common.Result;
     using TplSocketServer;
 
-    public class GetNewClientInfo
+    public class GetClientInfoFromUser
     {
         bool _waitingForTransferFolderResponse = true;
         bool _waitingForPublicIpResponse = true;
@@ -79,7 +79,7 @@
             if (Result.Combine(sendFolderRequestResult, sendIpRequestResult).Failure)
             {
                 return Result.Fail<RemoteServer>(
-                    $"Error requesting connetion info from client:\n{sendFolderRequestResult.Error}\n{sendIpRequestResult.Error}");
+                    $"Error requesting connetion info from new client:\n{sendFolderRequestResult.Error}\n{sendIpRequestResult.Error}");
             }
 
             while (_waitingForTransferFolderResponse && _waitingForPublicIpResponse) { }

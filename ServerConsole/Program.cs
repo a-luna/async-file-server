@@ -1,5 +1,6 @@
 ﻿namespace ServerConsole
 {
+    using AaronLuna.Common.Console;
     using AaronLuna.Common.Network;
     using AaronLuna.Common.Numeric;
     using AaronLuna.Common.Result;
@@ -85,7 +86,7 @@
             Console.ReadLine();
         }
 
-        private static AppSettings InitializeAppSettings()
+        public static AppSettings InitializeAppSettings()
         {
             var settings = new AppSettings
             {
@@ -218,13 +219,10 @@
 
                     case GetFile:
                         result = await RequestFileListFromClientAsync(
-                                        server, 
+                                        settings, 
+                                        myInfo,
                                         clientIpAddress,
-                                        clientInfo.ConnectionInfo.Port,
-                                        myInfo.LocalIpAddress, 
-                                        myInfo.Port,
-                                        settings.TransferFolderPath,
-                                        token);
+                                        clientInfo.ConnectionInfo.Port);
                         break;
                 }
 
@@ -314,7 +312,7 @@
 
         private static async Task<Result<RemoteServer>> AddNewClientAsync(AppSettings settings, ConnectionInfo myInfo)
         {
-            var getNewClientInfo = new GetNewClientInfo();
+            var getNewClientInfo = new GetClientInfoFromUser();
             var getNewClientInfoResult = await getNewClientInfo.RunAsync(settings, myInfo);
 
             if (getNewClientInfoResult.Failure)
@@ -502,99 +500,27 @@
         }
 
         private static async Task<Result> RequestFileListFromClientAsync(
-            TplSocketServer server,
+            AppSettings settings,
+            ConnectionInfo myInfo,
             string clientIpAddress,
-            int clientPort,
-            string localIpAddress,
-            int localPort,
-            string targetFolder,
-            CancellationToken token)
+            int clientPort)
         {
-            Console.WriteLine($"Requesting list of files from {clientIpAddress}:{clientPort}...");
-            Console.WriteLine(string.Empty);
-
-            var requestFileListResult =
-                 await server.RequestFileListAsync(
-                     clientIpAddress,
-                     clientPort,
-                     localIpAddress,
-                     localPort,
-                     targetFolder,
-                     token);
-
-            return requestFileListResult.Failure ? requestFileListResult : Result.Ok();
-        }
-
-        private static async Task<Result> DownloadFileFromClient(
-            List<(string filePath, long fileSizeInBytes)> fileInfoList,
-            string remoteIp, 
-            int remotePort,
-            string localIp,
-            int localPort,
-            string localFolder
-            )
-        {
-            var selectFileResult = ChooseFileToGet(fileInfoList);
-            if (selectFileResult.Failure)
-            {
-                Console.WriteLine(selectFileResult.Error);
-                return Result.Ok();
-            }
-
-            var fileToGet = selectFileResult.Value;
-
-            var settings = InitializeAppSettings();
-            var transferServer = new TplSocketServer(settings);
-
+            var getFileFromClient = new GetFileFromClient();
             var getFileResult =
-                await transferServer.GetFileAsync(
-                    remoteIp,
-                    remotePort,
-                    fileToGet,
-                    localIp,
-                    localPort,
-                    localFolder,
-                    new CancellationToken(false));
+                await getFileFromClient.RunAsync(
+                    settings, 
+                    myInfo, 
+                    clientIpAddress, 
+                    clientPort);            
 
-            return getFileResult.Failure ? getFileResult : Result.Ok();
-        }
-
-        private static Result<string> ChooseFileToGet(List<(string filePath, long fileSizeInBytes)> fileInfoList)
-        {
-            var fileMenuChoice = 0;
-            var totalMenuChoices = fileInfoList.Count + 1;
-            var returnToPreviousMenu = totalMenuChoices;
-
-            while (fileMenuChoice == 0)
+            if (getFileResult.Failure)
             {
-                Console.WriteLine("Choose a file to download:");
-
-                foreach (var i in Enumerable.Range(0, fileInfoList.Count))
-                {
-                    var fileName = Path.GetFileName(fileInfoList[i].filePath);
-                    Console.WriteLine($"{i + 1}. {fileName} ({fileInfoList[i].fileSizeInBytes.ConvertBytesForDisplay()})");
-                }
-
-                Console.WriteLine($"{returnToPreviousMenu}. Return to Main Menu");
-
-                var input = Console.ReadLine();
-                Console.WriteLine(string.Empty);
-
-                var validationResult = ValidateNumberIsWithinRange(input, 1, totalMenuChoices);
-                if (validationResult.Failure)
-                {
-                    Console.WriteLine(validationResult.Error);
-                    continue;
-                }
-
-                fileMenuChoice = validationResult.Value;
+                return getFileResult;
             }
 
-            return fileMenuChoice == returnToPreviousMenu 
-                ? Result.Fail<string>("Returning to main menu") 
-                : Result.Ok(fileInfoList[fileMenuChoice - 1].filePath);
+            return Result.Ok();
         }
-
+        
         private static bool UserWantsToShutdownServer()
         {
             var shutdownChoice = 0;
@@ -670,7 +596,7 @@
             AppSettings.Serialize(settings, $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}");
         }
 
-        private static async void HandleServerEvent(ServerEventInfo serverEvent)
+        private static void HandleServerEvent(ServerEventInfo serverEvent)
         {
             switch (serverEvent.EventType)
             {
@@ -731,14 +657,22 @@
 
                 case ServerEventType.ReceiveFileListResponseCompleted:
                     Console.WriteLine($"\nReceived list of downloadable files from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.FileInfoList.Count} files in list)\n");
-                    await DownloadFileFromClient(
-                        serverEvent.FileInfoList,
-                        serverEvent.RemoteServerIpAddress,
-                        serverEvent.RemoteServerPortNumber,
-                        serverEvent.LocalIpAddress,
-                        serverEvent.LocalPortNumber,
-                        serverEvent.LocalFolder
-                        );
+                    break;
+
+                case ServerEventType.SendPublicIpRequestStarted:
+                    Console.WriteLine($"\nSending request for public IP address to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}\n");
+                    break;
+
+                case ServerEventType.ReceivePublicIpRequestCompleted:
+                    Console.WriteLine($"\nReceived request for public IP address from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}");
+                    break;
+
+                case ServerEventType.SendPublicIpResponseStarted:
+                    Console.WriteLine($"Sending public IP address to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.PublicIpAddress})");
+                    break;
+
+                case ServerEventType.ReceivePublicIpResponseCompleted:
+                    Console.WriteLine($"\nReceived public IP address from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.PublicIpAddress})\n");                    
                     break;
 
                 case ServerEventType.ShutdownListenSocketCompleted:
