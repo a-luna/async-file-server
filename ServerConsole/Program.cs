@@ -187,6 +187,7 @@
                 var chooseClientResult = await ChooseClientAsync(settings, myInfo);
                 if (chooseClientResult.Failure)
                 {
+                    Console.WriteLine(chooseClientResult.Error);
                     continue;
                 }
 
