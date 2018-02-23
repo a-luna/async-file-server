@@ -14,6 +14,8 @@
         string _clientTransferFolderPath = string.Empty;
         string _clientPublicIp = string.Empty;
 
+        public event ServerEventDelegate EventOccurred;
+
         public async Task<Result<RemoteServer>> RunAsync(AppSettings settings, ConnectionInfo listenServerInfo)
         {
             var cts = new CancellationTokenSource();
@@ -158,44 +160,18 @@
 
         private void HandleServerEvent(ServerEventInfo serverEvent)
         {
+            EventOccurred?.Invoke(serverEvent);
+
             switch (serverEvent.EventType)
-            {
-                case ServerEventType.SendTransferFolderRequestStarted:
-
-                    Console.WriteLine(
-                        $"\nSending request for transfer folder path info to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}\n");
-                    
-                    break;                    
-
+            {     
                 case ServerEventType.ReceiveFileListResponseCompleted:
-
-                    Console.WriteLine(
-                        $"\nReceived transfer folder path info from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}:\n\tRemote Folder:\t{serverEvent.RemoteFolder}");
-
                     _clientTransferFolderPath = serverEvent.RemoteFolder;
                     _waitingForTransferFolderResponse = false;
-
-                    break;
-
-                case ServerEventType.SendPublicIpRequestStarted:
-
-                    Console.WriteLine(
-                        $"\nSending request for public IP address to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}\n");
-
                     break;
 
                 case ServerEventType.ReceivePublicIpResponseCompleted:
-
-                    Console.WriteLine(
-                        $"\nReceived public IP address from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}:\n\tRemote Folder:\t{serverEvent.RemoteFolder}");
-
                     _clientPublicIp = serverEvent.PublicIpAddress;
                     _waitingForPublicIpResponse = false;
-
-                    break;
-
-                case ServerEventType.ErrorOccurred:
-                    Console.WriteLine($"Error occurred: {serverEvent.ErrorMessage}");
                     break;
             }
         }

@@ -313,6 +313,8 @@
         private static async Task<Result<RemoteServer>> AddNewClientAsync(AppSettings settings, ConnectionInfo myInfo)
         {
             var getNewClientInfo = new GetClientInfoFromUser();
+            getNewClientInfo.EventOccurred += HandleServerEvent;
+
             var getNewClientInfoResult = await getNewClientInfo.RunAsync(settings, myInfo);
 
             if (getNewClientInfoResult.Failure)
@@ -673,6 +675,22 @@
 
                 case ServerEventType.ReceivePublicIpResponseCompleted:
                     Console.WriteLine($"\nReceived public IP address from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.PublicIpAddress})\n");                    
+                    break;
+
+                case ServerEventType.SendTransferFolderRequestStarted:
+                    Console.WriteLine($"\nSending request for transfer folder path to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}\n");
+                    break;
+
+                case ServerEventType.ReceiveTransferFolderRequestCompleted:
+                    Console.WriteLine($"\nReceived request for transfer folder path from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}");
+                    break;
+
+                case ServerEventType.SendTransferFolderResponseStarted:
+                    Console.WriteLine($"Sending transfer folder path to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.LocalFolder})");
+                    break;
+
+                case ServerEventType.ReceiveTransferFolderResponseCompleted:
+                    Console.WriteLine($"\nReceived transfer folder path from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.RemoteFolder})\n");
                     break;
 
                 case ServerEventType.ShutdownListenSocketCompleted:
