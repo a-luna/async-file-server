@@ -1,6 +1,5 @@
 ﻿namespace ServerConsole
 {
-    using AaronLuna.Common.Console;
     using AaronLuna.Common.Network;
     using AaronLuna.Common.Numeric;
     using AaronLuna.Common.Result;
@@ -185,9 +184,10 @@
                     break;
                 }
 
-                var chooseClientResult = await ChooseClientAsync(settings, myInfo);
+                var chooseClientResult = await ChooseClientAsync(server, settings, myInfo);
                 if (chooseClientResult.Failure)
                 {
+                    Console.WriteLine(chooseClientResult.Error);
                     continue;
                 }
 
@@ -262,7 +262,7 @@
             Console.WriteLine("4. Shutdown");
         }
         
-        private static async Task<Result<RemoteServer>> ChooseClientAsync(AppSettings settings, ConnectionInfo myInfo)
+        private static async Task<Result<RemoteServer>> ChooseClientAsync(TplSocketServer server, AppSettings settings, ConnectionInfo myInfo)
         {
             var clientMenuChoice = 0;
             var totalMenuChoices = settings.RemoteServers.Count + 2;
@@ -304,16 +304,18 @@
 
             if (clientMenuChoice == addNewClient)
             {
-                return await AddNewClientAsync(settings, myInfo);
+                return await AddNewClientAsync(server, settings, myInfo);
             }
             
             return Result.Ok(settings.RemoteServers[clientMenuChoice - 1]);
         }
 
-        private static async Task<Result<RemoteServer>> AddNewClientAsync(AppSettings settings, ConnectionInfo myInfo)
+        private static async Task<Result<RemoteServer>> AddNewClientAsync(TplSocketServer server, AppSettings settings, ConnectionInfo myInfo)
         {
             var getNewClientInfo = new GetClientInfoFromUser();
-            var getNewClientInfoResult = await getNewClientInfo.RunAsync(settings, myInfo);
+            getNewClientInfo.EventOccurred += HandleServerEvent;
+
+            var getNewClientInfoResult = await getNewClientInfo.RunAsync(server, settings, myInfo);
 
             if (getNewClientInfoResult.Failure)
             {
@@ -673,6 +675,22 @@
 
                 case ServerEventType.ReceivePublicIpResponseCompleted:
                     Console.WriteLine($"\nReceived public IP address from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.PublicIpAddress})\n");                    
+                    break;
+
+                case ServerEventType.SendTransferFolderRequestStarted:
+                    Console.WriteLine($"\nSending request for transfer folder path to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}\n");
+                    break;
+
+                case ServerEventType.ReceiveTransferFolderRequestCompleted:
+                    Console.WriteLine($"\nReceived request for transfer folder path from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}");
+                    break;
+
+                case ServerEventType.SendTransferFolderResponseStarted:
+                    Console.WriteLine($"Sending transfer folder path to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.LocalFolder})");
+                    break;
+
+                case ServerEventType.ReceiveTransferFolderResponseCompleted:
+                    Console.WriteLine($"\nReceived transfer folder path from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.RemoteFolder})\n");
                     break;
 
                 case ServerEventType.ShutdownListenSocketCompleted:
