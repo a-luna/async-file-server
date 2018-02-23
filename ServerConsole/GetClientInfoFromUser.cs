@@ -16,8 +16,10 @@
 
         public event ServerEventDelegate EventOccurred;
 
-        public async Task<Result<RemoteServer>> RunAsync(AppSettings settings, ConnectionInfo listenServerInfo)
+        public async Task<Result<RemoteServer>> RunAsync(TplSocketServer server, AppSettings settings, ConnectionInfo listenServerInfo)
         {
+            server.EventOccurred += HandleServerEvent;
+
             var cts = new CancellationTokenSource();
             var token = cts.Token;
 
@@ -36,29 +38,6 @@
                 newClient = addClientResult.Value;
                 clientInfoIsValid = true;
             }
-
-            var server = new TplSocketServer(settings);
-            server.EventOccurred += HandleServerEvent;
-
-            var randomPort = 0;
-            while (randomPort is 0)
-            {
-                var random = new Random();
-                randomPort = random.Next(Program.PortRangeMin, Program.PortRangeMax + 1);
-
-                if (randomPort == listenServerInfo.Port)
-                {
-                    randomPort = 0;
-                }
-            }
-
-            var listenTask =
-                Task.Run(
-                    () => server.HandleIncomingConnectionsAsync(
-                        listenServerInfo.GetLocalIpAddress(),
-                        randomPort,
-                        token),
-                    token);
 
             var sendFolderRequestResult = 
                 await server.RequestTransferFolderPath(
@@ -88,28 +67,6 @@
 
             newClient.TransferFolder = _clientTransferFolderPath;
             newClient.ConnectionInfo.PublicIpAddress = _clientPublicIp;
-
-            try
-            {
-                cts.Cancel();
-                var serverShutdown = await listenTask.ConfigureAwait(false);
-                if (serverShutdown.Failure)
-                {
-                    Console.WriteLine($"There was an error shutting down the server: {serverShutdown.Error}");
-                }
-            }
-            catch (AggregateException ex)
-            {
-                Console.WriteLine("\nException messages:");
-                foreach (var ie in ex.InnerExceptions)
-                {
-                    Console.WriteLine($"\t{ie.GetType().Name}: {ie.Message}");
-                }
-            }
-            finally
-            {
-                server.CloseListenSocket();
-            }
 
             Console.WriteLine("Thank you! This server has been successfully configured.");
             return Result.Ok(newClient);
@@ -160,8 +117,6 @@
 
         private void HandleServerEvent(ServerEventInfo serverEvent)
         {
-            EventOccurred?.Invoke(serverEvent);
-
             switch (serverEvent.EventType)
             {     
                 case ServerEventType.ReceiveFileListResponseCompleted:

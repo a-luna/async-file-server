@@ -184,7 +184,7 @@
                     break;
                 }
 
-                var chooseClientResult = await ChooseClientAsync(settings, myInfo);
+                var chooseClientResult = await ChooseClientAsync(server, settings, myInfo);
                 if (chooseClientResult.Failure)
                 {
                     Console.WriteLine(chooseClientResult.Error);
@@ -262,7 +262,7 @@
             Console.WriteLine("4. Shutdown");
         }
         
-        private static async Task<Result<RemoteServer>> ChooseClientAsync(AppSettings settings, ConnectionInfo myInfo)
+        private static async Task<Result<RemoteServer>> ChooseClientAsync(TplSocketServer server, AppSettings settings, ConnectionInfo myInfo)
         {
             var clientMenuChoice = 0;
             var totalMenuChoices = settings.RemoteServers.Count + 2;
@@ -304,18 +304,18 @@
 
             if (clientMenuChoice == addNewClient)
             {
-                return await AddNewClientAsync(settings, myInfo);
+                return await AddNewClientAsync(server, settings, myInfo);
             }
             
             return Result.Ok(settings.RemoteServers[clientMenuChoice - 1]);
         }
 
-        private static async Task<Result<RemoteServer>> AddNewClientAsync(AppSettings settings, ConnectionInfo myInfo)
+        private static async Task<Result<RemoteServer>> AddNewClientAsync(TplSocketServer server, AppSettings settings, ConnectionInfo myInfo)
         {
             var getNewClientInfo = new GetClientInfoFromUser();
             getNewClientInfo.EventOccurred += HandleServerEvent;
 
-            var getNewClientInfoResult = await getNewClientInfo.RunAsync(settings, myInfo);
+            var getNewClientInfoResult = await getNewClientInfo.RunAsync(server, settings, myInfo);
 
             if (getNewClientInfoResult.Failure)
             {
