@@ -14,109 +14,139 @@
         string _clientTransferFolderPath = string.Empty;
         string _clientPublicIp = string.Empty;
 
+        TplSocketServer _server;
+
         public event ServerEventDelegate EventOccurred;
 
-        public async Task<Result<RemoteServer>> RunAsync(TplSocketServer server, AppSettings settings, ConnectionInfo listenServerInfo)
+        public async Task<Result<RemoteServer>> RunAsync(AppSettings settings, ConnectionInfo listenServerInfo)
         {
-            server.EventOccurred += HandleServerEvent;
-
             var cts = new CancellationTokenSource();
             var token = cts.Token;
 
-            var newClient = new RemoteServer();
-            var clientInfoIsValid = false;
+            _server = new TplSocketServer(settings);
+            _server.EventOccurred += HandleServerEvent;
 
+            var randomPort = 0;
+            while (randomPort is 0)
+            {
+                var random = new Random();
+                randomPort = random.Next(Program.PortRangeMin, Program.PortRangeMax + 1);
+
+                if (randomPort == listenServerInfo.Port)
+                {
+                    randomPort = 0;
+                }
+            }
+
+            var listenTask =
+                Task.Run(
+                    () => _server.HandleIncomingConnectionsAsync(
+                        listenServerInfo.GetLocalIpAddress(),
+                        randomPort,
+                        token),
+                    token);
+
+            var newClient = new RemoteServer();
+
+            var clientInfoIsValid = false;
             while (!clientInfoIsValid)
             {
-                var addClientResult = GetNewClientInfoFromUser();
+                var addClientResult = Program.GetRemoteServerConnectionInfoFromUser();
                 if (addClientResult.Failure)
                 {
-                    Console.WriteLine(addClientResult.Error);
-                    continue;
+                    return addClientResult;
                 }
 
                 newClient = addClientResult.Value;
                 clientInfoIsValid = true;
             }
 
-            var sendFolderRequestResult = 
-                await server.RequestTransferFolderPath(
-                    newClient.ConnectionInfo.LocalIpAddress, 
-                    newClient.ConnectionInfo.Port, 
-                    listenServerInfo.LocalIpAddress, 
-                    listenServerInfo.Port, 
-                    token)
-                    .ConfigureAwait(false);
-
-            var sendIpRequestResult = 
-                await server.RequestPublicIp(
-                    newClient.ConnectionInfo.LocalIpAddress,
-                    newClient.ConnectionInfo.Port,
-                    listenServerInfo.LocalIpAddress,
-                    listenServerInfo.Port,
-                    token)
-                    .ConfigureAwait(false);
-
-            if (Result.Combine(sendFolderRequestResult, sendIpRequestResult).Failure)
+            var clientIp = string.Empty;
+            if (!string.IsNullOrEmpty(newClient.ConnectionInfo.LocalIpAddress))
             {
-                return Result.Fail<RemoteServer>(
-                    $"Error requesting connetion info from new client:\n{sendFolderRequestResult.Error}\n{sendIpRequestResult.Error}");
+                clientIp = newClient.ConnectionInfo.LocalIpAddress;
             }
 
-            while (_waitingForTransferFolderResponse && _waitingForPublicIpResponse) { }
+            if (string.IsNullOrEmpty(clientIp) && !string.IsNullOrEmpty(newClient.ConnectionInfo.PublicIpAddress))
+            {
+                clientIp = newClient.ConnectionInfo.PublicIpAddress;
+            }
 
+            if (string.IsNullOrEmpty(clientIp))
+            {
+                return Result.Fail<RemoteServer>("There was an error getting the client's IP address from user input.");
+            }
+
+            var sendFolderRequestResult = 
+                await _server.RequestTransferFolderPath(
+                    clientIp, 
+                    newClient.ConnectionInfo.Port, 
+                    listenServerInfo.LocalIpAddress, 
+                    randomPort,
+                    token)
+                    .ConfigureAwait(false);
+
+            if (sendFolderRequestResult.Failure)
+            {
+                return Result.Fail<RemoteServer>(
+                    $"Error requesting transfer folder path from new client:\n{sendFolderRequestResult.Error}");
+            }
+
+            while (_waitingForTransferFolderResponse) { }
             newClient.TransferFolder = _clientTransferFolderPath;
-            newClient.ConnectionInfo.PublicIpAddress = _clientPublicIp;
 
-            Console.WriteLine("Thank you! This server has been successfully configured.");
+            if (string.IsNullOrEmpty(newClient.ConnectionInfo.PublicIpAddress))
+            {
+                var sendIpRequestResult =
+                    await _server.RequestPublicIp(
+                            clientIp,
+                            newClient.ConnectionInfo.Port,
+                            listenServerInfo.LocalIpAddress,
+                            randomPort,
+                            token)
+                        .ConfigureAwait(false);
+
+                if (sendIpRequestResult.Failure)
+                {
+                    return Result.Fail<RemoteServer>(
+                        $"Error requesting transfer folder path from new client:\n{sendIpRequestResult.Error}");
+                }
+
+                while (_waitingForPublicIpResponse) { }
+                newClient.ConnectionInfo.PublicIpAddress = _clientPublicIp;
+            }
+
+            try
+            {
+                cts.Cancel();
+                var serverShutdown = await listenTask.ConfigureAwait(false);
+                if (serverShutdown.Failure)
+                {
+                    return Result.Fail<RemoteServer>(
+                        $"There was an error shutting down the temp request server: {serverShutdown.Error}");
+                }
+            }
+            catch (AggregateException ex)
+            {
+                var report = "\nException messages:";
+                foreach (var ie in ex.InnerExceptions)
+                {
+                    report += $"\t{ie.GetType().Name}: {ie.Message}";
+                    return Result.Fail<RemoteServer>(report);
+                }
+            }
+            finally
+            {
+                _server.CloseListenSocket();
+            }
+
             return Result.Ok(newClient);
         }
 
-        private Result<RemoteServer> GetNewClientInfoFromUser()
-        {
-            var clientInfo = new RemoteServer();
-
-            Console.WriteLine("Enter the server's IPv4 address:");
-            var input = Console.ReadLine();
-
-            var ipValidationResult = Program.ValidateIpV4Address(input);
-            if (ipValidationResult.Failure)
-            {
-                return Result.Fail<RemoteServer>(ipValidationResult.Error);
-            }
-
-            var clientIp = ipValidationResult.Value;
-            Console.WriteLine($"Is {clientIp} a local or public IP address?");
-            Console.WriteLine("1. Public/External");
-            Console.WriteLine("2. Local");
-            input = Console.ReadLine();
-
-            var ipTypeValidationResult = Program.ValidateNumberIsWithinRange(input, 1, 2);
-            if (ipTypeValidationResult.Failure)
-            {
-                return Result.Fail<RemoteServer>(ipTypeValidationResult.Error);
-            }
-
-            switch (ipTypeValidationResult.Value)
-            {
-                case Program.PublicIpAddress:
-                    clientInfo.ConnectionInfo.PublicIpAddress = clientIp;
-                    break;
-
-                case Program.LocalIpAddress:
-                    clientInfo.ConnectionInfo.LocalIpAddress = clientIp;
-                    break;
-            }
-
-            clientInfo.ConnectionInfo.Port =
-                Program.GetPortNumberFromUser("Enter the server's port number that handles incoming requests", false);
-
-            return Result.Ok(clientInfo);
-        }
-
-
         private void HandleServerEvent(ServerEventInfo serverEvent)
         {
+            EventOccurred?.Invoke(serverEvent);
+
             switch (serverEvent.EventType)
             {     
                 case ServerEventType.ReceiveFileListResponseCompleted:

@@ -22,7 +22,7 @@
         const string NotifyLanTrafficOnly = "Unable to determine public IP address, this server will only be able to communicate with machines in the same local network.";
         const string PropmptMultipleLocalIPv4Addresses = "There are multiple IPv4 addresses available on this machine, choose the most appropriate local address:";
 
-        const int SendTextMessage = 1;
+        const int SendMessage = 1;
         const int SendFile = 2;
         const int GetFile = 3;
         const int ShutDown = 4;
@@ -147,7 +147,6 @@
                 }
 
                 var input = Console.ReadLine();
-
                 var validationResult = ValidateNumberIsWithinRange(input, 1, totalMenuChoices);
                 if (validationResult.Failure)
                 {
@@ -168,7 +167,7 @@
             // TODO: Change logic so that main menu does not always reprint when operation (GetFIle) is in progress
             while (true)
             {
-                Console.WriteLine($"Server is ready to handle incoming requests\nLocal Endpoint:\t{myInfo.GetLocalEndPoint()}\nPublic Endpoint:\t{myInfo.GetPublicEndPoint()}");
+                Console.WriteLine($"Server is ready to handle incoming requests\n\n\tLocal Endpoint:\t\t{myInfo.GetLocalEndPoint()}\n\tPublic Endpoint:\t{myInfo.GetPublicEndPoint()}");
 
                 var menuResult = GetMenuChoice();
                 if (menuResult.Failure)
@@ -184,7 +183,7 @@
                     break;
                 }
 
-                var chooseClientResult = await ChooseClientAsync(server, settings, myInfo);
+                var chooseClientResult = await ChooseClientAsync(settings, myInfo);
                 if (chooseClientResult.Failure)
                 {
                     Console.WriteLine(chooseClientResult.Error);
@@ -198,7 +197,7 @@
                 var result = Result.Ok();
                 switch (menuChoice)
                 {   
-                    case SendTextMessage:
+                    case SendMessage:
                         result = await SendTextMessageToClientAsync(
                                         server, 
                                         myInfo, 
@@ -262,7 +261,7 @@
             Console.WriteLine("4. Shutdown");
         }
         
-        private static async Task<Result<RemoteServer>> ChooseClientAsync(TplSocketServer server, AppSettings settings, ConnectionInfo myInfo)
+        private static async Task<Result<RemoteServer>> ChooseClientAsync(AppSettings settings, ConnectionInfo myInfo)
         {
             var clientMenuChoice = 0;
             var totalMenuChoices = settings.RemoteServers.Count + 2;
@@ -304,29 +303,71 @@
 
             if (clientMenuChoice == addNewClient)
             {
-                return await AddNewClientAsync(server, settings, myInfo);
+                return await AddNewClientAsync(settings, myInfo);
             }
             
             return Result.Ok(settings.RemoteServers[clientMenuChoice - 1]);
         }
 
-        private static async Task<Result<RemoteServer>> AddNewClientAsync(TplSocketServer server, AppSettings settings, ConnectionInfo myInfo)
+        private static async Task<Result<RemoteServer>> AddNewClientAsync(AppSettings settings, ConnectionInfo myInfo)
         {
             var getNewClientInfo = new GetClientInfoFromUser();
             getNewClientInfo.EventOccurred += HandleServerEvent;
 
-            var getNewClientInfoResult = await getNewClientInfo.RunAsync(server, settings, myInfo);
-
+            var getNewClientInfoResult = await getNewClientInfo.RunAsync(settings, myInfo);
             if (getNewClientInfoResult.Failure)
             {
                 return Result.Fail<RemoteServer>(getNewClientInfoResult.Error);
             }
 
+            Console.WriteLine("Thank you! This server has been successfully configured.");
             var newClientInfo = getNewClientInfoResult.Value;
 
             settings.RemoteServers.Add(newClientInfo);
             SaveSettingsToFile(settings);
             return Result.Ok(newClientInfo);
+        }
+
+        public static Result<RemoteServer> GetRemoteServerConnectionInfoFromUser()
+        {
+            var remoteServerInfo = new RemoteServer();
+
+            Console.WriteLine("Enter the server's IPv4 address:");
+            var input = Console.ReadLine();
+
+            var ipValidationResult = ValidateIpV4Address(input);
+            if (ipValidationResult.Failure)
+            {
+                return Result.Fail<RemoteServer>(ipValidationResult.Error);
+            }
+
+            var clientIp = ipValidationResult.Value;
+            Console.WriteLine($"Is {clientIp} a local or public IP address?");
+            Console.WriteLine("1. Public/External");
+            Console.WriteLine("2. Local");
+            input = Console.ReadLine();
+
+            var ipTypeValidationResult = ValidateNumberIsWithinRange(input, 1, 2);
+            if (ipTypeValidationResult.Failure)
+            {
+                return Result.Fail<RemoteServer>(ipTypeValidationResult.Error);
+            }
+
+            switch (ipTypeValidationResult.Value)
+            {
+                case PublicIpAddress:
+                    remoteServerInfo.ConnectionInfo.PublicIpAddress = clientIp;
+                    break;
+
+                case LocalIpAddress:
+                    remoteServerInfo.ConnectionInfo.LocalIpAddress = clientIp;
+                    break;
+            }
+
+            remoteServerInfo.ConnectionInfo.Port =
+                GetPortNumberFromUser("Enter the server's port number that handles incoming requests", false);
+
+            return Result.Ok(remoteServerInfo);
         }
 
         public static int GetPortNumberFromUser(string prompt, bool allowRandom)
