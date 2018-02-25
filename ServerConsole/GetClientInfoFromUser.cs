@@ -149,7 +149,7 @@
 
             switch (serverEvent.EventType)
             {     
-                case ServerEventType.ReceiveFileListResponseCompleted:
+                case ServerEventType.ReceiveTransferFolderResponseCompleted:
                     _clientTransferFolderPath = serverEvent.RemoteFolder;
                     _waitingForTransferFolderResponse = false;
                     break;

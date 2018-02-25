@@ -732,8 +732,8 @@ namespace TplSocketServer
             EventOccurred?.Invoke(new ServerEventInfo
             {
                 EventType = ServerEventType.SendTransferFolderResponseStarted,
-                RemoteServerIpAddress = _localIpAddress,
-                RemoteServerPortNumber = _localPort,
+                RemoteServerIpAddress = requestorIpAddress,
+                RemoteServerPortNumber = requestorPortNumber,
                 LocalFolder = _transferFolderPath
             });
 
@@ -1219,8 +1219,8 @@ namespace TplSocketServer
                 new ServerEventInfo
                 {
                     EventType = ServerEventType.SendTransferFolderRequestStarted,
-                    RemoteServerIpAddress = localIpAddress,
-                    RemoteServerPortNumber = localPort
+                    RemoteServerIpAddress = remoteServerIpAddress,
+                    RemoteServerPortNumber = remoteServerPort
                 });
 
             var requestResult =

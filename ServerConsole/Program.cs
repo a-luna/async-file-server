@@ -343,8 +343,8 @@
 
             var clientIp = ipValidationResult.Value;
             Console.WriteLine($"Is {clientIp} a local or public IP address?");
-            Console.WriteLine("1. Public/External");
-            Console.WriteLine("2. Local");
+            Console.WriteLine("1. Local");
+            Console.WriteLine("2. Public/External");
             input = Console.ReadLine();
 
             var ipTypeValidationResult = ValidateNumberIsWithinRange(input, 1, 2);
