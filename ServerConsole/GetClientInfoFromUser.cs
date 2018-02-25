@@ -14,41 +14,18 @@
         string _clientTransferFolderPath = string.Empty;
         string _clientPublicIp = string.Empty;
 
-        TplSocketServer _server;
-
         public event ServerEventDelegate EventOccurred;
 
-        public async Task<Result<RemoteServer>> RunAsync(AppSettings settings, ConnectionInfo listenServerInfo)
+        public async Task<Result<RemoteServer>> RunAsync(TplSocketServer server, ConnectionInfo listenServerInfo)
         {
             var cts = new CancellationTokenSource();
             var token = cts.Token;
 
-            _server = new TplSocketServer(settings);
-            _server.EventOccurred += HandleServerEvent;
-
-            var randomPort = 0;
-            while (randomPort is 0)
-            {
-                var random = new Random();
-                randomPort = random.Next(Program.PortRangeMin, Program.PortRangeMax + 1);
-
-                if (randomPort == listenServerInfo.Port)
-                {
-                    randomPort = 0;
-                }
-            }
-
-            var listenTask =
-                Task.Run(
-                    () => _server.HandleIncomingConnectionsAsync(
-                        listenServerInfo.GetLocalIpAddress(),
-                        randomPort,
-                        token),
-                    token);
+            server.EventOccurred += HandleServerEvent;
 
             var newClient = new RemoteServer();
-
             var clientInfoIsValid = false;
+
             while (!clientInfoIsValid)
             {
                 var addClientResult = Program.GetRemoteServerConnectionInfoFromUser();
@@ -78,11 +55,11 @@
             }
 
             var sendFolderRequestResult = 
-                await _server.RequestTransferFolderPath(
+                await server.RequestTransferFolderPath(
                     clientIp, 
                     newClient.ConnectionInfo.Port, 
                     listenServerInfo.LocalIpAddress, 
-                    randomPort,
+                    listenServerInfo.Port,
                     token)
                     .ConfigureAwait(false);
 
@@ -98,11 +75,11 @@
             if (string.IsNullOrEmpty(newClient.ConnectionInfo.PublicIpAddress))
             {
                 var sendIpRequestResult =
-                    await _server.RequestPublicIp(
+                    await server.RequestPublicIp(
                             clientIp,
                             newClient.ConnectionInfo.Port,
                             listenServerInfo.LocalIpAddress,
-                            randomPort,
+                            listenServerInfo.Port,
                             token)
                         .ConfigureAwait(false);
 
@@ -114,30 +91,6 @@
 
                 while (_waitingForPublicIpResponse) { }
                 newClient.ConnectionInfo.PublicIpAddress = _clientPublicIp;
-            }
-
-            try
-            {
-                cts.Cancel();
-                var serverShutdown = await listenTask.ConfigureAwait(false);
-                if (serverShutdown.Failure)
-                {
-                    return Result.Fail<RemoteServer>(
-                        $"There was an error shutting down the temp request server: {serverShutdown.Error}");
-                }
-            }
-            catch (AggregateException ex)
-            {
-                var report = "\nException messages:";
-                foreach (var ie in ex.InnerExceptions)
-                {
-                    report += $"\t{ie.GetType().Name}: {ie.Message}";
-                    return Result.Fail<RemoteServer>(report);
-                }
-            }
-            finally
-            {
-                _server.CloseListenSocket();
             }
 
             return Result.Ok(newClient);

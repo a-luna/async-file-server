@@ -1294,6 +1294,11 @@ namespace TplSocketServer
             return Result.Ok();
         }
 
+        public void RemoveAllSubscribers()
+        {
+            EventOccurred = null;
+        }
+
         public Result CloseListenSocket()
         {
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ShutdownListenSocketStarted });

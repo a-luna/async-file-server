@@ -183,7 +183,7 @@
                     break;
                 }
 
-                var chooseClientResult = await ChooseClientAsync(settings, myInfo);
+                var chooseClientResult = await ChooseClientAsync(server, settings, myInfo);
                 if (chooseClientResult.Failure)
                 {
                     Console.WriteLine(chooseClientResult.Error);
@@ -261,7 +261,7 @@
             Console.WriteLine("4. Shutdown");
         }
         
-        private static async Task<Result<RemoteServer>> ChooseClientAsync(AppSettings settings, ConnectionInfo myInfo)
+        private static async Task<Result<RemoteServer>> ChooseClientAsync(TplSocketServer server, AppSettings settings, ConnectionInfo myInfo)
         {
             var clientMenuChoice = 0;
             var totalMenuChoices = settings.RemoteServers.Count + 2;
@@ -303,18 +303,23 @@
 
             if (clientMenuChoice == addNewClient)
             {
-                return await AddNewClientAsync(settings, myInfo);
+                return await AddNewClientAsync(server, settings, myInfo);
             }
             
             return Result.Ok(settings.RemoteServers[clientMenuChoice - 1]);
         }
 
-        private static async Task<Result<RemoteServer>> AddNewClientAsync(AppSettings settings, ConnectionInfo myInfo)
+        private static async Task<Result<RemoteServer>> AddNewClientAsync(TplSocketServer server, AppSettings settings, ConnectionInfo myInfo)
         {
             var getNewClientInfo = new GetClientInfoFromUser();
             getNewClientInfo.EventOccurred += HandleServerEvent;
 
-            var getNewClientInfoResult = await getNewClientInfo.RunAsync(settings, myInfo);
+            server.RemoveAllSubscribers();
+            var getNewClientInfoResult = await getNewClientInfo.RunAsync(server, myInfo);
+
+            server.RemoveAllSubscribers();
+            server.EventOccurred += HandleServerEvent;
+
             if (getNewClientInfoResult.Failure)
             {
                 return Result.Fail<RemoteServer>(getNewClientInfoResult.Error);
@@ -376,28 +381,34 @@
             while (portNumber is 0)
             {
                 string input;
-                Console.WriteLine($"{prompt} (range {PortRangeMin}-{PortRangeMax}):");                
+                Console.WriteLine($"{prompt} (range {PortRangeMin}-{PortRangeMax}):");
 
                 if (allowRandom)
                 {
                     Console.WriteLine("Enter zero to use a random port number");
-                    input = Console.ReadLine();
-
-                    if (string.IsNullOrEmpty(input))
-                    {
-                        continue;
-                    }
-
-                    if (input.Equals("zero") || input.Equals("0"))
-                    {
-                        var rnd = new Random();
-                        portNumber = rnd.Next(PortRangeMin, PortRangeMax + 1);
-                        Console.WriteLine($"Your randomly chosen port number is: {portNumber}");
-                        break;
-                    }
                 }
 
                 input = Console.ReadLine();
+
+                if (string.IsNullOrEmpty(input))
+                {
+                    Console.WriteLine("User input was null or empty string, please try again.");
+                    continue;
+                }
+
+                if (input.Equals("zero") || input.Equals("0"))
+                {
+                    if (!allowRandom)
+                    {
+                        Console.WriteLine("Zero is not within the allowed range, please try again.");
+                        continue;
+                    }
+
+                    var rnd = new Random();
+                    portNumber = rnd.Next(PortRangeMin, PortRangeMax + 1);
+                    Console.WriteLine($"Your randomly chosen port number is: {portNumber}");
+                    break;
+                }
 
                 var portValidationResult = ValidateNumberIsWithinRange(input, PortRangeMin, PortRangeMax);
                 if (portValidationResult.Failure)
