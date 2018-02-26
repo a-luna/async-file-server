@@ -60,7 +60,11 @@ namespace TplSocketServer
 
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         }
-        
+
+        public string LocalEndPoint => _listenSocket.IsBound
+            ? _listenSocket.LocalEndPoint.ToString()
+            : string.Empty;
+
         public event ServerEventDelegate EventOccurred;
 
         public async Task<Result> HandleIncomingConnectionsAsync(IPAddress ipAddress, int localPort, CancellationToken token)
@@ -820,7 +824,7 @@ namespace TplSocketServer
 
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerCompleted });
 
-            var publicIp = string.Empty;
+            var publicIp = IPAddress.None.ToString();
             var publicIpResult = await IpAddressHelper.GetPublicIPv4AddressAsync().ConfigureAwait(false);
             if (publicIpResult.Success)
             {
@@ -874,7 +878,7 @@ namespace TplSocketServer
             EventOccurred?.Invoke(
                 new ServerEventInfo
                 {
-                    EventType = ServerEventType.ReceivePublicIpRequestCompleted,
+                    EventType = ServerEventType.ReceivePublicIpResponseCompleted,
                     RemoteServerIpAddress = remoteServerIp,
                     RemoteServerPortNumber = remoteServerPort,
                     PublicIpAddress = publicIpAddress

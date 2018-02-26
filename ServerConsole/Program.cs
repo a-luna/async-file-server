@@ -24,17 +24,12 @@
             {
                 case ServerEventType.ReceiveTextMessageCompleted:
                     Console.WriteLine($"\nMessage received from client {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}:");
-                    Console.WriteLine($"{serverEvent.TextMessage}\n");
+                    Console.WriteLine($"{serverEvent.TextMessage}");
                     break;
 
                 case ServerEventType.ReceiveOutboundFileTransferInfoCompleted:
                     Console.WriteLine("\nReceived Outbound File Transfer Request");
-                    Console.WriteLine($"\tFile Requested:\t\t{serverEvent.FileName}\n\tFile Size:\t\t{serverEvent.FileSizeString}\n\tRemote Endpoint:\t{serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}\n\tTarget Directory:\t{serverEvent.RemoteFolder}\n");
-                    break;
-
-                case ServerEventType.ReceiveInboundFileTransferInfoCompleted:
-                    Console.WriteLine("\nReceived Inbound File Transfer Request");
-                    Console.WriteLine($"\tFile Name:\t\t\t{serverEvent.FileName}\n\tFile Size:\t\t\t{serverEvent.FileSizeString}\n");                    
+                    Console.WriteLine($"File Requested:\t\t{serverEvent.FileName}\nFile Size:\t\t{serverEvent.FileSizeString}\nRemote Endpoint:\t{serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}\nTarget Directory:\t{serverEvent.RemoteFolder}");
                     break;
 
                 case ServerEventType.SendFileBytesStarted:
@@ -42,28 +37,19 @@
                     break;
 
                 case ServerEventType.ReceiveFileBytesStarted:
-                    Console.WriteLine("\nReceving file from client...");
-                    break;
-
-                case ServerEventType.FileTransferProgress:
-                    Console.WriteLine($"\nFile Transfer {serverEvent.PercentComplete:P0} Complete\n");
+                    Console.WriteLine("\nReceiving file from client...");
                     break;
 
                 case ServerEventType.ReceiveConfirmationMessageCompleted:
-                    Console.WriteLine("Client confirmed file transfer completed successfully\n");                    
-                    break;
-
-                case ServerEventType.ReceiveFileBytesCompleted:
-                    Console.WriteLine("\nSuccessfully received file from client");
-                    Console.WriteLine($"\tTransfer Start Time:\t{serverEvent.FileTransferStartTime.ToLongTimeString()}\n\tTransfer Complete Time:\t{serverEvent.FileTransferCompleteTime.ToLongTimeString()}\n\tElapsed Time:\t\t\t{serverEvent.FileTransferElapsedTimeString}\n\tTransfer Rate:\t\t\t{serverEvent.FileTransferRate}\n");                    
+                    Console.WriteLine("Client confirmed file transfer completed successfully");                    
                     break;
 
                 case ServerEventType.SendFileListRequestStarted:
-                    Console.WriteLine($"\nSending request for list of downloadable files to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}\n");
+                    Console.WriteLine($"Sending request for list of available files to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}");
                     break;
 
                 case ServerEventType.ReceiveFileListRequestCompleted:
-                    Console.WriteLine($"\nReceived request for list of downloadable files from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}");
+                    Console.WriteLine($"Received request for list of available files from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}");
                     break;
 
                 case ServerEventType.SendFileListResponseStarted:
@@ -75,7 +61,7 @@
                     break;
 
                 case ServerEventType.SendPublicIpRequestStarted:
-                    Console.WriteLine($"\nSending request for public IP address to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}\n");
+                    Console.WriteLine($"\nSending request for public IP address to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}");
                     break;
 
                 case ServerEventType.ReceivePublicIpRequestCompleted:
@@ -87,11 +73,11 @@
                     break;
 
                 case ServerEventType.ReceivePublicIpResponseCompleted:
-                    Console.WriteLine($"\nReceived public IP address from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.PublicIpAddress})\n");                    
+                    Console.WriteLine($"Received public IP address from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.PublicIpAddress})\n");                    
                     break;
 
                 case ServerEventType.SendTransferFolderRequestStarted:
-                    Console.WriteLine($"\nSending request for transfer folder path to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}\n");
+                    Console.WriteLine($"\nSending request for transfer folder path to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}");
                     break;
 
                 case ServerEventType.ReceiveTransferFolderRequestCompleted:
@@ -103,7 +89,7 @@
                     break;
 
                 case ServerEventType.ReceiveTransferFolderResponseCompleted:
-                    Console.WriteLine($"\nReceived transfer folder path from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.RemoteFolder})\n");
+                    Console.WriteLine($"Received transfer folder path from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.RemoteFolder})");
                     break;
 
                 case ServerEventType.ShutdownListenSocketCompleted:

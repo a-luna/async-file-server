@@ -41,6 +41,7 @@ namespace ServerConsole
         readonly string _settingsFilePath;
         readonly string _transferFolderPath;
 
+        bool _waitingForServerToBeginAcceptingConnections;
         bool _waitingForTransferFolderResponse;
         bool _waitingForPublicIpResponse;
         bool _waitingForFileListResponse = true;
@@ -49,11 +50,12 @@ namespace ServerConsole
         string _clientTransferFolderPath;
         string _clientPublicIp;
         List<(string filePath, long fileSize)> _fileInfoList;
-
-        IProgress<double> _progress;
-
+        ServerEventInfo _fileTransferComplete;
+        
         readonly CancellationTokenSource _cts;
         CancellationToken _token;
+        ConsoleProgressBar _progress;
+
         AppSettings _settings;
         ConnectionInfo _myInfo;
         TplSocketServer _server;        
@@ -77,7 +79,9 @@ namespace ServerConsole
             _myInfo = await GetLocalServerSettingsFromUser();
 
             _server = new TplSocketServer(_settings);
-            _server.EventOccurred += HandleServerEvent;            
+            _server.EventOccurred += HandleServerEvent;
+
+            _waitingForServerToBeginAcceptingConnections = true;
 
             try
             {
@@ -88,6 +92,10 @@ namespace ServerConsole
                             _myInfo.Port,
                             _token),
                         _token);
+
+                while (_waitingForServerToBeginAcceptingConnections) { }
+
+                _myInfo.LocalEndPoint = _server.LocalEndPoint;
 
                 await ServerMenuAsync();
 
@@ -143,6 +151,7 @@ namespace ServerConsole
             var retrievePublicIp = await IpAddressHelper.GetPublicIPv4AddressAsync();
             if (retrievePublicIp.Failure)
             {
+                Console.WriteLine(Environment.NewLine);
                 Console.WriteLine(NotifyLanTrafficOnly);
             }
             else
@@ -244,7 +253,7 @@ namespace ServerConsole
             
             while (true)
             {
-                Console.WriteLine($"Server is ready to handle incoming requests\n\n\tLocal Endpoint: [{_myInfo.GetLocalEndPoint()}]\tPublic Endpoint: [{_myInfo.GetPublicEndPoint()}]");
+                Console.WriteLine($"Server is ready to handle incoming requests\nLocal Endpoint: [{_myInfo.LocalEndPoint}]\nPublic IP: [{_myInfo.GetPublicIpAddress()}]");
 
                 var menuResult = GetMenuChoice();
                 if (menuResult.Failure)
@@ -302,7 +311,7 @@ namespace ServerConsole
 
         private Result<int> GetMenuChoice()
         {
-            WriteMenuToScreen();
+            WriteMenuToScreen(false);
             var input = Console.ReadLine();
             Console.WriteLine(string.Empty);
 
@@ -315,9 +324,14 @@ namespace ServerConsole
             return Result.Ok(validationResult.Value);
         }
 
-        private void WriteMenuToScreen()
+        private void WriteMenuToScreen(bool waitingForUserInput)
         {
-            Console.WriteLine("Please make a choice from the menu below:");
+            if (waitingForUserInput)
+            {
+                Console.WriteLine($"\nServer is ready to handle incoming requests\nLocal Endpoint: [{_myInfo.LocalEndPoint}]\nPublic IP: [{_myInfo.GetPublicIpAddress()}]");
+            }
+
+            Console.WriteLine("\nPlease make a choice from the menu below:");
             Console.WriteLine("1. Send Text Message");
             Console.WriteLine("2. Send File");
             Console.WriteLine("3. Get File");
@@ -338,7 +352,7 @@ namespace ServerConsole
                 foreach (var i in Enumerable.Range(0, _settings.RemoteServers.Count))
                 {
                     var thisClient = _settings.RemoteServers[i];
-                    Console.WriteLine($"{i + 1}. Local IP: [{thisClient.ConnectionInfo.GetLocalEndPoint()}]\tPublic IP: [{thisClient.ConnectionInfo.GetPublicEndPoint()}]");
+                    Console.WriteLine($"{i + 1}. Local IP: [{thisClient.ConnectionInfo.LocalEndPoint}]\tPublic IP: [{thisClient.ConnectionInfo.GetPublicEndPoint()}]");
                 }
 
                 Console.WriteLine($"{addNewClient}. Add New Client");
@@ -450,7 +464,7 @@ namespace ServerConsole
                 newClient.ConnectionInfo.PublicIpAddress = _clientPublicIp;
             }
 
-            Console.WriteLine("Thank you! Connection info for client has been successfully configured.");
+            Console.WriteLine("Thank you! Connection info for client has been successfully configured.\n");
 
             _settings.RemoteServers.Add(newClient);
             SaveSettingsToFile(_settings);
@@ -471,7 +485,7 @@ namespace ServerConsole
             }
 
             var clientIp = ipValidationResult.Value;
-            Console.WriteLine($"Is {clientIp} a local or public IP address?");
+            Console.WriteLine($"\nIs {clientIp} a local or public IP address?");
             Console.WriteLine("1. Local");
             Console.WriteLine("2. Public/External");
             input = Console.ReadLine();
@@ -494,7 +508,7 @@ namespace ServerConsole
             }
 
             remoteServerInfo.ConnectionInfo.Port =
-                GetPortNumberFromUser("Enter the server's port number that handles incoming requests", false);
+                GetPortNumberFromUser("\nEnter the server's port number that handles incoming requests", false);
 
             return Result.Ok(remoteServerInfo);
         }
@@ -531,7 +545,7 @@ namespace ServerConsole
 
         private async Task<Result> SendTextMessageToClientAsync(RemoteServer client, string ipAddress, int port, CancellationToken token)
         {
-            Console.WriteLine($"Please enter a text message to send to {client.ConnectionInfo.GetLocalEndPoint()}");
+            Console.WriteLine($"Please enter a text message to send to {client.ConnectionInfo.LocalEndPoint}");
             var message = Console.ReadLine();
             Console.WriteLine(string.Empty);
             
@@ -627,10 +641,6 @@ namespace ServerConsole
 
         private async Task<Result> RequestFileListFromClientAsync(string ipAddress, int port, CancellationToken token)
         {
-            _progress = new ConsoleProgressBar();
-
-            Console.WriteLine($"Requesting list of files from {ipAddress}:{port}...");
-
             var requestFileListResult =
                 await _server.RequestFileListAsync(
                         ipAddress,
@@ -657,6 +667,14 @@ namespace ServerConsole
             }
 
             while (_waitingForDownloadToComplete) { }
+            await Task.Delay(500);
+            _progress.Dispose();
+
+            Console.WriteLine("\nSuccessfully received file from client");
+            Console.WriteLine($"Transfer Start Time:\t\t{_fileTransferComplete.FileTransferStartTime.ToLongTimeString()}");
+            Console.WriteLine($"Transfer Complete Time:\t\t{_fileTransferComplete.FileTransferCompleteTime.ToLongTimeString()}");
+            Console.WriteLine($"Elapsed Time:\t\t\t{_fileTransferComplete.FileTransferElapsedTimeString}");
+            Console.WriteLine($"Transfer Rate:\t\t\t{_fileTransferComplete.FileTransferRate}\n");
 
             return Result.Ok();
         }
@@ -671,19 +689,16 @@ namespace ServerConsole
             }
 
             var fileToGet = selectFileResult.Value;
-
-            var settings = InitializeAppSettings();
-            var transferServer = new TplSocketServer(settings);
-
+            
             var getFileResult =
-                await transferServer.GetFileAsync(
+                await _server.GetFileAsync(
                     remoteIp,
                     remotePort,
                     fileToGet,
                     _myInfo.LocalIpAddress,
                     _myInfo.Port,
                     _transferFolderPath,
-                    new CancellationToken(false))
+                    _token)
                     .ConfigureAwait(false);
 
             return getFileResult.Failure ? getFileResult : Result.Ok();
@@ -801,12 +816,25 @@ namespace ServerConsole
 
             switch (serverEvent.EventType)
             {
+                case ServerEventType.AcceptConnectionAttemptStarted:
+                    _waitingForServerToBeginAcceptingConnections = false;
+                    break;
+
+                case ServerEventType.ReceiveFileBytesStarted:
+                    _progress = new ConsoleProgressBar();
+                    break;
+
                 case ServerEventType.FileTransferProgress:
                     _progress.Report(serverEvent.PercentComplete);
                     break;
 
                 case ServerEventType.ReceiveFileBytesCompleted:
                     _waitingForDownloadToComplete = false;
+                    _fileTransferComplete = serverEvent;
+                    break;
+
+                case ServerEventType.ReceiveConfirmationMessageCompleted:
+                    WriteMenuToScreen(true);
                     break;
 
                 case ServerEventType.ReceiveFileListResponseCompleted:
@@ -817,6 +845,10 @@ namespace ServerConsole
                 case ServerEventType.ReceiveTransferFolderResponseCompleted:
                     _clientTransferFolderPath = serverEvent.RemoteFolder;
                     _waitingForTransferFolderResponse = false;
+                    break;
+
+                case ServerEventType.SendPublicIpResponseStarted:
+                    WriteMenuToScreen(true);
                     break;
 
                 case ServerEventType.ReceivePublicIpResponseCompleted:

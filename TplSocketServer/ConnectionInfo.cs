@@ -12,13 +12,9 @@
         }
 
         public string LocalIpAddress { get; set; }
+        public string LocalEndPoint { get; set; }
         public string PublicIpAddress { get; set; }
         public int Port { get; set; }       
-        
-        public string GetLocalEndPoint()
-        {
-            return $"{LocalIpAddress}:{Port}";
-        }
 
         public string GetPublicEndPoint()
         {
