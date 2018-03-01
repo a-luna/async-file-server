@@ -52,6 +52,7 @@ namespace TplSocketServerTest
         [TestInitialize]
         public void Setup()
         {
+            var test = IpAddressHelper.GetLocalIPv4AddressList();
             _tokenSource = new CancellationTokenSource();
 
             _server = new TplSocketServer();
@@ -118,7 +119,6 @@ namespace TplSocketServerTest
             var runServerTask1 = 
                 Task.Run(() => 
                     _server.HandleIncomingConnectionsAsync(
-                        _ipAddress, 
                         remoteServerPort, 
                         token), 
                     token);
@@ -126,7 +126,6 @@ namespace TplSocketServerTest
             var runServerTask2 = 
                 Task.Run(() => 
                     _client.HandleIncomingConnectionsAsync(
-                        _ipAddress, 
                         localPort, 
                         token), 
                     token);
@@ -234,7 +233,6 @@ namespace TplSocketServerTest
             var listenTask = 
                 Task.Run(() => 
                     _server.HandleIncomingConnectionsAsync(
-                        _ipAddress, 
                         remoteServerPort, 
                         token),
                     token);
@@ -321,7 +319,6 @@ namespace TplSocketServerTest
             var runServerTask1 = 
                 Task.Run(() => 
                     _server.HandleIncomingConnectionsAsync(
-                        _ipAddress, 
                         remoteServerPort, 
                         token), 
                     token);
@@ -329,7 +326,6 @@ namespace TplSocketServerTest
             var runServerTask2 = 
                 Task.Run(() => 
                     _client.HandleIncomingConnectionsAsync(
-                        _ipAddress, 
                         localPort, 
                         token), 
                     token);

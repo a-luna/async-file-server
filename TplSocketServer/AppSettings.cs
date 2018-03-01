@@ -1,5 +1,8 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Xml.Serialization;
+using AaronLuna.Common.Network;
+using AaronLuna.Common.Result;
 
 namespace TplSocketServer
 {
@@ -27,16 +30,39 @@ namespace TplSocketServer
             }
         }
 
-        public static AppSettings Deserialize(string filePath)
+        public void InitializeIpAddresses()
+        {
+            foreach (var server in RemoteServers)
+            {
+               var parseResult =
+                    IpAddressHelper.ParseSingleIPv4Address(server.ConnectionInfo.LocalIpString);
+
+                if (parseResult.Success)
+                {
+                    server.ConnectionInfo.LocalIpAddress = parseResult.Value;
+                }
+            }
+        }
+
+        public static Result<AppSettings> Deserialize(string filePath)
         {
             AppSettings settings;
-            var deserializer = new XmlSerializer(typeof(AppSettings));
-            using (var reader = new StreamReader(filePath))
+            try
             {
-                settings = (AppSettings) deserializer.Deserialize(reader);
+                var deserializer = new XmlSerializer(typeof(AppSettings));
+                using (var reader = new StreamReader(filePath))
+                {
+                    settings = (AppSettings)deserializer.Deserialize(reader);
+                }
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail<AppSettings>($"{ex.Message} ({ex.GetType()})");
             }
 
-            return settings;
+            settings.InitializeIpAddresses();
+
+            return Result.Ok(settings);
         }
     }
 }

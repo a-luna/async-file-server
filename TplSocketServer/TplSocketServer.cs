@@ -18,6 +18,9 @@ namespace TplSocketServer
     public class TplSocketServer
     {
         const string ConfirmationMessage = "handshake";
+        const string FileAlreadyExists = "A file with the same name already exists in the download folder, please rename or remove this file in order to proceed.";
+        const string EmptyTransferFolderErrorMessage = "Currently there are no files available in transfer folder";
+
         const int OneSecondInMilliseconds = 1000;
 
         readonly int _maxConnections;
@@ -29,7 +32,7 @@ namespace TplSocketServer
         
         readonly string _transferFolderPath;
 
-        string _localIpAddress;
+        readonly string _localIpAddress;
         int _localPort;
 
         Socket _listenSocket;
@@ -40,7 +43,7 @@ namespace TplSocketServer
             _transferFolderPath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}transfer";
 
             _maxConnections = 5;
-            _bufferSize = 1024 * 8;
+            _bufferSize = 1024;
             _connectTimeoutMs = 5000;
             _receiveTimeoutMs = 5000;
             _sendTimeoutMs = 5000;
@@ -48,8 +51,9 @@ namespace TplSocketServer
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         }
 
-        public TplSocketServer(AppSettings appSettings)
+        public TplSocketServer(AppSettings appSettings, IPAddress localIpAddress)
         {
+            _localIpAddress = localIpAddress.ToString();
             _transferFolderPath = appSettings.TransferFolderPath;
 
             _maxConnections = appSettings.SocketSettings.MaxNumberOfConections;
@@ -67,20 +71,19 @@ namespace TplSocketServer
 
         public event ServerEventDelegate EventOccurred;
 
-        public async Task<Result> HandleIncomingConnectionsAsync(IPAddress ipAddress, int localPort, CancellationToken token)
+        public async Task<Result> HandleIncomingConnectionsAsync(int localPort, CancellationToken token)
         {
-            _localIpAddress = ipAddress.ToString();
             _localPort = localPort;
 
-            return (await Task.Factory.StartNew(() => Listen(ipAddress, localPort), token).ConfigureAwait(false))
+            return (await Task.Factory.StartNew(() => Listen(localPort), token).ConfigureAwait(false))
                 .OnSuccess(() => WaitForConnectionsAsync(token));
         }
 
-        private Result Listen(IPAddress ipAddress, int localPort)
+        private Result Listen(int localPort)
         { 
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ListenOnLocalPortStarted });
             
-            var ipEndPoint = new IPEndPoint(ipAddress, localPort);            
+            var ipEndPoint = new IPEndPoint(IPAddress.Any, localPort);            
             try
             {
                 _listenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
@@ -108,22 +111,32 @@ namespace TplSocketServer
                 }
 
                 var acceptConnectionResult = await AcceptNextConnection(token).ConfigureAwait(false);
-
-                if (acceptConnectionResult.Success)
+                if (acceptConnectionResult.Failure)
                 {
-                    var requestResult = await ProcessRequestAsync(token).ConfigureAwait(false);
-
-                    if (requestResult.Failure)
+                    EventOccurred?.Invoke(new ServerEventInfo
                     {
-                        EventOccurred?.Invoke(new ServerEventInfo
-                        {
-                            EventType = ServerEventType.ErrorOccurred,
-                            ErrorMessage = requestResult.Error
-                        });
+                        EventType = ServerEventType.ErrorOccurred,
+                        ErrorMessage = acceptConnectionResult.Error
+                    });
 
-                        return requestResult;
-                    }
+                    return acceptConnectionResult;
                 }
+
+                var requestResult = await ProcessRequestAsync(token).ConfigureAwait(false);
+                if (requestResult.Success)
+                {
+                    _transferSocket.Shutdown(SocketShutdown.Both);
+                    _transferSocket.Close();
+                    continue;
+                }
+
+                EventOccurred?.Invoke(new ServerEventInfo
+                {
+                    EventType = ServerEventType.ErrorOccurred,
+                    ErrorMessage = requestResult.Error
+                });
+
+                return requestResult;
             }
         }
 
@@ -145,7 +158,6 @@ namespace TplSocketServer
             _transferSocket = acceptResult.Value;
 
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.AcceptConnectionAttemptCompleted });
-
             return Result.Ok();
         }
 
@@ -344,17 +356,13 @@ namespace TplSocketServer
                 new ServerEventInfo { EventType = ServerEventType.ReceiveInboundFileTransferInfoStarted });
 
             var(localFilePath, 
-                fileSizeBytes) = MessageUnwrapper.ReadInboundFileTransferRequest(buffer);
+                fileSizeBytes,
+                remoteIpAddress,
+                remotePort) = MessageUnwrapper.ReadInboundFileTransferRequest(buffer);
 
             if (token.IsCancellationRequested)
             {
                 token.ThrowIfCancellationRequested();
-            }
-
-            var deleteFileResult = FileHelper.DeleteFileIfAlreadyExists(localFilePath);
-            if (deleteFileResult.Failure)
-            {
-                return deleteFileResult;
             }
 
             EventOccurred?.Invoke(
@@ -365,6 +373,22 @@ namespace TplSocketServer
                     FileName = Path.GetFileName(localFilePath),
                     FileSizeInBytes = fileSizeBytes
                 });
+
+            if (File.Exists(localFilePath))
+            {
+                var message = $"{FileAlreadyExists} ({localFilePath})";
+
+                var sendResult = await SendTextMessageAsync(
+                        message,
+                        remoteIpAddress,
+                        remotePort,
+                        _localIpAddress,
+                        _localPort,
+                        token)
+                    .ConfigureAwait(false);
+                
+                return sendResult.Success ? Result.Ok() : sendResult;
+            }
 
             var startTime = DateTime.Now;
 
@@ -587,7 +611,16 @@ namespace TplSocketServer
 
             if (!listOfFiles.Any())
             {
-                var message = $"The requested folder is empty ({_transferFolderPath})";
+                EventOccurred?.Invoke(new ServerEventInfo
+                {
+                    EventType = ServerEventType.SendFileListResponseStarted,
+                    RemoteServerIpAddress = _localIpAddress,
+                    RemoteServerPortNumber = _localPort,
+                    FileInfoList = new List<(string, long)>(),
+                    LocalFolder = targetFolderPath,
+                });
+
+                var message = $"{EmptyTransferFolderErrorMessage}: {_transferFolderPath}";
 
                 var sendResult = await SendTextMessageAsync(
                         message, 
@@ -598,9 +631,9 @@ namespace TplSocketServer
                         token)
                         .ConfigureAwait(false);
 
-                return Result.Fail(sendResult.Success 
-                    ? message 
-                    : sendResult.Error);
+                EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.SendFileListResponseCompleted });
+
+                return sendResult.Success ? Result.Ok() : sendResult;
             }
 
             if (token.IsCancellationRequested)
@@ -698,7 +731,7 @@ namespace TplSocketServer
             return Result.Ok();
         }
 
-        public async Task<Result> SendTransferFolderResponseAsync(byte[] buffer, CancellationToken token)
+        private async Task<Result> SendTransferFolderResponseAsync(byte[] buffer, CancellationToken token)
         {
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ReceiveTransferFolderRequestStarted });
 
@@ -789,7 +822,7 @@ namespace TplSocketServer
             return Result.Ok();
         }
 
-        public async Task<Result> SendPublicIpAddress(byte[] buffer, CancellationToken token)
+        private async Task<Result> SendPublicIpAddress(byte[] buffer, CancellationToken token)
         {
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ReceiveTransferFolderRequestStarted });
 
@@ -977,7 +1010,7 @@ namespace TplSocketServer
             var fileSizeBytes = new FileInfo(localFilePath).Length;
 
             var messageWrapper = 
-                MessageWrapper.ConstructOutboundFileTransferRequest(localFilePath, fileSizeBytes, remoteFolderPath);
+                MessageWrapper.ConstructOutboundFileTransferRequest(localFilePath, fileSizeBytes, _localIpAddress, _localPort, remoteFolderPath);
 
             EventOccurred?.Invoke(
                 new ServerEventInfo
@@ -1168,8 +1201,8 @@ namespace TplSocketServer
                 new ServerEventInfo
                 {
                     EventType = ServerEventType.SendFileListRequestStarted,
-                    RemoteServerIpAddress = localIpAddress,
-                    RemoteServerPortNumber = localPort,
+                    RemoteServerIpAddress = remoteServerIpAddress,
+                    RemoteServerPortNumber = remoteServerPort,
                     RemoteFolder = targetFolder
                 });
 

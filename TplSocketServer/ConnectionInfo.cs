@@ -1,63 +1,90 @@
-﻿namespace TplSocketServer
+﻿using System.Xml.Serialization;
+using AaronLuna.Common.Enums;
+
+namespace TplSocketServer
 {
     using AaronLuna.Common.Network;
     using System.Net;
 
     public class ConnectionInfo
     {
+        IPAddress _localIp;
+        IPAddress _pubilcIp;
+
         public ConnectionInfo()
         {
-            LocalIpAddress = string.Empty;
-            PublicIpAddress = string.Empty;
+            LocalIpAddress = IPAddress.None;
+            PublicIpAddress = IPAddress.None;
+
+            LocalIpString = string.Empty;
+            PublicIpString = string.Empty;
         }
 
-        public string LocalIpAddress { get; set; }
-        public string LocalEndPoint { get; set; }
-        public string PublicIpAddress { get; set; }
-        public int Port { get; set; }       
+        [XmlIgnore]
+        public IPAddress LocalIpAddress
+        {
+            get => _localIp;
+            set
+            {
+                _localIp = value;
+                LocalIpString = value.ToString();
+            }
+        }
+
+        [XmlIgnore]
+        public IPAddress PublicIpAddress
+        {
+            get => _pubilcIp;
+            set
+            {
+                _pubilcIp = value;
+                PublicIpString = value.ToString();
+            }
+        }
+
+        public string LocalIpString { get; set; }
+
+        public string PublicIpString { get; set; }
+
+        public int Port { get; set; }
 
         public string GetPublicEndPoint()
         {
-            return $"{PublicIpAddress}:{Port}";
+            return $"{PublicIpString}:{Port}";
         }
 
-        public IPAddress GetLocalIpAddress()
+        public byte[] GetLocalIpAddressBytes()
         {
-            var parse = IpAddressHelper.ParseSingleIPv4Address(LocalIpAddress);
-
-            return parse.Success
-                ? parse.Value
-                : IPAddress.None;
+            return LocalIpAddress.GetAddressBytes();
         }
 
-        public IPAddress GetPublicIpAddress()
+        public byte[] GetPublicIpAddressBytes()
         {
-            var parse = IpAddressHelper.ParseSingleIPv4Address(PublicIpAddress);
-
-            return parse.Success
-                ? parse.Value
-                : IPAddress.None;
+            return PublicIpAddress.GetAddressBytes();
         }
     }
 
-    public static class ServerInfoExtensions
+    public static class ConnectionInfoExtensions
     {
         public static bool IsEqualTo(this ConnectionInfo myInfo, ConnectionInfo otherInfo)
         {
             //// Transfer Folder not used to determine equality, ip address
             //// and port number combination  must be unique 
-
-            if (!string.Equals(myInfo.LocalIpAddress, otherInfo.LocalIpAddress))
+            
+            var localIpSimilarity = IpAddressHelper.CompareTwoIpAddresses(myInfo.LocalIpAddress, otherInfo.LocalIpAddress);
+            var publicIpSimilarity = IpAddressHelper.CompareTwoIpAddresses(myInfo.PublicIpAddress, otherInfo.PublicIpAddress);
+            
+            if (localIpSimilarity == IpAddressSimilarity.AllBytesMatch && myInfo.Port == otherInfo.Port)
             {
-                return false;
+                return true;
             }
 
-            if (myInfo.Port != otherInfo.Port)
+            if (publicIpSimilarity == IpAddressSimilarity.AllBytesMatch && myInfo.Port == otherInfo.Port)
             {
-                return false;
+                return true;
             }
 
-            return true;
+            return false;
         }
     }
 }

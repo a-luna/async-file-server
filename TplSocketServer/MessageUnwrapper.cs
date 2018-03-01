@@ -32,7 +32,7 @@ namespace TplSocketServer
             return (message, clientIp, clientPort);
         }
 
-        public static (string filePath, long fileSizeInBytes) ReadInboundFileTransferRequest(byte[] buffer)
+        public static (string filePath, long fileSizeInBytes, string remoteIpAddress, int remotePort) ReadInboundFileTransferRequest(byte[] buffer)
         {
             var fileNameLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
             var fileName = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, fileNameLen);
@@ -40,12 +40,18 @@ namespace TplSocketServer
             var fileSizeLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + fileNameLen);
             var fileSize = Convert.ToInt64( Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + fileNameLen, fileSizeLen));
 
-            var targetFolderLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 3) + fileNameLen + fileSizeLen);
-            var targerFolder = Encoding.UTF8.GetString( buffer, (SizeOfInt32InBytes * 4) + fileNameLen + fileSizeLen, targetFolderLen);
+            var remoteIpLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 3) + fileNameLen + fileSizeLen);
+            var remoteIpAddress = Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 4) + fileNameLen + fileSizeLen, remoteIpLen);
+
+            var remotePortLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 4) + fileNameLen + fileSizeLen + remoteIpLen);
+            var remotePort = int.Parse(Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 5) + fileNameLen + fileSizeLen + remoteIpLen, remotePortLen));
+
+            var targetFolderLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 5) + fileNameLen + fileSizeLen + remoteIpLen + remotePortLen);
+            var targerFolder = Encoding.UTF8.GetString( buffer, (SizeOfInt32InBytes * 6) + fileNameLen + fileSizeLen + remoteIpLen + remotePortLen, targetFolderLen);
 
             var localFilePath = Path.Combine(targerFolder, fileName);
 
-            return (localFilePath, fileSize);
+            return (localFilePath, fileSize, remoteIpAddress, remotePort);
         }
 
         public static (string localFilePath, string remoteIpAddress, int remotePortNumber, string remoteFilePath) ReadOutboundFileTransferRequest(byte[] buffer)

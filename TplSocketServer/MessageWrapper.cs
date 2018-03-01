@@ -69,14 +69,25 @@ namespace TplSocketServer
         public static byte[] ConstructOutboundFileTransferRequest(
             string localFilePath,
             long fileSizeBytes,
+            string remoteIpAddress,
+            int remotePort,
             string remoteFolderPath)
         {
             var requestFlag = BitConverter.GetBytes((int) RequestType.InboundFileTransfer);
             var fileName = Path.GetFileName(localFilePath);
+
             var fileNameData = Encoding.UTF8.GetBytes(fileName);
             var fileNameLen = BitConverter.GetBytes(fileNameData.Length);
+
             var sizeBytesData = Encoding.UTF8.GetBytes(fileSizeBytes.ToString(CultureInfo.InvariantCulture));
             var sizeBytesLen = BitConverter.GetBytes(sizeBytesData.Length);
+
+            var remoteIpData = Encoding.UTF8.GetBytes(remoteIpAddress);
+            var remoteIpLen = BitConverter.GetBytes(remoteIpData.Length);
+
+            var remotePortData = Encoding.UTF8.GetBytes(remotePort.ToString(CultureInfo.InvariantCulture));
+            var remotePortLen = BitConverter.GetBytes(remotePortData.Length);
+
             var targetDirData = Encoding.UTF8.GetBytes(remoteFolderPath);
             var targetDirLen = BitConverter.GetBytes(targetDirData.Length);
 
@@ -86,6 +97,10 @@ namespace TplSocketServer
             messageWrapper.AddRange(fileNameData);
             messageWrapper.AddRange(sizeBytesLen);
             messageWrapper.AddRange(sizeBytesData);
+            messageWrapper.AddRange(remoteIpLen);
+            messageWrapper.AddRange(remoteIpData);
+            messageWrapper.AddRange(remotePortLen);
+            messageWrapper.AddRange(remotePortData);
             messageWrapper.AddRange(targetDirLen);
             messageWrapper.AddRange(targetDirData);
 
