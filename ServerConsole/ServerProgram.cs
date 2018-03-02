@@ -962,7 +962,7 @@
                     await SaveNewClientAsync(serverEvent.RemoteServerIpAddress, serverEvent.RemoteServerPortNumber);
                     _textSessionIp = serverEvent.RemoteServerIpAddress;
                     _textSessionPort = serverEvent.RemoteServerPortNumber;
-                    _activeTextSession = true;
+                    //_activeTextSession = true;
 
                     if (serverEvent.TextMessage.Contains(EmptyTransferFolderErrorMessage))
                     {

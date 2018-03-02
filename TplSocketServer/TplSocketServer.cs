@@ -371,7 +371,9 @@ namespace TplSocketServer
                     EventType = ServerEventType.ReceiveInboundFileTransferInfoCompleted,
                     LocalFolder = Path.GetDirectoryName(localFilePath),
                     FileName = Path.GetFileName(localFilePath),
-                    FileSizeInBytes = fileSizeBytes
+                    FileSizeInBytes = fileSizeBytes,
+                    RemoteServerIpAddress = remoteIpAddress,
+                    RemoteServerPortNumber = remotePort
                 });
 
             if (File.Exists(localFilePath))
@@ -518,15 +520,15 @@ namespace TplSocketServer
                 receiveCount++;
                 var bytesRemaining = fileSizeInBytes - totalBytesReceived;
 
-                //EventOccurred?.Invoke(new ServerEventInfo
-                //{
-                //    EventType = ServerEventType.ReceivedDataFromSocket,
-                //    ReceiveBytesCount = receiveBytesCount,
-                //    CurrentBytesReceivedFromSocket = bytesReceived,
-                //    TotalBytesReceivedFromSocket = totalBytesReceived,
-                //    FileSizeInBytes = fileSizeInBytes,
-                //    BytesRemainingInFile = bytesRemaining
-                //});
+                EventOccurred?.Invoke(new ServerEventInfo
+                {
+                    EventType = ServerEventType.ReceivedDataFromSocket,
+                    ReceiveBytesCount = receiveCount,
+                    CurrentBytesReceivedFromSocket = bytesReceived,
+                    TotalBytesReceivedFromSocket = totalBytesReceived,
+                    FileSizeInBytes = fileSizeInBytes,
+                    BytesRemainingInFile = bytesRemaining
+                });
 
                 var checkPercentComplete = totalBytesReceived / (float)fileSizeInBytes;
                 var changeSinceLastUpdate = checkPercentComplete - percentComplete;
