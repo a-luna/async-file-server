@@ -52,7 +52,6 @@ namespace TplSocketServerTest
         [TestInitialize]
         public void Setup()
         {
-            var test = IpAddressHelper.GetLocalIPv4AddressList();
             _tokenSource = new CancellationTokenSource();
 
             _server = new TplSocketServer();
@@ -61,7 +60,7 @@ namespace TplSocketServerTest
             _client = new TplSocketServer();
             _client.EventOccurred += HandleClientEvent;
 
-            _ipAddress = IpAddressHelper.GetLocalIPv4Address();
+            _ipAddress = IpAddressHelper.GetLocalIPv4AddressWithInternet().Value;
 
             var currentPath = Directory.GetCurrentDirectory();
             var index = currentPath.IndexOf(@"bin", StringComparison.Ordinal);

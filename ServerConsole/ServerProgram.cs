@@ -1,4 +1,6 @@
-﻿namespace ServerConsole
+﻿using System.Net.Sockets;
+
+namespace ServerConsole
 {
     using System;
     using System.Collections.Generic;
@@ -234,10 +236,16 @@
 
         private IPAddress GetLocalIpToBindTo()
         {
-            var localIps = IpAddressHelper.GetLocalIPv4AddressList();
-            if (localIps.Count == 1)
+            var ipRequest = IpAddressHelper.GetLocalIPv4AddressWithInternet();
+            if (ipRequest.Success)
             {
-                return localIps[0];
+                return ipRequest.Value;
+            }
+
+            var localIps = IpAddressHelper.GetLocalIPv4AddressList();
+            if (localIps.Count == 0)
+            {
+                return localIps.FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
             }
 
             var ipChoice = 0;
@@ -1000,7 +1008,7 @@
                         NumberOfBlocks = 20,
                         StartBracketChar = '|',
                         EndBracketChar = '|',
-                        CompletedBlockChar = '\u00BB',
+                        CompletedBlockChar = '|',
                         UncompletedBlockChar = ' ',
                         AnimationSequence = ".oO@*"
                     };

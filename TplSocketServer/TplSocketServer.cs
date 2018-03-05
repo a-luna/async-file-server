@@ -455,7 +455,7 @@ namespace TplSocketServer
         {
             long totalBytesReceived = 0;
             float percentComplete = 0;
-            var receiveCount = 0;
+            //var receiveCount = 0;
 
             // Read file bytes from transfer socket until 
             //      1. the entire file has been received OR 
@@ -517,18 +517,18 @@ namespace TplSocketServer
                 }
 
                 // THese two lines and the event raised below are useful when debugging socket errors
-                receiveCount++;
-                var bytesRemaining = fileSizeInBytes - totalBytesReceived;
+                //receiveCount++;
+                //var bytesRemaining = fileSizeInBytes - totalBytesReceived;
 
-                EventOccurred?.Invoke(new ServerEventInfo
-                {
-                    EventType = ServerEventType.ReceivedDataFromSocket,
-                    ReceiveBytesCount = receiveCount,
-                    CurrentBytesReceivedFromSocket = bytesReceived,
-                    TotalBytesReceivedFromSocket = totalBytesReceived,
-                    FileSizeInBytes = fileSizeInBytes,
-                    BytesRemainingInFile = bytesRemaining
-                });
+                //EventOccurred?.Invoke(new ServerEventInfo
+                //{
+                //    EventType = ServerEventType.ReceivedDataFromSocket,
+                //    ReceiveBytesCount = receiveCount,
+                //    CurrentBytesReceivedFromSocket = bytesReceived,
+                //    TotalBytesReceivedFromSocket = totalBytesReceived,
+                //    FileSizeInBytes = fileSizeInBytes,
+                //    BytesRemainingInFile = bytesRemaining
+                //});
 
                 var checkPercentComplete = totalBytesReceived / (float)fileSizeInBytes;
                 var changeSinceLastUpdate = checkPercentComplete - percentComplete;

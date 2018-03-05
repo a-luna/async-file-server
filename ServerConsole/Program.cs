@@ -31,6 +31,11 @@
                     Console.WriteLine($"File Requested:\t\t{serverEvent.FileName}\nFile Size:\t\t{serverEvent.FileSizeString}\nRemote Endpoint:\t{serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}\nTarget Directory:\t{serverEvent.RemoteFolder}");
                     break;
 
+                case ServerEventType.ReceiveInboundFileTransferInfoCompleted:
+                    Console.WriteLine($"\nIncoming file transfer from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}:");
+                    Console.WriteLine($"File Name:\t\t{serverEvent.FileName}\nFile Size:\t\t{serverEvent.FileSizeString}\nSave To:\t\t{serverEvent.LocalFolder}");
+                    break;
+
                 case ServerEventType.SendFileBytesStarted:
                     Console.WriteLine("\nSending file to client...");
                     break;
