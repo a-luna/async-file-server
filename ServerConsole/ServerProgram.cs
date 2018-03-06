@@ -15,64 +15,61 @@ namespace ServerConsole
     using AaronLuna.Common.Result;
 
     using TplSocketServer;
-
-    // TODO: Add new logic that adds entry to connection list ands saves to file wheneever an applicable event is handled
-    // TODO: Add new logic that asks user to respond to message
-
+    
     public class ServerProgram
     {
-        const string SettingsFileName = "settings.xml";
-        const string DefaultTransferFolderName = "transfer";
+        private const string SettingsFileName = "settings.xml";
+        private const string DefaultTransferFolderName = "transfer";
 
-        const string IpChoiceClient = "Which IP address would you like to use for this request?";
-        const string NotifyLanTrafficOnly = "Unable to determine public IP address, this server will only be able to communicate with machines in the same local network.";
-        const string PropmptMultipleLocalIPv4Addresses = "There are multiple IPv4 addresses available on this machine, choose the most appropriate local address:";
-        const string EmptyTransferFolderErrorMessage = "Currently there are no files available in transfer folder";
-        const string FileAlreadyExists = "A file with the same name already exists in the download folder, please rename or remove this file in order to proceed.";
-        
-        const int SendMessage = 1;
-        const int SendFile = 2;
-        const int GetFile = 3;
-        const int ShutDown = 4;
+        private const string IpChoiceClient = "Which IP address would you like to use for this request?";
+        private const string NotifyLanTrafficOnly = "Unable to determine public IP address, this server will only be able to communicate with machines in the same local network.";
+        private const string PropmptMultipleLocalIPv4Addresses = "There are multiple IPv4 addresses available on this machine, choose the most appropriate local address:";
+        private const string EmptyTransferFolderErrorMessage = "Currently there are no files available in transfer folder";
+        private const string FileAlreadyExists = "A file with the same name already exists in the download folder, please rename or remove this file in order to proceed.";
 
-        const int LocalIpAddress = 1;
-        const int PublicIpAddress = 2;
+        private const int SendMessage = 1;
+        private const int SendFile = 2;
+        private const int GetFile = 3;
+        private const int ShutDown = 4;
 
-        const int ReplyToTextMessage = 1;
-        const int EndTextSession = 2;
+        private const int LocalIpAddress = 1;
+        private const int PublicIpAddress = 2;
 
-        const int PortRangeMin = 49152;
-        const int PortRangeMax = 65535;
+        private const int ReplyToTextMessage = 1;
+        private const int EndTextSession = 2;
 
-        readonly string _settingsFilePath;
-        readonly string _transferFolderPath;
+        private const int PortRangeMin = 49152;
+        private const int PortRangeMax = 65535;
 
-        bool _waitingForServerToBeginAcceptingConnections = true;
-        bool _waitingForTransferFolderResponse = true;
-        bool _waitingForPublicIpResponse = true;
-        bool _waitingForFileListResponse = true;
-        bool _waitingForDownloadToComplete = true;
-        bool _waitingForConfirmationMessage = true;
-        bool _activeTextSession;
-        bool _requestedFileFromClient;
-        bool _fileTransferInProgress;
-        bool _needToRewriteMenu;
-        bool _errorOccurred;
+        private readonly string _settingsFilePath;
+        private readonly string _transferFolderPath;
 
-        string _clientTransferFolderPath;
-        IPAddress _clientPublicIp;
-        List<(string filePath, long fileSize)> _fileInfoList;
-        
-        readonly CancellationTokenSource _cts;
-        CancellationToken _token;
-        ConsoleProgressBar _progress;
+        private bool _waitingForServerToBeginAcceptingConnections = true;
+        private bool _waitingForTransferFolderResponse = true;
+        private bool _waitingForPublicIpResponse = true;
+        private bool _waitingForFileListResponse = true;
+        private bool _waitingForDownloadToComplete = true;
+        private bool _waitingForConfirmationMessage = true;
+        private bool _activeTextSession;
+        private bool _requestedFileFromClient;
+        private bool _progressBarInstantiated;
+        private bool _needToRewriteMenu;
+        private bool _errorOccurred;
 
-        AppSettings _settings;
-        ConnectionInfo _myInfo;
-        TplSocketServer _server;
+        private string _clientTransferFolderPath;
+        private IPAddress _clientPublicIp;
+        private List<(string filePath, long fileSize)> _fileInfoList;
 
-        string _textSessionIp;
-        int _textSessionPort;
+        private readonly CancellationTokenSource _cts;
+        private CancellationToken _token;
+        private ConsoleProgressBar _progress;
+
+        private AppSettings _settings;
+        private ConnectionInfo _myInfo;
+        private TplSocketServer _server;
+
+        private string _textSessionIp;
+        private int _textSessionPort;
 
         public ServerProgram()
         {
@@ -108,7 +105,7 @@ namespace ServerConsole
                 
                 await ServerMenuAsync();
 
-                if (_fileTransferInProgress)
+                if (_progressBarInstantiated)
                 {
                     _progress.Dispose();
                 }
@@ -507,7 +504,7 @@ namespace ServerConsole
                 return Result.Fail<RemoteServer>("There was an error getting the client's IP address from user input.");
             }           
 
-            return await RequestAdditionalConnectionInfoFromClient(clientIp, newClient);
+            return await RequestAdditionalConnectionInfoFromClientAsync(clientIp, newClient);
         }
 
         public Result<RemoteServer> GetRemoteServerConnectionInfoFromUser()
@@ -563,7 +560,7 @@ namespace ServerConsole
             return Result.Ok(remoteServerInfo);
         }
 
-        private async Task<Result<RemoteServer>> RequestAdditionalConnectionInfoFromClient(IPAddress clientIp, RemoteServer client)
+        private async Task<Result<RemoteServer>> RequestAdditionalConnectionInfoFromClientAsync(IPAddress clientIp, RemoteServer client)
         {
             var clientPort = client.ConnectionInfo.Port;
 
@@ -716,6 +713,7 @@ namespace ServerConsole
                         clientInfo.TransferFolder,
                     token));
 
+            // TODO: Detect CTRL+C and break out of loop
             while (_waitingForConfirmationMessage) { }
 
             var sendFileResult = await sendFileTask;
@@ -1014,7 +1012,7 @@ namespace ServerConsole
                         AnimationSequence = ConsoleProgressBar.RotatingPipeAnimation
                     };
 
-                    _fileTransferInProgress = true;
+                    _progressBarInstantiated = true;
                     Console.WriteLine(Environment.NewLine);
                     break;
 
@@ -1140,7 +1138,7 @@ namespace ServerConsole
                 }
             }
 
-                var clientAdded = await RequestAdditionalConnectionInfoFromClient(clientIp, newClient);
+                var clientAdded = await RequestAdditionalConnectionInfoFromClientAsync(clientIp, newClient);
             if (clientAdded.Failure)
             {
                 Console.WriteLine(clientAdded.Error);

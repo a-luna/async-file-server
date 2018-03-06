@@ -4,8 +4,6 @@ namespace TplSocketServerTest
     using AaronLuna.Common.Result;
 
     using Microsoft.VisualStudio.TestTools.UnitTesting;
-
-    using System.Linq;
     using System.Net;
     using System.Net.Sockets;
     using System.Text;
@@ -25,7 +23,7 @@ namespace TplSocketServerTest
         Socket _serverSocket;
         Socket _clientSocket;
 
-        string _serverIpAddress;
+        IPAddress _serverIpAddress;
         string _messageReceived;
 
         [TestInitialize]
@@ -34,9 +32,8 @@ namespace TplSocketServerTest
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-            var myIp = IpAddressHelper.GetLocalIPv4AddressWithInternet();
-            _serverIpAddress = myIp.ToString();
+            
+            _serverIpAddress = IpAddressHelper.GetLocalIPv4AddressWithInternet().Value;
 
             _messageReceived = string.Empty;
         }
@@ -56,11 +53,7 @@ namespace TplSocketServerTest
             Assert.IsNull(_clientSocket.LocalEndPoint);
             Assert.IsNull(_clientSocket.RemoteEndPoint);
 
-            var ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
-            var ipAddress = ipHostInfo.AddressList.Select(ip => ip)
-                .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
-
-            var ipEndPoint = new IPEndPoint(ipAddress, serverPort);
+            var ipEndPoint = new IPEndPoint(_serverIpAddress, serverPort);
 
             _listenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             _listenSocket.Bind(ipEndPoint);
@@ -68,7 +61,7 @@ namespace TplSocketServerTest
 
             var acceptTask = Task.Run(AcceptConnectionTask);
 
-            var connectResult = await _clientSocket.ConnectWithTimeoutAsync(_serverIpAddress, serverPort, ConnectTimeoutMs).ConfigureAwait(false);
+            var connectResult = await _clientSocket.ConnectWithTimeoutAsync(_serverIpAddress.ToString(), serverPort, ConnectTimeoutMs).ConfigureAwait(false);
             if (connectResult.Failure)
             {
                 Assert.Fail("There was an error connecting to the server." + connectResult.Error);
@@ -100,12 +93,7 @@ namespace TplSocketServerTest
         public async Task TestSendAndReceiveTextMesageAsync()
         {
             var serverPort = 7003;
-
-            var ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
-            var ipAddress = ipHostInfo.AddressList.Select(ip => ip)
-                .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
-
-            var ipEndPoint = new IPEndPoint(ipAddress, serverPort);
+            var ipEndPoint = new IPEndPoint(_serverIpAddress, serverPort);
 
             _listenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             _listenSocket.Bind(ipEndPoint);
@@ -113,7 +101,7 @@ namespace TplSocketServerTest
 
             var acceptTask = Task.Run(AcceptConnectionTask);
 
-            var connectResult = await _clientSocket.ConnectWithTimeoutAsync(_serverIpAddress, serverPort, ConnectTimeoutMs).ConfigureAwait(false);
+            var connectResult = await _clientSocket.ConnectWithTimeoutAsync(_serverIpAddress.ToString(), serverPort, ConnectTimeoutMs).ConfigureAwait(false);
             if (connectResult.Failure)
             {
                 Assert.Fail("There was an error connecting to the server." + connectResult.Error);

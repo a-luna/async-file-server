@@ -39,7 +39,7 @@
                     break;
 
                 case ServerEventType.DetermineMessageLengthCompleted:
-                    report += $"Completed Process: Determine incoming message length\n\n\tMessage Length:\t{serverEventInfo.MessageLength}\n\tUnread Byte Count:\t{serverEventInfo.UnreadByteCount}\n";
+                    report += $"Completed Process: Determine incoming message length\n\n\tMessage Length:\t\t\t{serverEventInfo.MessageLength}\n\tUnread Byte Count:\t\t{serverEventInfo.UnreadByteCount}\n";
                     break;
 
                 case ServerEventType.ReceiveAllMessageBytesStarted:
@@ -55,7 +55,7 @@
                     break;
 
                 case ServerEventType.DetermineTransferTypeCompleted:
-                    report += $"Completed Process: Determine transfer typee\n\n\tTransfer Type:\t{serverEventInfo.RequestType}\n";
+                    report += $"Completed Process: Determine transfer type\n\n\tTransfer Type:\t{serverEventInfo.RequestType}\n";
                     break;
 
                 case ServerEventType.ShutdownListenSocketStarted:
@@ -179,7 +179,7 @@
                     break;
 
                 case ServerEventType.SendOutboundFileTransferInfoStarted:
-                    report += $"Started Process: Send outbound transfer info\n\n\tSending File:\t\t{serverEventInfo.FileName}\n\tFile Size:\t\t\t{serverEventInfo.FileSizeString}\n\tClient Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n\tTarget Directory:\t\t{serverEventInfo.RemoteFolder}\n";
+                    report += $"Started Process: Send outbound transfer info\n\n\tSending File:\t\t{serverEventInfo.FileName}\n\tFile Size:\t\t\t{serverEventInfo.FileSizeString}\n\tClient Endpoint:\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n\tTarget Directory:\t{serverEventInfo.RemoteFolder}\n";
                     break;
 
                 case ServerEventType.SendOutboundFileTransferInfoCompleted:
@@ -200,7 +200,7 @@
 
                 case ServerEventType.ReceiveInboundFileTransferInfoCompleted:
                     report +=
-                        $"Completed Process: Receive inbound transfer info\n\n\tFile Name:\t\t{serverEventInfo.FileName}\n\tFile Size:\t\t\t{serverEventInfo.FileSizeString}\n\tDownload Location:\t{serverEventInfo.LocalFolder}\n";
+                        $"Completed Process: Receive inbound transfer info\n\n\tFile Name:\t\t\t{serverEventInfo.FileName}\n\tFile Size:\t\t\t{serverEventInfo.FileSizeString}\n\tDownload Location:\t{serverEventInfo.LocalFolder}\n";
                     break;
 
                 case ServerEventType.ReceiveOutboundFileTransferInfoStarted:
@@ -209,7 +209,7 @@
 
                 case ServerEventType.ReceiveOutboundFileTransferInfoCompleted:
                     report +=
-                        $"Completed Process: Receive outbound transfer info\n\n\tFile Requested:\t\t{serverEventInfo.FileName}\n\tFile Size:\t\t\t{serverEventInfo.FileSizeString}\n\tClient Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n\tTarget Directory:\t\t{serverEventInfo.RemoteFolder}\n";
+                        $"Completed Process: Receive outbound transfer info\n\n\tFile Requested:\t\t{serverEventInfo.FileName}\n\tFile Size:\t\t\t{serverEventInfo.FileSizeString}\n\tClient Endpoint:\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n\tTarget Directory:\t{serverEventInfo.RemoteFolder}\n";
                     break;
 
                 case ServerEventType.SendFileBytesStarted:
@@ -226,7 +226,7 @@
 
                 case ServerEventType.ReceivedDataFromSocket:
                     report +=
-                        $"Received Data From Socket:\n\n\tData Received Count:\t{serverEventInfo.ReceiveBytesCount}\n\tCurrent Bytes Received:\t{serverEventInfo.CurrentBytesReceivedFromSocket}\n\tTotal Bytes Received:\t{serverEventInfo.TotalBytesReceivedFromSocket}\n\tFile Size In Bytes:\t{serverEventInfo.FileSizeInBytes}\n\tBytes Remaining:\t{serverEventInfo.BytesRemainingInFile}\n";
+                        $"Received Data From Socket:\n\n\tData Received Count:\t{serverEventInfo.ReceiveBytesCount}\n\tCurrent Bytes Received:\t{serverEventInfo.CurrentBytesReceivedFromSocket}\n\tTotal Bytes Received:\t{serverEventInfo.TotalBytesReceivedFromSocket}\n\tFile Size In Bytes:\t\t{serverEventInfo.FileSizeInBytes}\n\tBytes Remaining:\t\t{serverEventInfo.BytesRemainingInFile}\n";
                     break;
 
                 case ServerEventType.FileTransferProgress:

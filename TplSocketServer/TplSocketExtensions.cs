@@ -122,6 +122,11 @@ namespace TplSocketServer
             SocketFlags socketFlags,
             int timeoutMs)
         {
+            if (timeoutMs == 0)
+            {
+                return await ReceiveAsync(socket, buffer, offset, size, socketFlags);
+            }
+
             int bytesReceived;
             try
             {

@@ -34,6 +34,7 @@ namespace TplSocketServerTest
         string _restoreFilePath;
         string _messageFromClient;
         string _messageFromServer;
+        string _transferFolderPath;
 
         bool _serverIsListening;
         bool _serverReceivedTextMessage;
@@ -46,6 +47,7 @@ namespace TplSocketServerTest
         bool _clientReceivedTextMessage;
         bool _clientReceivedAllFileBytes;
         bool _clientReceivedConfirmationMessage;
+        bool _clientReceivedTransferFolderPath;
         bool _clientListenSocketIsShutdown;
         bool _clientErrorOccurred;
 
@@ -75,6 +77,7 @@ namespace TplSocketServerTest
 
             _messageFromClient = string.Empty;
             _messageFromServer = string.Empty;
+            _transferFolderPath = string.Empty;
 
             _serverIsListening = false;
             _serverReceivedTextMessage = false;
@@ -87,6 +90,7 @@ namespace TplSocketServerTest
             _clientReceivedTextMessage = false;
             _clientReceivedAllFileBytes = false;
             _clientReceivedConfirmationMessage = false;
+            _clientReceivedTransferFolderPath = false;
             _clientReceivedAllFileBytes = false;
             _clientErrorOccurred = false;
             
@@ -118,7 +122,6 @@ namespace TplSocketServerTest
             var runServerTask1 = 
                 Task.Run(() => 
                     _server.HandleIncomingConnectionsAsync(
-                        _ipAddress.ToString(),
                         remoteServerPort, 
                         token), 
                     token);
@@ -224,20 +227,30 @@ namespace TplSocketServerTest
         public async Task VerifySendFileAsync()
         {
             var remoteServerPort = 8003;
+            var localPort = 8004;
+
             var sendFilePath = _localFilePath;
             var receiveFilePath = _remoteFilePath;
             var receiveFolderPath = _remoteFolder;
 
             var token = _tokenSource.Token;
 
-            var listenTask = 
-                Task.Run(() => 
-                    _server.HandleIncomingConnectionsAsync(
-                        remoteServerPort, 
-                        token),
+            var runServerListenTask =
+                Task.Run(() =>
+                        _server.HandleIncomingConnectionsAsync(
+                            remoteServerPort,
+                            token),
+                    token);
+
+            var runClientListenTask =
+                Task.Run(() =>
+                        _client.HandleIncomingConnectionsAsync(
+                            localPort,
+                            token),
                     token);
 
             while (!_serverIsListening) { }
+            while (!_clientIsListening) { }
 
             var sizeOfFileToSend = new FileInfo(sendFilePath).Length;
             FileHelper.DeleteFileIfAlreadyExists(receiveFilePath);
@@ -278,23 +291,23 @@ namespace TplSocketServerTest
             try
             {
                 _tokenSource.Cancel();
-                var serverListenResult = listenTask.Result;
-                if (serverListenResult.Failure)
+                var serverResult = runServerListenTask.Result;
+                if (serverResult.Failure)
                 {
                     Assert.Fail(
-                        "There was an error attempting to shutdown the server's listening socket: "
-                        + serverListenResult.Error);
+                        "There was an error attempting to shutdown the server: "
+                        + serverResult.Error);
                 }
             }
             catch (AggregateException ex)
             {
-                Console.WriteLine("Exception messages:");
+                Console.WriteLine("\nException messages:");
                 foreach (var ie in ex.InnerExceptions)
                 {
-                    Console.WriteLine("   {0}: {1}", ie.GetType().Name, ie.Message);
+                    Console.WriteLine($"\t{ie.GetType().Name}: {ie.Message}");
                 }
 
-                Console.WriteLine("\nTask status: {0}", listenTask.Status);
+                Console.WriteLine($"\nServer Shutdown Task status: {runServerListenTask.Status}\n");
             }
             finally
             {
@@ -303,14 +316,39 @@ namespace TplSocketServerTest
 
             while (!_serverListenSocketIsShutdown) { }
 
-            Assert.IsTrue(_serverListenSocketIsShutdown);
+            try
+            {
+                var clientResult = runClientListenTask.Result;
+                if (clientResult.Failure)
+                {
+                    Assert.Fail(
+                        "There was an error attempting to shutdown the server: "
+                        + clientResult.Error);
+                }
+            }
+            catch (AggregateException ex)
+            {
+                Console.WriteLine("\nException messages:");
+                foreach (var ie in ex.InnerExceptions)
+                {
+                    Console.WriteLine($"\t{ie.GetType().Name}: {ie.Message}");
+                }
+
+                Console.WriteLine($"\nClient Shutdown Task status: {runClientListenTask.Status}\n");
+            }
+            finally
+            {
+                _client.CloseListenSocket();
+            }
+
+            while (!_clientListenSocketIsShutdown) { }
         }
 
         [TestMethod]
         public async Task VerifyGetFileAsync()
         {
-            var localPort = 8004;
-            var remoteServerPort = 8005;
+            var localPort = 8005;
+            var remoteServerPort = 8006;
             var getFilePath = _remoteFilePath;
             var receivedFilePath = _localFilePath;
 
@@ -420,6 +458,105 @@ namespace TplSocketServerTest
             while (!_clientListenSocketIsShutdown) { }
         }
 
+        [TestMethod]
+        public async Task VerifyRequestTransferFolderPath()
+        {
+            var localPort = 8007;
+            var remoteServerPort = 8008;
+
+            _server.TransferFolderPath = _remoteFolder;
+            var token = _tokenSource.Token;
+
+            var runServerListenTask =
+                Task.Run(() =>
+                        _server.HandleIncomingConnectionsAsync(
+                            remoteServerPort,
+                            token),
+                        token);
+
+            var runClientListenTask =
+                Task.Run(() =>
+                        _client.HandleIncomingConnectionsAsync(
+                            localPort,
+                            token),
+                        token);
+
+            while (!_serverIsListening) { }
+            while (!_clientIsListening) { }
+            Assert.AreEqual(string.Empty, _transferFolderPath);
+
+            var transferFolderRequest = 
+               await _client.RequestTransferFolderPath(
+                    _ipAddress.ToString(), 
+                    remoteServerPort,
+                    _ipAddress.ToString(), 
+                    localPort, 
+                    token);
+
+            if (transferFolderRequest.Failure)
+            {
+                Assert.Fail("Error sending request for transfer folder path.");
+            }
+
+            while(!_clientReceivedTransferFolderPath) { }
+            Assert.AreEqual(_remoteFolder, _transferFolderPath);
+
+            try
+            {
+                _tokenSource.Cancel();
+                var serverResult = runServerListenTask.Result;
+                if (serverResult.Failure)
+                {
+                    Assert.Fail(
+                        "There was an error attempting to shutdown the server: "
+                        + serverResult.Error);
+                }
+            }
+            catch (AggregateException ex)
+            {
+                Console.WriteLine("\nException messages:");
+                foreach (var ie in ex.InnerExceptions)
+                {
+                    Console.WriteLine($"\t{ie.GetType().Name}: {ie.Message}");
+                }
+
+                Console.WriteLine($"\nServer Shutdown Task status: {runServerListenTask.Status}\n");
+            }
+            finally
+            {
+                _server.CloseListenSocket();
+            }
+
+            while (!_serverListenSocketIsShutdown) { }
+
+            try
+            {
+                var clientResult = runClientListenTask.Result;
+                if (clientResult.Failure)
+                {
+                    Assert.Fail(
+                        "There was an error attempting to shutdown the server: "
+                        + clientResult.Error);
+                }
+            }
+            catch (AggregateException ex)
+            {
+                Console.WriteLine("\nException messages:");
+                foreach (var ie in ex.InnerExceptions)
+                {
+                    Console.WriteLine($"\t{ie.GetType().Name}: {ie.Message}");
+                }
+
+                Console.WriteLine($"\nClient Shutdown Task status: {runClientListenTask.Status}\n");
+            }
+            finally
+            {
+                _client.CloseListenSocket();
+            }
+
+            while (!_clientListenSocketIsShutdown) { }
+        }
+
         private void HandleClientEvent(ServerEventInfo serverEventInfo)
         {
 
@@ -434,6 +571,11 @@ namespace TplSocketServerTest
                 case ServerEventType.ReceiveTextMessageCompleted:
                     _clientReceivedTextMessage = true;
                     _messageFromServer = serverEventInfo.TextMessage;
+                    break;
+
+                case ServerEventType.ReceiveTransferFolderResponseCompleted:
+                    _transferFolderPath = serverEventInfo.RemoteFolder;
+                    _clientReceivedTransferFolderPath = true;
                     break;
 
                 case ServerEventType.ReceiveFileBytesCompleted:
