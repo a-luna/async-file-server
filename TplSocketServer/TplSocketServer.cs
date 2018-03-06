@@ -21,8 +21,6 @@ namespace TplSocketServer
         const string FileAlreadyExists = "A file with the same name already exists in the download folder, please rename or remove this file in order to proceed.";
         const string EmptyTransferFolderErrorMessage = "Currently there are no files available in transfer folder";
 
-        const int OneSecondInMilliseconds = 1000;
-
         readonly int _maxConnections;
         readonly int _bufferSize;
 
@@ -32,11 +30,13 @@ namespace TplSocketServer
         
         readonly string _transferFolderPath;
 
-        readonly string _localIpAddress;
+        string _localIpAddress;
         int _localPort;
 
-        Socket _listenSocket;
-        Socket _transferSocket;
+        readonly Socket _listenSocket;
+        byte[] _buffer;
+        List<byte> _unreadBytes;
+        int _lastBytesReceivedCount;
 
         public TplSocketServer()
         {
@@ -71,19 +71,45 @@ namespace TplSocketServer
 
         public event ServerEventDelegate EventOccurred;
 
+        public async Task<Result> HandleIncomingConnectionsAsync(string localIpAddress, int localPort,
+            CancellationToken token)
+        {
+            _localIpAddress = localIpAddress;
+            _localPort = localPort;
+
+            return (await Task.Factory.StartNew(() => Listen(localIpAddress, localPort), token).ConfigureAwait(false))
+                .OnSuccess(() => WaitForConnectionsAsync(token));
+        }
+
         public async Task<Result> HandleIncomingConnectionsAsync(int localPort, CancellationToken token)
         {
             _localPort = localPort;
 
-            return (await Task.Factory.StartNew(() => Listen(localPort), token).ConfigureAwait(false))
+            return (await Task.Factory.StartNew(() => Listen(string.Empty, _localPort), token).ConfigureAwait(false))
                 .OnSuccess(() => WaitForConnectionsAsync(token));
         }
 
-        private Result Listen(int localPort)
-        { 
+        private Result Listen(string localIpAdress, int localPort)
+        {
+            IPAddress ipToBind;
+            if (string.IsNullOrEmpty(localIpAdress))
+            {
+                ipToBind = IPAddress.Any;
+            }
+            else
+            {
+                var parsedIp = IpAddressHelper.ParseSingleIPv4Address(localIpAdress);
+                if (parsedIp.Failure)
+                {
+                    return parsedIp;
+                }
+
+                ipToBind = parsedIp.Value;
+            }
+
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ListenOnLocalPortStarted });
             
-            var ipEndPoint = new IPEndPoint(IPAddress.Any, localPort);            
+            var ipEndPoint = new IPEndPoint(ipToBind, localPort);            
             try
             {
                 _listenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
@@ -110,33 +136,17 @@ namespace TplSocketServer
                     token.ThrowIfCancellationRequested();
                 }
 
-                var acceptConnectionResult = await AcceptNextConnection(token).ConfigureAwait(false);
-                if (acceptConnectionResult.Failure)
-                {
-                    EventOccurred?.Invoke(new ServerEventInfo
+                var connectResult = await AcceptNextConnection(token).ConfigureAwait(false);
+                if (connectResult.Success) continue;
+
+                EventOccurred?.Invoke(
+                    new ServerEventInfo
                     {
                         EventType = ServerEventType.ErrorOccurred,
-                        ErrorMessage = acceptConnectionResult.Error
+                        ErrorMessage = connectResult.Error
                     });
 
-                    return acceptConnectionResult;
-                }
-
-                var requestResult = await ProcessRequestAsync(token).ConfigureAwait(false);
-                if (requestResult.Success)
-                {
-                    _transferSocket.Shutdown(SocketShutdown.Both);
-                    _transferSocket.Close();
-                    continue;
-                }
-
-                EventOccurred?.Invoke(new ServerEventInfo
-                {
-                    EventType = ServerEventType.ErrorOccurred,
-                    ErrorMessage = requestResult.Error
-                });
-
-                return requestResult;
+                //return connectResult;
             }
         }
 
@@ -155,30 +165,194 @@ namespace TplSocketServer
                 token.ThrowIfCancellationRequested();
             }
 
-            _transferSocket = acceptResult.Value;
+            var clientSocket = acceptResult.Value;
 
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.AcceptConnectionAttemptCompleted });
-            return Result.Ok();
+
+            var requestResult = await ReadIncomingMessageAsync(clientSocket, token).ConfigureAwait(false);
+            //if (requestResult.Failure) return requestResult;
+
+            clientSocket.Shutdown(SocketShutdown.Both);
+            clientSocket.Close();
+
+            return requestResult;
         }
 
-        private async Task<Result> ProcessRequestAsync(CancellationToken token)
+        private async Task<Result> ReadIncomingMessageAsync(Socket clientSocket, CancellationToken token)
         {
-            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.DetermineTransferTypeStarted });
-            
             if (token.IsCancellationRequested)
             {
                 token.ThrowIfCancellationRequested();
             }
 
-            var buffer = new byte[_bufferSize];
+            _buffer = new byte[_bufferSize];
+            _unreadBytes = new List<byte>();
 
-            var determineTransferTypeResult = await DetermineTransferTypeAsync(buffer).ConfigureAwait(false);
-            if (determineTransferTypeResult.Failure)
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.DetermineMessageLengthStarted });
+
+            var determineMessageLengthResult = await DetermineMessageLengthAsync(clientSocket).ConfigureAwait(false);
+            if (determineMessageLengthResult.Failure)
             {
-                return determineTransferTypeResult;
+                return determineMessageLengthResult;
             }
 
-            var transferType = determineTransferTypeResult.Value;
+            var messageLength = determineMessageLengthResult.Value;
+
+            EventOccurred?.Invoke(
+                new ServerEventInfo
+                {
+                    EventType = ServerEventType.DetermineMessageLengthCompleted,
+                    MessageLength = messageLength,
+                    UnreadByteCount = _unreadBytes.Count
+                });
+
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ReceiveAllMessageBytesStarted });
+
+            var receiveMessageResult = await ReceiveAllMessageBytesAsync(clientSocket, messageLength);
+            if (receiveMessageResult.Failure)
+            {
+                return receiveMessageResult;
+            }
+
+            var messageData = receiveMessageResult.Value;
+
+            EventOccurred?.Invoke(
+                new ServerEventInfo
+                {
+                    EventType = ServerEventType.ReceiveAllMessageBytesCompleted,
+                    UnreadByteCount = _unreadBytes.Count
+                });
+
+            var processRequestResult = await ProcessRequestAsync(clientSocket, messageData, token);
+            if (processRequestResult.Failure)
+            {
+                return processRequestResult;
+            }
+
+            return Result.Ok();
+        }
+
+        private async Task<Result<int>> ReadFromSocketAsync(Socket clientSocket)
+        {
+            Result<int> receiveResult;
+            int bytesReceived;
+
+            try
+            {
+                receiveResult =
+                    await clientSocket.ReceiveWithTimeoutAsync(_buffer, 0, _bufferSize, 0, _receiveTimeoutMs)
+                        .ConfigureAwait(false);
+
+                bytesReceived = receiveResult.Value;
+            }
+            catch (SocketException ex)
+            {
+                return Result.Fail<int>($"{ex.Message} ({ex.GetType()} raised in method TplSocketServer.DetermineTransferTypeAsync)");
+            }
+            catch (TimeoutException ex)
+            {
+                return Result.Fail<int>($"{ex.Message} ({ex.GetType()} raised in method TplSocketServer.DetermineTransferTypeAsync)");
+            }
+
+            if (receiveResult.Failure)
+            {
+                return Result.Fail<int>(receiveResult.Error);
+            }
+
+            if (bytesReceived == 0)
+            {
+                return Result.Fail<int>("Error reading request from client, no data was received");
+            }
+            
+            return Result.Ok(bytesReceived);
+        }
+ 
+        private async Task<Result<int>> DetermineMessageLengthAsync(Socket clientSocket)
+        {
+            var readFromSocketResult = await ReadFromSocketAsync(clientSocket).ConfigureAwait(false);
+            if (readFromSocketResult.Failure)
+            {
+                return readFromSocketResult;
+            }
+
+            _lastBytesReceivedCount = readFromSocketResult.Value;
+            if (_lastBytesReceivedCount > 4)
+            {
+                var numberOfUnreadBytes = _lastBytesReceivedCount - 4;
+                var unreadBytes = new byte[numberOfUnreadBytes];
+                _buffer.ToList().CopyTo(4, unreadBytes, 0, numberOfUnreadBytes);
+                _unreadBytes = unreadBytes.ToList();
+            }
+
+            var messageLength = MessageUnwrapper.ReadInt32(_buffer);
+
+            return Result.Ok(messageLength);
+        }
+
+        private async Task<Result<byte[]>> ReceiveAllMessageBytesAsync(Socket clientSocket, int messageLength)
+        {
+            var messageData = new List<byte>();
+            if (_unreadBytes.Count > 0)
+            {
+                var savedBytes = new byte[_unreadBytes.Count];
+                _unreadBytes.CopyTo(0, savedBytes, 0, _unreadBytes.Count);
+                messageData.AddRange(savedBytes.ToList());
+            }
+
+            var receiveCount = 0;
+            var totalBytesReceieved = 0;
+            _unreadBytes = new List<byte>();
+
+            while (messageData.Count < messageLength)
+            {
+                var readFromSocketResult = await ReadFromSocketAsync(clientSocket);
+                if (readFromSocketResult.Failure)
+                {
+                    return Result.Fail<byte[]>(readFromSocketResult.Error);
+                }
+                
+                _lastBytesReceivedCount = readFromSocketResult.Value;
+                var receivedBytes = new byte[_lastBytesReceivedCount];
+
+                _buffer.ToList().CopyTo(0, receivedBytes, 0, _lastBytesReceivedCount);
+                messageData.AddRange(receivedBytes.ToList());
+
+                receiveCount++;
+                totalBytesReceieved += _lastBytesReceivedCount;
+
+                EventOccurred?.Invoke(
+                    new ServerEventInfo
+                    {
+                        EventType = ServerEventType.ReceivedDataFromSocket,
+                        ReceiveBytesCount = receiveCount,
+                        CurrentBytesReceivedFromSocket = _lastBytesReceivedCount,
+                        TotalBytesReceivedFromSocket = totalBytesReceieved,
+                        MessageLength = messageLength
+                    });
+            }
+
+            var unreadByteCount = messageData.Count - messageLength;
+            if (unreadByteCount <= 0)
+            {
+                return Result.Ok(messageData.ToArray());
+            }
+
+            var unreadBytes = new byte[unreadByteCount];
+            messageData.CopyTo(messageData.Count, unreadBytes, 0, unreadByteCount);
+
+            _unreadBytes = unreadBytes.ToList();
+            messageData = messageData.GetRange(0, messageLength);
+
+            return Result.Ok(messageData.ToArray());
+        }
+
+        private async Task<Result> ProcessRequestAsync(Socket clientSocket, byte[] messageData, CancellationToken token)
+        {
+            EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.DetermineTransferTypeStarted });
+
+            var transferTypeData = MessageUnwrapper.ReadInt32(messageData).ToString();
+            var transferType = (RequestType)Enum.Parse(typeof(RequestType), transferTypeData);
+
             switch (transferType)
             {
                 case RequestType.TextMessage:
@@ -190,7 +364,7 @@ namespace TplSocketServer
                             RequestType = RequestType.TextMessage
                         });
 
-                    return ReceiveTextMessage(buffer, token);
+                    return ReceiveTextMessage(messageData, token);
 
                 case RequestType.InboundFileTransfer:
 
@@ -201,7 +375,7 @@ namespace TplSocketServer
                             RequestType = RequestType.InboundFileTransfer
                         });
 
-                    return await InboundFileTransferAsync(buffer, token).ConfigureAwait(false);
+                    return await InboundFileTransferAsync(clientSocket, messageData, token).ConfigureAwait(false);
 
                 case RequestType.OutboundFileTransfer:
 
@@ -212,7 +386,7 @@ namespace TplSocketServer
                             RequestType = RequestType.OutboundFileTransfer
                         });
 
-                    return await OutboundFileTransferAsync(buffer, token).ConfigureAwait(false);
+                    return await OutboundFileTransferAsync(messageData, token).ConfigureAwait(false);
 
                 case RequestType.GetFileList:
 
@@ -223,7 +397,7 @@ namespace TplSocketServer
                             RequestType = RequestType.GetFileList
                         });
 
-                    return await SendFileList(buffer, token).ConfigureAwait(false);
+                    return await SendFileList(messageData, token).ConfigureAwait(false);
 
                 case RequestType.ReceiveFileList:
 
@@ -234,7 +408,7 @@ namespace TplSocketServer
                             RequestType = RequestType.ReceiveFileList
                         });
 
-                    return ReceiveFileList(buffer, token);
+                    return ReceiveFileList(messageData, token);
 
                 case RequestType.TransferFolderPathRequest:
 
@@ -245,7 +419,7 @@ namespace TplSocketServer
                             RequestType = RequestType.TransferFolderPathRequest
                         });
 
-                    return await SendTransferFolderResponseAsync(buffer, token).ConfigureAwait(false);
+                    return await SendTransferFolderResponseAsync(messageData, token).ConfigureAwait(false);
 
                 case RequestType.TransferFolderPathResponse:
 
@@ -256,8 +430,8 @@ namespace TplSocketServer
                             RequestType = RequestType.TransferFolderPathResponse
                         });
 
-                    return ReceiveTransferFolderResponse(buffer, token);
-                    
+                    return ReceiveTransferFolderResponse(messageData, token);
+
                 case RequestType.PublicIpAddressRequest:
 
                     EventOccurred?.Invoke(
@@ -267,7 +441,7 @@ namespace TplSocketServer
                             RequestType = RequestType.PublicIpAddressRequest
                         });
 
-                    return await SendPublicIpAddress(buffer, token).ConfigureAwait(false);
+                    return await SendPublicIpAddress(messageData, token).ConfigureAwait(false);
 
                 case RequestType.PublicIpAddressResponse:
 
@@ -278,51 +452,13 @@ namespace TplSocketServer
                             RequestType = RequestType.PublicIpAddressResponse
                         });
 
-                    return ReceivePublicIpAddress(buffer, token);
+                    return ReceivePublicIpAddress(messageData, token);
 
                 default:
 
                     var error = "Unable to determine transfer type, value of " + "'" + transferType + "' is invalid.";
                     return Result.Fail(error);
             }
-        }
-
-        private async Task<Result<RequestType>> DetermineTransferTypeAsync(byte[] buffer)
-        {
-            Result<int> receiveResult;
-            int bytesReceived;
-
-            try
-            {
-                receiveResult = 
-                    await _transferSocket.ReceiveWithTimeoutAsync(buffer, 0, _bufferSize, 0, _receiveTimeoutMs)
-                        .ConfigureAwait(false);
-
-                bytesReceived = receiveResult.Value;
-            }
-            catch (SocketException ex)
-            {
-                return Result.Fail<RequestType>($"{ex.Message} ({ex.GetType()} raised in method TplSocketServer.DetermineTransferTypeAsync)");
-            }
-            catch (TimeoutException ex)
-            {
-                return Result.Fail<RequestType>($"{ex.Message} ({ex.GetType()} raised in method TplSocketServer.DetermineTransferTypeAsync)");
-            }
-
-            if (receiveResult.Failure)
-            {
-                return Result.Fail<RequestType>(receiveResult.Error);
-            }
-
-            if (bytesReceived == 0)
-            {
-                return Result.Fail<RequestType>("Error reading request from client, no data was received");
-            }
-
-            var transferType = MessageUnwrapper.DetermineTransferType(buffer).ToString();
-            var transferTypeEnum = (RequestType)Enum.Parse(typeof(RequestType), transferType);
-
-            return Result.Ok(transferTypeEnum);
         }
 
         private Result ReceiveTextMessage(byte[] buffer, CancellationToken token)
@@ -350,7 +486,7 @@ namespace TplSocketServer
             return Result.Ok();
         }
 
-        private async Task<Result> InboundFileTransferAsync(byte[] buffer, CancellationToken token)
+        private async Task<Result> InboundFileTransferAsync(Socket clientSocket, byte[] buffer, CancellationToken token)
         {
             EventOccurred?.Invoke(
                 new ServerEventInfo { EventType = ServerEventType.ReceiveInboundFileTransferInfoStarted });
@@ -397,11 +533,12 @@ namespace TplSocketServer
             EventOccurred?.Invoke(new ServerEventInfo
             {
                 EventType = ServerEventType.ReceiveFileBytesStarted,
-                FileTransferStartTime = startTime            
+                FileTransferStartTime = startTime,
+                FileSizeInBytes = fileSizeBytes
             });
 
             var receiveFileResult = 
-                await ReceiveFileAsync(localFilePath, fileSizeBytes, buffer, 0, _bufferSize, 0, _receiveTimeoutMs, token)
+                await ReceiveFileAsync(clientSocket, localFilePath, fileSizeBytes, buffer, 0, _bufferSize, 0, _receiveTimeoutMs, token)
                     .ConfigureAwait(false);
 
             if (receiveFileResult.Failure)
@@ -417,9 +554,6 @@ namespace TplSocketServer
                 FileSizeInBytes = fileSizeBytes
             });
 
-            //TODO: This is a hack to separate the file read and handshake steps to ensure that all data is read correcty by the client server. I know how to fix by keeping track of the buffer between steps.
-            await Task.Delay(OneSecondInMilliseconds);
-
             EventOccurred?.Invoke(
                 new ServerEventInfo
                 {
@@ -430,7 +564,7 @@ namespace TplSocketServer
             var confirmationMessageData = Encoding.ASCII.GetBytes(ConfirmationMessage);
 
             var sendConfirmatinMessageResult = 
-                await _transferSocket.SendWithTimeoutAsync(confirmationMessageData, 0, confirmationMessageData.Length, 0, _sendTimeoutMs)
+                await clientSocket.SendWithTimeoutAsync(confirmationMessageData, 0, confirmationMessageData.Length, 0, _sendTimeoutMs)
                     .ConfigureAwait(false);
 
             if (sendConfirmatinMessageResult.Failure)
@@ -444,6 +578,7 @@ namespace TplSocketServer
         }
 
         private async Task<Result> ReceiveFileAsync(
+            Socket clientSocket,
             string localFilePath,
             long fileSizeInBytes,
             byte[] buffer,
@@ -455,6 +590,18 @@ namespace TplSocketServer
         {
             long totalBytesReceived = 0;
             float percentComplete = 0;
+
+            if (_unreadBytes.Count > 0)
+            {
+                totalBytesReceived += _unreadBytes.Count;
+
+                var writeBytesResult = FileHelper.WriteBytesToFile(localFilePath, _unreadBytes.ToArray(), _unreadBytes.Count);
+                if (writeBytesResult.Failure)
+                {
+                    return writeBytesResult;
+                }
+            }
+
             //var receiveCount = 0;
 
             // Read file bytes from transfer socket until 
@@ -484,7 +631,7 @@ namespace TplSocketServer
                 int bytesReceived;
                 try
                 {
-                    var receiveBytesResult = await _transferSocket
+                    var receiveBytesResult = await clientSocket
                                                  .ReceiveWithTimeoutAsync(
                                                      buffer,
                                                      offset,
@@ -541,6 +688,7 @@ namespace TplSocketServer
                         new ServerEventInfo
                         {
                             EventType = ServerEventType.FileTransferProgress,
+                            TotalBytesReceivedFromSocket = totalBytesReceived,
                             PercentComplete = percentComplete
                         });
                 }
@@ -963,10 +1111,20 @@ namespace TplSocketServer
                     RemoteServerPortNumber = remoteServerPort
                 });
 
-            var messageWrapperAndData = MessageWrapper.ConstuctTextMessageRequest(message, localIpAddress, localPort);
+            var messageData = MessageWrapper.ConstuctTextMessageRequest(message, localIpAddress, localPort);
+            var messageLength = BitConverter.GetBytes(messageData.Length);
 
-            var sendMessageResult = 
-                await transferSocket.SendWithTimeoutAsync(messageWrapperAndData, 0, messageWrapperAndData.Length, 0, _sendTimeoutMs)
+            var sendMessageResult =
+                await transferSocket.SendWithTimeoutAsync(messageLength, 0, messageLength.Length, 0, _sendTimeoutMs)
+                    .ConfigureAwait(false);
+
+            if (sendMessageResult.Failure)
+            {
+                return sendMessageResult;
+            }
+
+            sendMessageResult = 
+                await transferSocket.SendWithTimeoutAsync(messageData, 0, messageData.Length, 0, _sendTimeoutMs)
                     .ConfigureAwait(false);
 
             if (sendMessageResult.Failure)
@@ -1010,36 +1168,42 @@ namespace TplSocketServer
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerCompleted });
 
             var fileSizeBytes = new FileInfo(localFilePath).Length;
-
-            var messageWrapper = 
-                MessageWrapper.ConstructOutboundFileTransferRequest(localFilePath, fileSizeBytes, _localIpAddress, _localPort, remoteFolderPath);
-
             EventOccurred?.Invoke(
                 new ServerEventInfo
-                    {
-                        EventType = ServerEventType.SendOutboundFileTransferInfoStarted,
-                        LocalFolder = Path.GetDirectoryName(localFilePath),
-                        FileName = Path.GetFileName(localFilePath),
-                        FileSizeInBytes = fileSizeBytes,
-                        RemoteServerIpAddress = remoteServerIpAddress,
-                        RemoteServerPortNumber = remoteServerPort,
-                        RemoteFolder = remoteFolderPath
-                    });
+                {
+                    EventType = ServerEventType.SendOutboundFileTransferInfoStarted,
+                    LocalFolder = Path.GetDirectoryName(localFilePath),
+                    FileName = Path.GetFileName(localFilePath),
+                    FileSizeInBytes = fileSizeBytes,
+                    RemoteServerIpAddress = remoteServerIpAddress,
+                    RemoteServerPortNumber = remoteServerPort,
+                    RemoteFolder = remoteFolderPath
+                });
 
-            var sendRequest = 
-                await transferSocket.SendWithTimeoutAsync(messageWrapper, 0, messageWrapper.Length, 0, _sendTimeoutMs)
+            var messageData = 
+                MessageWrapper.ConstructOutboundFileTransferRequest(localFilePath, fileSizeBytes, _localIpAddress, _localPort, remoteFolderPath);
+
+            var messageLength = BitConverter.GetBytes(messageData.Length);
+
+            var sendMessageResult =
+                await transferSocket.SendWithTimeoutAsync(messageLength, 0, messageLength.Length, 0, _sendTimeoutMs)
                     .ConfigureAwait(false);
 
-            if (sendRequest.Failure)
+            if (sendMessageResult.Failure)
             {
-                return sendRequest;
+                return sendMessageResult;
+            }
+
+            sendMessageResult = 
+                await transferSocket.SendWithTimeoutAsync(messageData, 0, messageData.Length, 0, _sendTimeoutMs)
+                    .ConfigureAwait(false);
+
+            if (sendMessageResult.Failure)
+            {
+                return sendMessageResult;
             }
 
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.SendOutboundFileTransferInfoCompleted });
-
-            //TODO: This is a hack to separate the transfer request and file transfer steps to ensure that all data is read correcty by the client server. I know how to fix by keeping track of the buffer between steps.
-            await Task.Delay(OneSecondInMilliseconds);
-
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.SendFileBytesStarted });
 
             var sendFileResult = await transferSocket.SendFileAsync(localFilePath).ConfigureAwait(false);
@@ -1134,31 +1298,42 @@ namespace TplSocketServer
 
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerCompleted });
 
-            var messageHeaderData = 
+            EventOccurred?.Invoke(
+                new ServerEventInfo
+                {
+                    EventType = ServerEventType.SendInboundFileTransferInfoStarted,
+                    RemoteServerIpAddress = remoteServerIpAddress,
+                    RemoteServerPortNumber = remoteServerPort,
+                    RemoteFolder = Path.GetDirectoryName(remoteFilePath),
+                    FileName = Path.GetFileName(remoteFilePath),
+                    LocalFolder = localFolderPath,
+                });
+
+            var messageData = 
                 MessageWrapper.ConstructInboundFileTransferRequest(
                     remoteFilePath,
                     localIpAddress,
                     localPort,
                     localFolderPath);
 
-            EventOccurred?.Invoke(
-                new ServerEventInfo
-                    {
-                        EventType = ServerEventType.SendInboundFileTransferInfoStarted,
-                        RemoteServerIpAddress = remoteServerIpAddress,
-                        RemoteServerPortNumber = remoteServerPort,
-                        RemoteFolder = Path.GetDirectoryName(remoteFilePath),
-                        FileName = Path.GetFileName(remoteFilePath),
-                        LocalFolder = localFolderPath,
-                    });
+            var messageLength = BitConverter.GetBytes(messageData.Length);
 
-            var requestResult = 
-                await transferSocket.SendWithTimeoutAsync(messageHeaderData, 0, messageHeaderData.Length, 0, _sendTimeoutMs)
+            var sendMessageResult =
+                await transferSocket.SendWithTimeoutAsync(messageLength, 0, messageLength.Length, 0, _sendTimeoutMs)
                     .ConfigureAwait(false);
 
-            if (requestResult.Failure)
+            if (sendMessageResult.Failure)
             {
-                return requestResult;
+                return sendMessageResult;
+            }
+
+            sendMessageResult =
+                await transferSocket.SendWithTimeoutAsync(messageData, 0, messageData.Length, 0, _sendTimeoutMs)
+                    .ConfigureAwait(false);
+
+            if (sendMessageResult.Failure)
+            {
+                return sendMessageResult;
             }
 
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.SendInboundFileTransferInfoCompleted });
@@ -1196,9 +1371,6 @@ namespace TplSocketServer
 
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerCompleted });
 
-            var requestData =
-                MessageWrapper.ConstructFileListRequest(localIpAddress, localPort, targetFolder);
-
             EventOccurred?.Invoke(
                 new ServerEventInfo
                 {
@@ -1208,13 +1380,27 @@ namespace TplSocketServer
                     RemoteFolder = targetFolder
                 });
 
-            var requestResult =
-                await transferSocket.SendWithTimeoutAsync(requestData, 0, requestData.Length, 0, _sendTimeoutMs)
+            var messageData =
+                MessageWrapper.ConstructFileListRequest(localIpAddress, localPort, targetFolder);
+
+            var messageLength = BitConverter.GetBytes(messageData.Length);
+
+            var sendMessageResult =
+                await transferSocket.SendWithTimeoutAsync(messageLength, 0, messageLength.Length, 0, _sendTimeoutMs)
                     .ConfigureAwait(false);
 
-            if (requestResult.Failure)
+            if (sendMessageResult.Failure)
             {
-                return requestResult;
+                return sendMessageResult;
+            }
+
+            sendMessageResult =
+                await transferSocket.SendWithTimeoutAsync(messageData, 0, messageData.Length, 0, _sendTimeoutMs)
+                    .ConfigureAwait(false);
+
+            if (sendMessageResult.Failure)
+            {
+                return sendMessageResult;
             }
 
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.SendFileListRequestCompleted });
@@ -1251,9 +1437,6 @@ namespace TplSocketServer
 
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerCompleted });
 
-            var requestData =
-                MessageWrapper.ConstructTransferFolderRequest(localIpAddress, localPort);
-
             EventOccurred?.Invoke(
                 new ServerEventInfo
                 {
@@ -1262,13 +1445,27 @@ namespace TplSocketServer
                     RemoteServerPortNumber = remoteServerPort
                 });
 
-            var requestResult =
-                await transferSocket.SendWithTimeoutAsync(requestData, 0, requestData.Length, 0, _sendTimeoutMs)
+            var messageData =
+                MessageWrapper.ConstructTransferFolderRequest(localIpAddress, localPort);
+
+            var messageLength = BitConverter.GetBytes(messageData.Length);
+
+            var sendMessageResult =
+                await transferSocket.SendWithTimeoutAsync(messageLength, 0, messageLength.Length, 0, _sendTimeoutMs)
                     .ConfigureAwait(false);
 
-            if (requestResult.Failure)
+            if (sendMessageResult.Failure)
             {
-                return requestResult;
+                return sendMessageResult;
+            }
+
+            sendMessageResult =
+                await transferSocket.SendWithTimeoutAsync(messageData, 0, messageData.Length, 0, _sendTimeoutMs)
+                    .ConfigureAwait(false);
+
+            if (sendMessageResult.Failure)
+            {
+                return sendMessageResult;
             }
 
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.SendTransferFolderRequestCompleted });
@@ -1305,9 +1502,6 @@ namespace TplSocketServer
 
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ConnectToRemoteServerCompleted });
 
-            var requestData =
-                MessageWrapper.ConstructPublicIpAddressRequest(localIpAddress, localPort);
-
             EventOccurred?.Invoke(
                 new ServerEventInfo
                 {
@@ -1316,13 +1510,27 @@ namespace TplSocketServer
                     RemoteServerPortNumber = localPort
                 });
 
-            var requestResult =
-                await transferSocket.SendWithTimeoutAsync(requestData, 0, requestData.Length, 0, _sendTimeoutMs)
+            var messageData =
+                MessageWrapper.ConstructPublicIpAddressRequest(localIpAddress, localPort);
+
+            var messageLength = BitConverter.GetBytes(messageData.Length);
+
+            var sendMessageResult =
+                await transferSocket.SendWithTimeoutAsync(messageLength, 0, messageLength.Length, 0, _sendTimeoutMs)
                     .ConfigureAwait(false);
 
-            if (requestResult.Failure)
+            if (sendMessageResult.Failure)
             {
-                return requestResult;
+                return sendMessageResult;
+            }
+
+            sendMessageResult =
+                await transferSocket.SendWithTimeoutAsync(messageData, 0, messageData.Length, 0, _sendTimeoutMs)
+                    .ConfigureAwait(false);
+
+            if (sendMessageResult.Failure)
+            {
+                return sendMessageResult;
             }
 
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.SendPublicIpRequestCompleted });
@@ -1332,12 +1540,7 @@ namespace TplSocketServer
 
             return Result.Ok();
         }
-
-        public void RemoveAllSubscribers()
-        {
-            EventOccurred = null;
-        }
-
+        
         public Result CloseListenSocket()
         {
             EventOccurred?.Invoke(new ServerEventInfo { EventType = ServerEventType.ShutdownListenSocketStarted });

@@ -11,6 +11,8 @@ namespace TplSocketServer
     {
         public ServerEventType EventType { get; set; } = ServerEventType.None;
 
+        public int MessageLength { get; set; }
+        public int UnreadByteCount { get; set; }
         public RequestType RequestType { get; set; }
         public string TextMessage { get; set; }
         public string RemoteServerIpAddress { get; set; }
@@ -47,8 +49,15 @@ namespace TplSocketServer
             var totalMilliseconds = elapsed.Ticks / 10_000;
             var bytesPerMs = bytesReceived / (double)totalMilliseconds;
             var kilobitsPerSecond = (bytesPerMs * 1000) / 1024;
+            var transferRate = $"{kilobitsPerSecond:F1} kb/s";
 
-            return $"{kilobitsPerSecond:F1} kb/s";
+            if (kilobitsPerSecond > 1024)
+            {
+                var megabitsPerSecond = kilobitsPerSecond / 1024;
+                transferRate = $"{megabitsPerSecond:F1} mb/s";
+            }
+
+            return transferRate;
         }
     }
 }

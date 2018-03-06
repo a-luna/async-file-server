@@ -12,6 +12,12 @@
         ConnectToRemoteServerStarted,
         ConnectToRemoteServerCompleted,
 
+        DetermineMessageLengthStarted,
+        DetermineMessageLengthCompleted,
+
+        ReceiveAllMessageBytesStarted,
+        ReceiveAllMessageBytesCompleted,
+
         DetermineTransferTypeStarted,
         DetermineTransferTypeCompleted,
 

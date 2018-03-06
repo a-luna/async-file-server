@@ -13,7 +13,7 @@ namespace TplSocketServer
         public const int SizeOfInt32InBytes = 4;
         public const int SizeOfCharInBytes = 2;
 
-        public static int DetermineTransferType(byte[] buffer)
+        public static int ReadInt32(byte[] buffer)
         {
             return BitConverter.ToInt32(buffer, 0);
         }

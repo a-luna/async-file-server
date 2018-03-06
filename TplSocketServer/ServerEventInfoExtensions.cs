@@ -34,6 +34,22 @@
                     report += "Completed Process: Connect to remote server";
                     break;
 
+                case ServerEventType.DetermineMessageLengthStarted:
+                    report += "Started Process: Determine incoming message length";
+                    break;
+
+                case ServerEventType.DetermineMessageLengthCompleted:
+                    report += $"Completed Process: Determine incoming message length\n\n\tMessage Length:\t{serverEventInfo.MessageLength}\n\tUnread Byte Count:\t{serverEventInfo.UnreadByteCount}\n";
+                    break;
+
+                case ServerEventType.ReceiveAllMessageBytesStarted:
+                    report += "Started Process: Receive incoming message bytes";
+                    break;
+
+                case ServerEventType.ReceiveAllMessageBytesCompleted:
+                    report += $"Completed Process: Receive incoming message bytes\n\n\tUnread Byte Count:\t{serverEventInfo.UnreadByteCount}\n";
+                    break;
+
                 case ServerEventType.DetermineTransferTypeStarted:
                     report += "Started Process: Determine transfer type";
                     break;
@@ -57,7 +73,6 @@
                 case ServerEventType.SendTextMessageCompleted:
                     report += "Completed Process: Send Text Message";
                     break;
-
 
                 case ServerEventType.SendPublicIpRequestStarted:
                     report += $"Started Process: Send Public IP Request\n\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n";
@@ -90,7 +105,6 @@
                 case ServerEventType.ReceivePublicIpResponseCompleted:
                     report += $"Completed Process: Receive Public IP Response\n\n\tPublic IP:\t\t{serverEventInfo.PublicIpAddress} files available\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}";
                     break;
-
 
                 case ServerEventType.SendTransferFolderRequestStarted:
                     report += $"Started Process: Send Transfer Folder Request\n\n\tServer Endpoint:\t\t{serverEventInfo.RemoteServerIpAddress}:{serverEventInfo.RemoteServerPortNumber}\n";

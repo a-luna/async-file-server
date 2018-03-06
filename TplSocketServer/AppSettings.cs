@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Xml.Serialization;
 using AaronLuna.Common.Network;
 using AaronLuna.Common.Result;
@@ -34,12 +35,34 @@ namespace TplSocketServer
         {
             foreach (var server in RemoteServers)
             {
-               var parseResult =
-                    IpAddressHelper.ParseSingleIPv4Address(server.ConnectionInfo.LocalIpString);
+                var thisLocalIp = server.ConnectionInfo.LocalIpString;
 
-                if (parseResult.Success)
+                if (string.IsNullOrEmpty(thisLocalIp))
                 {
-                    server.ConnectionInfo.LocalIpAddress = parseResult.Value;
+                    server.ConnectionInfo.LocalIpAddress = IPAddress.None;
+                }
+                else
+                {
+                    var parseLocalIpResult = IpAddressHelper.ParseSingleIPv4Address(thisLocalIp);
+                    if (parseLocalIpResult.Success)
+                    {
+                        server.ConnectionInfo.LocalIpAddress = parseLocalIpResult.Value;
+                    }
+                }
+
+                var thisPublicIp = server.ConnectionInfo.PublicIpString;
+
+                if (string.IsNullOrEmpty(thisPublicIp))
+                {
+                    server.ConnectionInfo.PublicIpAddress = IPAddress.None;
+                }
+                else
+                {
+                    var parsePublicIpResult = IpAddressHelper.ParseSingleIPv4Address(thisPublicIp);
+                    if (parsePublicIpResult.Success)
+                    {
+                        server.ConnectionInfo.PublicIpAddress = parsePublicIpResult.Value;
+                    }
                 }
             }
         }

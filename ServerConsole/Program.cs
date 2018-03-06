@@ -33,17 +33,13 @@
 
                 case ServerEventType.ReceiveInboundFileTransferInfoCompleted:
                     Console.WriteLine($"\nIncoming file transfer from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}:");
-                    Console.WriteLine($"File Name:\t\t{serverEvent.FileName}\nFile Size:\t\t{serverEvent.FileSizeString}\nSave To:\t\t{serverEvent.LocalFolder}");
+                    Console.WriteLine($"File Name:\t{serverEvent.FileName}\nFile Size:\t{serverEvent.FileSizeString}\nSave To:\t{serverEvent.LocalFolder}");
                     break;
 
                 case ServerEventType.SendFileBytesStarted:
                     Console.WriteLine("\nSending file to client...");
                     break;
-
-                case ServerEventType.ReceiveFileBytesStarted:
-                    Console.WriteLine("\nReceiving file from client...");
-                    break;
-
+                    
                 case ServerEventType.ReceiveConfirmationMessageCompleted:
                     Console.WriteLine("Client confirmed file transfer completed successfully");                    
                     break;

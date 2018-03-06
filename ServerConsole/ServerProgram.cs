@@ -1005,22 +1005,27 @@ namespace ServerConsole
 
                     _progress = new ConsoleProgressBar
                     {
+                        FileSizeInBytes = serverEvent.FileSizeInBytes,
                         NumberOfBlocks = 20,
-                        StartBracketChar = '|',
-                        EndBracketChar = '|',
-                        CompletedBlockChar = '|',
-                        UncompletedBlockChar = ' ',
-                        AnimationSequence = ".oO@*"
+                        StartBracket = "|",
+                        EndBracket = "|",
+                        CompletedBlock = "|",
+                        UncompletedBlock = " ",
+                        AnimationSequence = ConsoleProgressBar.RotatingPipeAnimation
                     };
+
                     _fileTransferInProgress = true;
+                    Console.WriteLine(Environment.NewLine);
                     break;
 
                 case ServerEventType.FileTransferProgress:
+                    _progress.BytesReceived = serverEvent.TotalBytesReceivedFromSocket;
                     _progress.Report(serverEvent.PercentComplete);
                     break;
 
                 case ServerEventType.ReceiveFileBytesCompleted:
 
+                    _progress.BytesReceived = serverEvent.FileSizeInBytes;
                     _progress.Report(1);
                     await Task.Delay(500);
                     _progress.Dispose();

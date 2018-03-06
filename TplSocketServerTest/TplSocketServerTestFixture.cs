@@ -118,6 +118,7 @@ namespace TplSocketServerTest
             var runServerTask1 = 
                 Task.Run(() => 
                     _server.HandleIncomingConnectionsAsync(
+                        _ipAddress.ToString(),
                         remoteServerPort, 
                         token), 
                     token);
@@ -318,6 +319,7 @@ namespace TplSocketServerTest
             var runServerTask1 = 
                 Task.Run(() => 
                     _server.HandleIncomingConnectionsAsync(
+                        _ipAddress.ToString(),
                         remoteServerPort, 
                         token), 
                     token);
@@ -325,6 +327,7 @@ namespace TplSocketServerTest
             var runServerTask2 = 
                 Task.Run(() => 
                     _client.HandleIncomingConnectionsAsync(
+                        _ipAddress.ToString(),
                         localPort, 
                         token), 
                     token);
