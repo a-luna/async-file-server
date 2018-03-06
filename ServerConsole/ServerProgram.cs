@@ -27,6 +27,8 @@ namespace ServerConsole
         private const string EmptyTransferFolderErrorMessage = "Currently there are no files available in transfer folder";
         private const string FileAlreadyExists = "A file with the same name already exists in the download folder, please rename or remove this file in order to proceed.";
 
+        private const int OneHalfSecondInMilliseconds = 500;
+
         private const int SendMessage = 1;
         private const int SendFile = 2;
         private const int GetFile = 3;
@@ -711,7 +713,7 @@ namespace ServerConsole
                         port,
                         fileToSend,
                         clientInfo.TransferFolder,
-                    token));
+                    token), token);
 
             // TODO: Detect CTRL+C and break out of loop
             while (_waitingForConfirmationMessage) { }
@@ -1005,10 +1007,10 @@ namespace ServerConsole
                     {
                         FileSizeInBytes = serverEvent.FileSizeInBytes,
                         NumberOfBlocks = 20,
-                        StartBracket = "|",
-                        EndBracket = "|",
+                        StartBracket = "(",
+                        EndBracket = ")",
                         CompletedBlock = "|",
-                        UncompletedBlock = " ",
+                        UncompletedBlock = "-",
                         AnimationSequence = ConsoleProgressBar.RotatingPipeAnimation
                     };
 
@@ -1025,7 +1027,7 @@ namespace ServerConsole
 
                     _progress.BytesReceived = serverEvent.FileSizeInBytes;
                     _progress.Report(1);
-                    await Task.Delay(500);
+                    await Task.Delay(OneHalfSecondInMilliseconds);
                     _progress.Dispose();
 
                     Console.WriteLine($"\n\nTransfer Start Time:\t\t{serverEvent.FileTransferStartTime.ToLongTimeString()}");
