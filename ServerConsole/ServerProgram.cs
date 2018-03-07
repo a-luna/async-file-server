@@ -24,6 +24,7 @@ namespace ServerConsole
         private const string IpChoiceClient = "Which IP address would you like to use for this request?";
         private const string NotifyLanTrafficOnly = "Unable to determine public IP address, this server will only be able to communicate with machines in the same local network.";
         private const string PropmptMultipleLocalIPv4Addresses = "There are multiple IPv4 addresses available on this machine, choose the most appropriate local address:";
+        private const string ConnectionRefusedAdvice = "\nPlease verify that the port number on the client server is properly opened, this could entail modifying firewall or port forwarding settings depending on the operating system.";
         private const string EmptyTransferFolderErrorMessage = "Currently there are no files available in transfer folder";
         private const string FileAlreadyExists = "A file with the same name already exists in the download folder, please rename or remove this file in order to proceed.";
 
@@ -160,7 +161,7 @@ namespace ServerConsole
         private async Task<ConnectionInfo> GetLocalServerSettingsFromUser()
         {
             var portChoice =
-                GetPortNumberFromUser("Enter a port number where this server will listen for incoming connections", true);
+                GetPortNumberFromUser("Enter the port number this server will use to handle connections", true);
 
             var localIp = GetLocalIpToBindTo();
             var publicIp = IPAddress.None;
@@ -308,6 +309,7 @@ namespace ServerConsole
                 if (chooseClientResult.Failure)
                 {
                     Console.WriteLine(chooseClientResult.Error);
+                    Console.WriteLine("Returning to main menu...");
                     continue;
                 }
 
@@ -359,9 +361,7 @@ namespace ServerConsole
             {
                 return Result.Fail<int>(string.Empty);
             }
-
-            Console.WriteLine(string.Empty);
-
+            
             if (_activeTextSession)
             {
                 await PromptUserToReplyToTextMessageAsync();
@@ -374,6 +374,7 @@ namespace ServerConsole
                 return validationResult;
             }
 
+            Console.WriteLine(string.Empty);
             return Result.Ok(validationResult.Value);
         }
 
@@ -544,7 +545,7 @@ namespace ServerConsole
         {
             var remoteServerInfo = new RemoteServer();
 
-            Console.WriteLine("Enter the server's IPv4 address:");
+            Console.WriteLine("Enter the client's IPv4 address:");
             var input = Console.ReadLine();
 
             var ipValidationResult = ValidateIpV4Address(input);
@@ -588,7 +589,7 @@ namespace ServerConsole
             }
 
             remoteServerInfo.ConnectionInfo.Port =
-                GetPortNumberFromUser("\nEnter the server's port number that handles incoming requests", false);
+                GetPortNumberFromUser("\nEnter the client's port number:", false);
 
             return Result.Ok(remoteServerInfo);
         }
@@ -624,8 +625,14 @@ namespace ServerConsole
 
             if (sendFolderRequestResult.Failure)
             {
+                var userHint = string.Empty;
+                if (sendFolderRequestResult.Error.Contains("Connection refused"))
+                {
+                    userHint = ConnectionRefusedAdvice;
+                }
+
                 return Result.Fail<RemoteServer>(
-                    $"Error requesting transfer folder path from new client:\n{sendFolderRequestResult.Error}");
+                    $"{sendFolderRequestResult.Error}{userHint}");
             }
 
             while (_waitingForTransferFolderResponse) { }
