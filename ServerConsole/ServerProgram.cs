@@ -29,6 +29,7 @@ namespace ServerConsole
         private const string FileAlreadyExists = "A file with the same name already exists in the download folder, please rename or remove this file in order to proceed.";
 
         private const int OneHalfSecondInMilliseconds = 500;
+        private const int TwoSecondsInMillisconds = 2000;
 
         private const int SendMessage = 1;
         private const int SendFile = 2;
@@ -54,6 +55,7 @@ namespace ServerConsole
         private bool _waitingForDownloadToComplete = true;
         private bool _waitingForConfirmationMessage = true;
         private bool _activeTextSession;
+        private bool _didTimeout;
         private bool _requestedFileFromClient;
         private bool _progressBarInstantiated;
         private bool _needToRewriteMenu;
@@ -537,7 +539,17 @@ namespace ServerConsole
                 return Result.Fail<RemoteServer>("There was an error getting the client's IP address from user input.");
             }
 
-            return await RequestAdditionalConnectionInfoFromClientAsync(clientIp, newClient);
+            var result = Result.Fail<RemoteServer>(string.Empty);
+            try
+            {
+                result = await RequestAdditionalConnectionInfoFromClientAsync(clientIp, newClient);
+            }
+            catch (TimeoutException ex)
+            {
+                return Result.Fail<RemoteServer>($"{ex.Message} ({ex.GetType()})");
+            }
+
+            return result;
         }
 
         public Result<RemoteServer> GetRemoteServerConnectionInfoFromUser()
@@ -634,7 +646,18 @@ namespace ServerConsole
                     $"{sendFolderRequestResult.Error}{userHint}");
             }
 
-            while (_waitingForTransferFolderResponse) { }
+            _didTimeout = false;
+            var oneSecondTimer = new Timer(HandleTimeout, true, TwoSecondsInMillisconds, Timeout.Infinite);
+
+            while (_waitingForTransferFolderResponse)
+            {
+                if (_didTimeout)
+                {
+                    oneSecondTimer.Dispose();
+                    throw new TimeoutException();
+                }
+            }
+
             client.TransferFolder = _clientTransferFolderPath;
 
             if (Equals(client.ConnectionInfo.PublicIpAddress, IPAddress.None))
@@ -657,7 +680,17 @@ namespace ServerConsole
                         $"Error requesting transfer folder path from new client:\n{sendIpRequestResult.Error}");
                 }
 
-                while (_waitingForPublicIpResponse) { }
+                _didTimeout = false;
+                oneSecondTimer = new Timer(HandleTimeout, true, TwoSecondsInMillisconds, Timeout.Infinite);
+
+                while (_waitingForPublicIpResponse)
+                {
+                    if (_didTimeout)
+                    {
+                        oneSecondTimer.Dispose();
+                        throw new TimeoutException();
+                    }
+                }
                 client.ConnectionInfo.PublicIpAddress = _clientPublicIp;
             }
 
@@ -666,6 +699,11 @@ namespace ServerConsole
             _settings.RemoteServers.Add(client);
             SaveSettingsToFile(_settings);
             return Result.Ok(client);
+        }
+
+        private void HandleTimeout(object state)
+        {
+            _didTimeout = true;
         }
 
         private bool ClientAlreadyExists(RemoteServer newClient)
