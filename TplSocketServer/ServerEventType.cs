@@ -18,8 +18,8 @@
         ReceiveAllMessageBytesStarted,
         ReceiveAllMessageBytesCompleted,
 
-        DetermineTransferTypeStarted,
-        DetermineTransferTypeCompleted,
+        DetermineRequestTypeStarted,
+        DetermineRequestTypeCompleted,
 
         SendTextMessageStarted,
         SendTextMessageCompleted,
@@ -70,7 +70,7 @@
         ReceivedDataFromSocket,
         FileTransferProgress,
         ReceiveFileBytesCompleted,
-        
+
         SendConfirmationMessageStarted,
         SendConfirmationMessageCompleted,
         ReceiveConfirmationMessageStarted,

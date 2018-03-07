@@ -43,7 +43,7 @@ namespace TplSocketServer
                 }
                 else
                 {
-                    var parseLocalIpResult = IpAddressHelper.ParseSingleIPv4Address(thisLocalIp);
+                    var parseLocalIpResult = Network.ParseSingleIPv4Address(thisLocalIp);
                     if (parseLocalIpResult.Success)
                     {
                         server.ConnectionInfo.LocalIpAddress = parseLocalIpResult.Value;
@@ -58,7 +58,7 @@ namespace TplSocketServer
                 }
                 else
                 {
-                    var parsePublicIpResult = IpAddressHelper.ParseSingleIPv4Address(thisPublicIp);
+                    var parsePublicIpResult = Network.ParseSingleIPv4Address(thisPublicIp);
                     if (parsePublicIpResult.Success)
                     {
                         server.ConnectionInfo.PublicIpAddress = parsePublicIpResult.Value;

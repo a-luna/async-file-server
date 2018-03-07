@@ -14,10 +14,12 @@
             var serverProgram = new ServerProgram();
             serverProgram.EventOccurred += HandleServerEvent;
 
-            await serverProgram.RunAsyncServer();
-
-            Console.WriteLine("Press enter to exit.");
-            Console.ReadLine();
+            var result = await serverProgram.RunAsyncServer();
+            if (result.Success)
+            {
+                Console.WriteLine("Press enter to exit.");
+                Console.ReadLine();
+            }
         }
 
         private static void HandleServerEvent(ServerEventInfo serverEvent)
@@ -39,9 +41,9 @@
                 case ServerEventType.SendFileBytesStarted:
                     Console.WriteLine("\nSending file to client...");
                     break;
-                    
+
                 case ServerEventType.ReceiveConfirmationMessageCompleted:
-                    Console.WriteLine("Client confirmed file transfer completed successfully");                    
+                    Console.WriteLine("Client confirmed file transfer completed successfully");
                     break;
 
                 case ServerEventType.SendFileListRequestStarted:
@@ -62,9 +64,9 @@
                     break;
 
                 case ServerEventType.ReceiveFileListResponseCompleted:
-                    
-                    fileCount = serverEvent.FileInfoList.Count == 1 
-                        ? $"{serverEvent.FileInfoList.Count} file in list" 
+
+                    fileCount = serverEvent.FileInfoList.Count == 1
+                        ? $"{serverEvent.FileInfoList.Count} file in list"
                         : $"{serverEvent.FileInfoList.Count} files in list";
 
                     Console.WriteLine($"Received list of files from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({fileCount})\n");
@@ -83,7 +85,7 @@
                     break;
 
                 case ServerEventType.ReceivePublicIpResponseCompleted:
-                    Console.WriteLine($"Received public IP address from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.PublicIpAddress})\n");                    
+                    Console.WriteLine($"Received public IP address from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.PublicIpAddress})\n");
                     break;
 
                 case ServerEventType.SendTransferFolderRequestStarted:
@@ -103,7 +105,7 @@
                     break;
 
                 case ServerEventType.ShutdownListenSocketCompleted:
-                    Console.WriteLine("Server has been successfully shutdown\n");
+                    Console.WriteLine("Server has been successfully shutdown, press Enter to exit progrm\n");
                     break;
 
                 case ServerEventType.ErrorOccurred:

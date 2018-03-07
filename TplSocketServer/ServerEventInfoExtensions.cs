@@ -50,12 +50,12 @@
                     report += $"Completed Process: Receive incoming message bytes\n\n\tUnread Byte Count:\t{serverEventInfo.UnreadByteCount}\n";
                     break;
 
-                case ServerEventType.DetermineTransferTypeStarted:
-                    report += "Started Process: Determine transfer type";
+                case ServerEventType.DetermineRequestTypeStarted:
+                    report += "Started Process: Determine request type";
                     break;
 
-                case ServerEventType.DetermineTransferTypeCompleted:
-                    report += $"Completed Process: Determine transfer type\n\n\tTransfer Type:\t{serverEventInfo.RequestType}\n";
+                case ServerEventType.DetermineRequestTypeCompleted:
+                    report += $"Completed Process: Determine reqeust type\n\n\tTransfer Type:\t{serverEventInfo.RequestType}\n";
                     break;
 
                 case ServerEventType.ShutdownListenSocketStarted:

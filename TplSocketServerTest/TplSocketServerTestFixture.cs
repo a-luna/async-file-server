@@ -11,7 +11,7 @@ namespace TplSocketServerTest
     using System.IO;
     using System.Threading;
     using System.Threading.Tasks;
-    
+
     using TplSocketServer;
 
     [TestClass]
@@ -62,7 +62,7 @@ namespace TplSocketServerTest
             _client = new TplSocketServer();
             _client.EventOccurred += HandleClientEvent;
 
-            _ipAddress = IpAddressHelper.GetLocalIPv4AddressWithInternet().Value;
+            _ipAddress = Network.GetLocalIPv4AddressFromInternet().Value;
 
             var currentPath = Directory.GetCurrentDirectory();
             var index = currentPath.IndexOf(@"bin", StringComparison.Ordinal);
@@ -93,7 +93,7 @@ namespace TplSocketServerTest
             _clientReceivedTransferFolderPath = false;
             _clientReceivedAllFileBytes = false;
             _clientErrorOccurred = false;
-            
+
             FileHelper.DeleteFileIfAlreadyExists(_localFilePath);
 
             if (File.Exists(_restoreFilePath))
@@ -119,18 +119,18 @@ namespace TplSocketServerTest
 
             var token = _tokenSource.Token;
 
-            var runServerTask1 = 
-                Task.Run(() => 
+            var runServerTask1 =
+                Task.Run(() =>
                     _server.HandleIncomingConnectionsAsync(
-                        remoteServerPort, 
-                        token), 
+                        remoteServerPort,
+                        token),
                     token);
 
-            var runServerTask2 = 
-                Task.Run(() => 
+            var runServerTask2 =
+                Task.Run(() =>
                     _client.HandleIncomingConnectionsAsync(
-                        localPort, 
-                        token), 
+                        localPort,
+                        token),
                     token);
 
             while (!_serverIsListening) { }
@@ -139,7 +139,7 @@ namespace TplSocketServerTest
             Assert.AreEqual(string.Empty, _messageFromClient);
             Assert.AreEqual(string.Empty, _messageFromServer);
 
-            var sendMessageResult1 = 
+            var sendMessageResult1 =
                 await _client.SendTextMessageAsync(messageForServer, _ipAddress.ToString(), remoteServerPort, _ipAddress.ToString(), localPort, token)
                     .ConfigureAwait(false);
 
@@ -259,11 +259,11 @@ namespace TplSocketServerTest
             var sendFileTask =
                 Task.Run(
                     () => _client.SendFileAsync(
-                                    _ipAddress.ToString(), 
+                                    _ipAddress.ToString(),
                                     remoteServerPort,
-                                    sendFilePath, 
+                                    sendFilePath,
                                     receiveFolderPath,
-                                    token), 
+                                    token),
                     token);
 
             while (!_serverReceivedAllFileBytes)
@@ -354,20 +354,20 @@ namespace TplSocketServerTest
 
             var token = _tokenSource.Token;
 
-            var runServerTask1 = 
-                Task.Run(() => 
+            var runServerTask1 =
+                Task.Run(() =>
                     _server.HandleIncomingConnectionsAsync(
                         _ipAddress.ToString(),
-                        remoteServerPort, 
-                        token), 
+                        remoteServerPort,
+                        token),
                     token);
 
-            var runServerTask2 = 
-                Task.Run(() => 
+            var runServerTask2 =
+                Task.Run(() =>
                     _client.HandleIncomingConnectionsAsync(
                         _ipAddress.ToString(),
-                        localPort, 
-                        token), 
+                        localPort,
+                        token),
                     token);
 
             while (!_serverIsListening) { }
@@ -376,7 +376,7 @@ namespace TplSocketServerTest
             FileHelper.DeleteFileIfAlreadyExists(receivedFilePath);
             Assert.IsFalse(File.Exists(receivedFilePath));
 
-            var getFileResult = 
+            var getFileResult =
                 await _client.GetFileAsync(_ipAddress.ToString(), remoteServerPort, getFilePath, _ipAddress.ToString(), localPort, _localFolder, token)
                             .ConfigureAwait(false);
 
@@ -485,12 +485,12 @@ namespace TplSocketServerTest
             while (!_clientIsListening) { }
             Assert.AreEqual(string.Empty, _transferFolderPath);
 
-            var transferFolderRequest = 
+            var transferFolderRequest =
                await _client.RequestTransferFolderPath(
-                    _ipAddress.ToString(), 
+                    _ipAddress.ToString(),
                     remoteServerPort,
-                    _ipAddress.ToString(), 
-                    localPort, 
+                    _ipAddress.ToString(),
+                    localPort,
                     token);
 
             if (transferFolderRequest.Failure)

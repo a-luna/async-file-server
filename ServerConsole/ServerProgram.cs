@@ -15,7 +15,7 @@ namespace ServerConsole
     using AaronLuna.Common.Result;
 
     using TplSocketServer;
-    
+
     public class ServerProgram
     {
         private const string SettingsFileName = "settings.xml";
@@ -77,14 +77,14 @@ namespace ServerConsole
         {
             _server = new TplSocketServer();
             _cts = new CancellationTokenSource();
-            
+
             _settingsFilePath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}";
             _transferFolderPath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{DefaultTransferFolderName}";
         }
 
         public event ServerEventDelegate EventOccurred;
 
-        public async Task RunAsyncServer()
+        public async Task<Result> RunAsyncServer()
         {
             _token = _cts.Token;
 
@@ -96,28 +96,24 @@ namespace ServerConsole
 
             _waitingForServerToBeginAcceptingConnections = true;
 
+            Result result = Result.Fail(string.Empty);
             try
             {
                 var listenTask =
-                    Task.Run(() => 
-                        _server.HandleIncomingConnectionsAsync(_myInfo.Port, _token), 
+                    Task.Run(() =>
+                        _server.HandleIncomingConnectionsAsync(_myInfo.Port, _token),
                         _token);
 
                 while (_waitingForServerToBeginAcceptingConnections) { }
-                
-                await ServerMenuAsync();
+
+                result = await ServerMenuAsync();
 
                 if (_progressBarInstantiated)
                 {
                     _progress.Dispose();
                 }
 
-                _cts.Cancel();
-                var serverShutdown = await listenTask;
-                if (serverShutdown.Failure)
-                {
-                    Console.WriteLine($"There was an error shutting down the server: {serverShutdown.Error}");
-                }
+                await listenTask;
             }
             catch (AggregateException ex)
             {
@@ -135,6 +131,8 @@ namespace ServerConsole
             {
                 _server.CloseListenSocket();
             }
+
+            return result;
         }
 
         private AppSettings InitializeAppSettings()
@@ -143,7 +141,7 @@ namespace ServerConsole
             {
                 TransferFolderPath = _transferFolderPath
             };
-            
+
             if (!File.Exists(_settingsFilePath)) return settings;
 
             var deserialized = AppSettings.Deserialize(_settingsFilePath);
@@ -167,7 +165,7 @@ namespace ServerConsole
             var localIp = GetLocalIpToBindTo();
             var publicIp = IPAddress.None;
 
-            var retrievePublicIp = await IpAddressHelper.GetPublicIPv4AddressAsync();
+            var retrievePublicIp = await Network.GetPublicIPv4AddressAsync();
             if (retrievePublicIp.Failure)
             {
                 Console.WriteLine(Environment.NewLine);
@@ -185,7 +183,7 @@ namespace ServerConsole
                 Port = portChoice
             };
         }
-        
+
         private int GetPortNumberFromUser(string prompt, bool allowRandom)
         {
             var portNumber = 0;
@@ -235,13 +233,13 @@ namespace ServerConsole
 
         private IPAddress GetLocalIpToBindTo()
         {
-            var ipRequest = IpAddressHelper.GetLocalIPv4AddressWithInternet();
+            var ipRequest = Network.GetLocalIPv4AddressFromInternet();
             if (ipRequest.Success)
             {
                 return ipRequest.Value;
             }
 
-            var localIps = IpAddressHelper.GetLocalIPv4AddressList();
+            var localIps = Network.GetLocalIPv4AddressList();
             if (localIps.Count == 0)
             {
                 return localIps.FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
@@ -273,14 +271,20 @@ namespace ServerConsole
         }
 
         private async Task<Result> ServerMenuAsync()
-        {   
+        {
             while (true)
             {
                 Console.WriteLine($"\nServer is listening for incoming requests on port {_myInfo.Port}\nLocal IP: {_myInfo.LocalIpString}\nPublic IP: {_myInfo.PublicIpString}");
+                _errorOccurred = false;
 
                 var menuResult = await GetMenuChoiceAsync();
                 if (menuResult.Failure)
                 {
+                    if (_errorOccurred)
+                    {
+                        return Result.Fail(string.Empty);
+                    }
+
                     Console.WriteLine(menuResult.Error);
                     continue;
                 }
@@ -296,6 +300,7 @@ namespace ServerConsole
                 if (menuChoice == ShutDown)
                 {
                     Console.WriteLine("Server is shutting down");
+                    ShutdownServer();
                     break;
                 }
 
@@ -349,6 +354,12 @@ namespace ServerConsole
             _needToRewriteMenu = true;
 
             var input = Console.ReadLine();
+
+            if (_errorOccurred)
+            {
+                return Result.Fail<int>(string.Empty);
+            }
+
             Console.WriteLine(string.Empty);
 
             if (_activeTextSession)
@@ -405,7 +416,7 @@ namespace ServerConsole
         {
             if (_activeTextSession)
             {
-                await Task.Run(() => SendEnterToConsole.Execute(), _token);                
+                await Task.Run(() => SendEnterToConsole.Execute(), _token);
                 return;
             }
 
@@ -419,7 +430,27 @@ namespace ServerConsole
             Console.WriteLine("1. Send Text Message");
             Console.WriteLine("2. Send File");
             Console.WriteLine("3. Get File");
-            Console.WriteLine("4. Shutdown");            
+            Console.WriteLine("4. Shutdown");
+        }
+
+        private void ShutdownServer()
+        {
+            try
+            {
+                _cts.Cancel();
+            }
+            catch (AggregateException ex)
+            {
+                Console.WriteLine("\nException messages:");
+                foreach (var ie in ex.InnerExceptions)
+                {
+                    Console.WriteLine($"\t{ie.GetType().Name}: {ie.Message}");
+                }
+            }
+            finally
+            {
+                _server.CloseListenSocket();
+            }
         }
 
         private async Task<Result<RemoteServer>> ChooseClientAsync()
@@ -504,7 +535,7 @@ namespace ServerConsole
             if (Equals(clientIp, IPAddress.None))
             {
                 return Result.Fail<RemoteServer>("There was an error getting the client's IP address from user input.");
-            }           
+            }
 
             return await RequestAdditionalConnectionInfoFromClientAsync(clientIp, newClient);
         }
@@ -522,7 +553,7 @@ namespace ServerConsole
                 return Result.Fail<RemoteServer>(ipValidationResult.Error);
             }
 
-            var parseIp = IpAddressHelper.ParseSingleIPv4Address(ipValidationResult.Value);
+            var parseIp = Network.ParseSingleIPv4Address(ipValidationResult.Value);
             var clientIp = parseIp.Value;
 
             var userInputIsValid = false;
@@ -543,7 +574,7 @@ namespace ServerConsole
 
                 userInputIsValid = true;
                 userMenuChoice = ipTypeValidationResult.Value;
-            }           
+            }
 
             switch (userMenuChoice)
             {
@@ -630,7 +661,7 @@ namespace ServerConsole
             SaveSettingsToFile(_settings);
             return Result.Ok(client);
         }
-        
+
         private bool ClientAlreadyExists(RemoteServer newClient)
         {
             var clients = _settings.RemoteServers;
@@ -645,7 +676,7 @@ namespace ServerConsole
             }
             return exists;
         }
-        
+
         private void SaveSettingsToFile(AppSettings settings)
         {
             AppSettings.Serialize(settings, $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}");
@@ -680,7 +711,7 @@ namespace ServerConsole
         {
             Console.WriteLine($"Please enter a text message to send to {ipAddress}:{port}");
             var message = Console.ReadLine();
-            
+
             var sendMessageResult =
                 await _server.SendTextMessageAsync(
                     message,
@@ -706,8 +737,8 @@ namespace ServerConsole
             _waitingForConfirmationMessage = true;
             _errorOccurred = false;
 
-            var sendFileTask = 
-                Task.Run(() => 
+            var sendFileTask =
+                Task.Run(() =>
                     _server.SendFileAsync(
                         ipAddress,
                         port,
@@ -817,9 +848,9 @@ namespace ServerConsole
             {
                 return fileDownloadResult;
             }
-            
+
             while (_waitingForDownloadToComplete) { }
-            
+
             return Result.Ok();
         }
 
@@ -835,7 +866,7 @@ namespace ServerConsole
             var fileToGet = selectFileResult.Value;
             _needToRewriteMenu = false;
             _requestedFileFromClient = true;
-            
+
             var getFileResult =
                 await _server.GetFileAsync(
                     remoteIp,
@@ -926,7 +957,7 @@ namespace ServerConsole
 
         public Result<string> ValidateIpV4Address(string input)
         {
-            var parseIpResult = IpAddressHelper.ParseSingleIPv4Address(input);
+            var parseIpResult = Network.ParseSingleIPv4Address(input);
             if (parseIpResult.Failure)
             {
                 return Result.Fail<string>($"Unable tp parse IPv4 address from input string: {parseIpResult.Error}");
@@ -966,7 +997,7 @@ namespace ServerConsole
                     break;
 
                 case ServerEventType.ReceiveTextMessageCompleted:
-                    
+
                     await SaveNewClientAsync(serverEvent.RemoteServerIpAddress, serverEvent.RemoteServerPortNumber);
                     _textSessionIp = serverEvent.RemoteServerIpAddress;
                     _textSessionPort = serverEvent.RemoteServerPortNumber;
@@ -986,10 +1017,10 @@ namespace ServerConsole
                     {
                         Console.WriteLine($"\n{serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} says:");
                         Console.WriteLine($"{serverEvent.TextMessage}");
-                        
+
                         await WriteMenuToScreenAsync(true);
                     }
-                    
+
                     break;
 
                 case ServerEventType.ReceiveInboundFileTransferInfoCompleted:
@@ -1071,7 +1102,7 @@ namespace ServerConsole
                 case ServerEventType.ReceivePublicIpResponseCompleted:
 
                     var clientPublicIpString = serverEvent.PublicIpAddress;
-                    var parseIp = IpAddressHelper.ParseSingleIPv4Address(clientPublicIpString);
+                    var parseIp = Network.ParseSingleIPv4Address(clientPublicIpString);
                     _clientPublicIp = parseIp.Value;
 
                     _waitingForPublicIpResponse = false;
@@ -1080,35 +1111,21 @@ namespace ServerConsole
                 case ServerEventType.ErrorOccurred:
 
                     Console.WriteLine("Fatal error occurred, shutting down server...");
+                    _errorOccurred = true;
 
-                    try
-                    {
-                        _cts.Cancel();
-                    }
-                    catch (AggregateException ex)
-                    {
-                        Console.WriteLine("\nException messages:");
-                        foreach (var ie in ex.InnerExceptions)
-                        {
-                            Console.WriteLine($"\t{ie.GetType().Name}: {ie.Message}");
-                        }
-                    }
-                    finally
-                    {
-                        _server.CloseListenSocket();
-                    }
+                    ShutdownServer();
                     break;
             }
         }
 
         private async Task<Result<RemoteServer>> SaveNewClientAsync(string clientIpAddress, int clientPort)
         {
-            var parseIp = IpAddressHelper.ParseSingleIPv4Address(clientIpAddress);
+            var parseIp = Network.ParseSingleIPv4Address(clientIpAddress);
             var clientIp = parseIp.Value;
-            
+
             var connectionInfo = new ConnectionInfo {Port = clientPort};
 
-            if (IpAddressHelper.IsLocalIpAddress(clientIpAddress))
+            if (Network.IpAddressIsInPrivateAddressSpace(clientIpAddress))
             {
                 connectionInfo.LocalIpAddress = clientIp;
             }

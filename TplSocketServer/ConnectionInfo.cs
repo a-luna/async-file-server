@@ -70,10 +70,10 @@ namespace TplSocketServer
         {
             //// Transfer Folder not used to determine equality, ip address
             //// and port number combination  must be unique 
-            
-            var localIpSimilarity = IpAddressHelper.CompareTwoIpAddresses(myInfo.LocalIpAddress, otherInfo.LocalIpAddress);
-            var publicIpSimilarity = IpAddressHelper.CompareTwoIpAddresses(myInfo.PublicIpAddress, otherInfo.PublicIpAddress);
-            
+
+            var localIpSimilarity = Network.CompareTwoIpAddresses(myInfo.LocalIpAddress, otherInfo.LocalIpAddress);
+            var publicIpSimilarity = Network.CompareTwoIpAddresses(myInfo.PublicIpAddress, otherInfo.PublicIpAddress);
+
             if (localIpSimilarity == IpAddressSimilarity.AllBytesMatch && myInfo.Port == otherInfo.Port)
             {
                 return true;
