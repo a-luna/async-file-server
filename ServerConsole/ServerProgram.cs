@@ -301,7 +301,6 @@ namespace ServerConsole
                 if (menuChoice == ShutDown)
                 {
                     Console.WriteLine("Server is shutting down");
-                    ShutdownServer();
                     break;
                 }
 
