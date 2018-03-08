@@ -103,7 +103,7 @@ namespace TplSocketServer
             try
             {
                 var asyncResult = socket.BeginReceive(buffer, offset, size, socketFlags, null, null);
-                bytesReceived = await Task<int>.Factory.FromAsync(asyncResult, _ => socket.EndReceive(asyncResult));
+                bytesReceived = await Task<int>.Factory.FromAsync(asyncResult, _ => socket.EndReceive(asyncResult)).ConfigureAwait(false);
 
             }
             catch (SocketException ex)
@@ -124,7 +124,7 @@ namespace TplSocketServer
         {
             if (timeoutMs == 0)
             {
-                return await ReceiveAsync(socket, buffer, offset, size, socketFlags);
+                return await ReceiveAsync(socket, buffer, offset, size, socketFlags).ConfigureAwait(false);
             }
 
             int bytesReceived;

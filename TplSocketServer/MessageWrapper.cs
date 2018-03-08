@@ -107,6 +107,24 @@ namespace TplSocketServer
             return messageWrapper.ToArray();
         }
 
+        public static byte[] ConstructGenericMessage(RequestType requestType, string localIpAddress, int localPort)
+        {
+            var requestFlag = BitConverter.GetBytes((int)requestType);
+            var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
+            var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
+            var thisServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));
+            var thisServerPortLen = BitConverter.GetBytes(thisServerPortData.Length);
+
+            var messageWrapper = new List<byte>();
+            messageWrapper.AddRange(requestFlag);
+            messageWrapper.AddRange(thisServerIpLen);
+            messageWrapper.AddRange(thisServerIpData);
+            messageWrapper.AddRange(thisServerPortLen);
+            messageWrapper.AddRange(thisServerPortData);
+
+            return messageWrapper.ToArray();
+        }
+
         public static byte[] ConstructFileListRequest(string localIpAddress, int localPort, string targetFolder)
         {
             var requestFlag = BitConverter.GetBytes((int) RequestType.GetFileList);
@@ -178,7 +196,7 @@ namespace TplSocketServer
 
                 if (!i.IsLastIteration(fileInfoList.Count))
                 {
-                    allFileInfo += $"{fileSeparator}";
+                    allFileInfo += fileSeparator;
                 }
             }
 
@@ -195,24 +213,6 @@ namespace TplSocketServer
             messageWrapper.AddRange(fileInfoSeparatorData);
             messageWrapper.AddRange(fileSeparatorLen);
             messageWrapper.AddRange(fileSeparatorData);
-
-            return messageWrapper.ToArray();
-        }
-
-        public static byte[] ConstructTransferFolderRequest(string localIpAddress, int localPort)
-        {
-            var requestFlag = BitConverter.GetBytes((int) RequestType.TransferFolderPathRequest);
-            var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
-            var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
-            var thisServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));
-            var thisServerPortLen = BitConverter.GetBytes(thisServerPortData.Length);
-
-            var messageWrapper = new List<byte>();
-            messageWrapper.AddRange(requestFlag);
-            messageWrapper.AddRange(thisServerIpLen);
-            messageWrapper.AddRange(thisServerIpData);
-            messageWrapper.AddRange(thisServerPortLen);
-            messageWrapper.AddRange(thisServerPortData);
 
             return messageWrapper.ToArray();
         }
@@ -236,24 +236,6 @@ namespace TplSocketServer
             messageWrapper.AddRange(thisServerPortData);
             messageWrapper.AddRange(transferFolderLen);
             messageWrapper.AddRange(transferFolderData);
-
-            return messageWrapper.ToArray();
-        }
-
-        public static byte[] ConstructPublicIpAddressRequest(string localIpAddress, int localPort)
-        {
-            var requestFlag = BitConverter.GetBytes((int)RequestType.PublicIpAddressRequest);
-            var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
-            var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
-            var thisServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));
-            var thisServerPortLen = BitConverter.GetBytes(thisServerPortData.Length);
-
-            var messageWrapper = new List<byte>();
-            messageWrapper.AddRange(requestFlag);
-            messageWrapper.AddRange(thisServerIpLen);
-            messageWrapper.AddRange(thisServerIpData);
-            messageWrapper.AddRange(thisServerPortLen);
-            messageWrapper.AddRange(thisServerPortData);
 
             return messageWrapper.ToArray();
         }

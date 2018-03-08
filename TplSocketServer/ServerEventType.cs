@@ -76,6 +76,10 @@
         ReceiveConfirmationMessageStarted,
         ReceiveConfirmationMessageCompleted,
 
+        NotifyClientDataIsNoLongerBeingReceivedStarted,
+        NotifyClientDataIsNoLongerBeingReceivedCompleted,
+        AbortOutboundFileTransfer,
+
         ShutdownListenSocketStarted,
         ShutdownListenSocketCompleted,
         ShutdownTransferSocketStarted,

@@ -8,8 +8,8 @@ namespace TplSocketServer
 
     public class ConnectionInfo
     {
-        IPAddress _localIp;
-        IPAddress _pubilcIp;
+        private IPAddress _localIp;
+        private IPAddress _pubilcIp;
 
         public ConnectionInfo()
         {

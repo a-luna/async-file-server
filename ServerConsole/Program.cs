@@ -5,16 +5,16 @@
 
     using TplSocketServer;
 
-    class Program
+    internal static class Program
     {
-        static async Task Main()
+        private static async Task Main()
         {
             Console.WriteLine("\nStarting server program...\n");
 
             var serverProgram = new ServerProgram();
             serverProgram.EventOccurred += HandleServerEvent;
 
-            var result = await serverProgram.RunAsyncServer();
+            var result = await serverProgram.RunAsyncServer().ConfigureAwait(false);
             if (result.Success)
             {
                 Console.WriteLine("Press enter to exit.");
@@ -105,11 +105,11 @@
                     break;
 
                 case ServerEventType.ShutdownListenSocketCompleted:
-                    Console.WriteLine("Server has been successfully shutdown, press Enter to exit progrm\n");
+                    Console.WriteLine("Server has been successfully shutdown, press Enter to exit program\n");
                     break;
 
                 case ServerEventType.ErrorOccurred:
-                    Console.WriteLine($"Error occurred: {serverEvent.ErrorMessage}");
+                    Console.WriteLine($"Error encountered while processing request from client:\n{serverEvent.ErrorMessage}");
                     break;
             }
         }

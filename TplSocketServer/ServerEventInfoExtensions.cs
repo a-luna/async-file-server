@@ -253,6 +253,18 @@
                     report += $"Completed Process: Receive confirmation message\n\tConfirmation Message:\t{serverEventInfo.ConfirmationMessage}";
                     break;
 
+                case ServerEventType.NotifyClientDataIsNoLongerBeingReceivedStarted:
+                    report += "Started Process: Notify client that file transfer data is no longer being received";
+                    break;
+
+                case ServerEventType.NotifyClientDataIsNoLongerBeingReceivedCompleted:
+                    report += "Completed Process: Notify client that file transfer data is no longer being received";
+                    break;
+
+                case ServerEventType.AbortOutboundFileTransfer:
+                    report += "Abort outbound file transfer";
+                    break;
+
                 case ServerEventType.ShutdownTransferSocketStarted:
                     report += "Started Process: Close transfer socket";
                     break;

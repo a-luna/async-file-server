@@ -17,39 +17,39 @@ namespace TplSocketServerTest
     [TestClass]
     public class TplSocketServerTestFixture
     {
-        const string FileName = "smallFile.jpg";
+        private const string FileName = "smallFile.jpg";
 
-        CancellationTokenSource _tokenSource;
+        private CancellationTokenSource _tokenSource;
 
-        TplSocketServer _server;
-        TplSocketServer _client;
+        private TplSocketServer _server;
+        private TplSocketServer _client;
 
-        IPAddress _ipAddress;
+        private IPAddress _ipAddress;
 
-        string _localFolder;
-        string _remoteFolder;
-        string _restoreFolder;
-        string _localFilePath;
-        string _remoteFilePath;
-        string _restoreFilePath;
-        string _messageFromClient;
-        string _messageFromServer;
-        string _transferFolderPath;
+        private string _localFolder;
+        private string _remoteFolder;
+        private string _restoreFolder;
+        private string _localFilePath;
+        private string _remoteFilePath;
+        private string _restoreFilePath;
+        private string _messageFromClient;
+        private string _messageFromServer;
+        private string _transferFolderPath;
 
-        bool _serverIsListening;
-        bool _serverReceivedTextMessage;
-        bool _serverReceivedAllFileBytes;
-        bool _serverReceivedConfirmationMessage;
-        bool _serverListenSocketIsShutdown;
-        bool _serverErrorOccurred;
+        private bool _serverIsListening;
+        private bool _serverReceivedTextMessage;
+        private bool _serverReceivedAllFileBytes;
+        private bool _serverReceivedConfirmationMessage;
+        private bool _serverListenSocketIsShutdown;
+        private bool _serverErrorOccurred;
 
-        bool _clientIsListening;
-        bool _clientReceivedTextMessage;
-        bool _clientReceivedAllFileBytes;
-        bool _clientReceivedConfirmationMessage;
-        bool _clientReceivedTransferFolderPath;
-        bool _clientListenSocketIsShutdown;
-        bool _clientErrorOccurred;
+        private bool _clientIsListening;
+        private bool _clientReceivedTextMessage;
+        private bool _clientReceivedAllFileBytes;
+        private bool _clientReceivedConfirmationMessage;
+        private bool _clientReceivedTransferFolderPath;
+        private bool _clientListenSocketIsShutdown;
+        private bool _clientErrorOccurred;
 
         [TestInitialize]
         public void Setup()
@@ -491,7 +491,7 @@ namespace TplSocketServerTest
                     remoteServerPort,
                     _ipAddress.ToString(),
                     localPort,
-                    token);
+                    token).ConfigureAwait(false);
 
             if (transferFolderRequest.Failure)
             {

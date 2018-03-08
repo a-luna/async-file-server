@@ -14,17 +14,17 @@ namespace TplSocketServerTest
     [TestClass]
     public class TplSocketTestFixture
     {
-        const int BufferSize = 8 * 1024;
-        const int ConnectTimeoutMs = 3000;
-        const int ReceiveTimeoutMs = 3000;
-        const int SendTimeoutMs = 3000;
+        private const int BufferSize = 8 * 1024;
+        private const int ConnectTimeoutMs = 3000;
+        private const int ReceiveTimeoutMs = 3000;
+        private const int SendTimeoutMs = 3000;
 
-        Socket _listenSocket;
-        Socket _serverSocket;
-        Socket _clientSocket;
+        private Socket _listenSocket;
+        private Socket _serverSocket;
+        private Socket _clientSocket;
 
-        IPAddress _serverIpAddress;
-        string _messageReceived;
+        private IPAddress _serverIpAddress;
+        private string _messageReceived;
 
         [TestInitialize]
         public void TestSetup()
@@ -135,12 +135,12 @@ namespace TplSocketServerTest
             Assert.AreEqual(messageSent, _messageReceived);
         }
 
-        async Task<Result<Socket>> AcceptConnectionTask()
+        private Task<Result<Socket>> AcceptConnectionTask()
         {
-            return await _listenSocket.AcceptTaskAsync().ConfigureAwait(false);
+            return _listenSocket.AcceptTaskAsync();
         }
 
-        async Task<Result<int>> ReceiveMessageAsync()
+        private async Task<Result<int>> ReceiveMessageAsync()
         {
             var buffer = new byte[BufferSize];
             var receiveResult = await _serverSocket
