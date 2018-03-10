@@ -14,17 +14,17 @@ namespace TplSocketServerTest
     [TestClass]
     public class TplSocketTestFixture
     {
-        private const int BufferSize = 8 * 1024;
-        private const int ConnectTimeoutMs = 3000;
-        private const int ReceiveTimeoutMs = 3000;
-        private const int SendTimeoutMs = 3000;
+        const int BufferSize = 8 * 1024;
+        const int ConnectTimeoutMs = 3000;
+        const int ReceiveTimeoutMs = 3000;
+        const int SendTimeoutMs = 3000;
 
-        private Socket _listenSocket;
-        private Socket _serverSocket;
-        private Socket _clientSocket;
+        Socket _listenSocket;
+        Socket _serverSocket;
+        Socket _clientSocket;
 
-        private IPAddress _serverIpAddress;
-        private string _messageReceived;
+        IPAddress _serverIpAddress;
+        string _messageReceived;
 
         [TestInitialize]
         public void TestSetup()
@@ -41,7 +41,7 @@ namespace TplSocketServerTest
         [TestMethod]
         public async Task TestAcceptConnectionAsync()
         {
-            var serverPort = 7002;
+            const int serverPort = 7002;
 
             Assert.IsFalse(_serverSocket.Connected);
             Assert.IsFalse(_serverSocket.IsBound);
@@ -92,7 +92,7 @@ namespace TplSocketServerTest
         [TestMethod]
         public async Task TestSendAndReceiveTextMesageAsync()
         {
-            var serverPort = 7003;
+            const int serverPort = 7003;
             var ipEndPoint = new IPEndPoint(_serverIpAddress, serverPort);
 
             _listenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
@@ -119,7 +119,7 @@ namespace TplSocketServerTest
 
             var receiveMessageTask = Task.Run(ReceiveMessageAsync);
 
-            var messageSent = "this is a text message from a socket";
+            const string messageSent = "this is a text message from a socket";
             var messageData = Encoding.ASCII.GetBytes(messageSent);
             var sendMessageResult = await _clientSocket
                                         .SendWithTimeoutAsync(messageData, 0, messageData.Length, 0, SendTimeoutMs)
@@ -135,12 +135,12 @@ namespace TplSocketServerTest
             Assert.AreEqual(messageSent, _messageReceived);
         }
 
-        private Task<Result<Socket>> AcceptConnectionTask()
+        Task<Result<Socket>> AcceptConnectionTask()
         {
             return _listenSocket.AcceptTaskAsync();
         }
 
-        private async Task<Result<int>> ReceiveMessageAsync()
+        async Task<Result<int>> ReceiveMessageAsync()
         {
             var buffer = new byte[BufferSize];
             var receiveResult = await _serverSocket

@@ -1,13 +1,12 @@
-﻿using System.Collections.Generic;
-
-namespace TplSocketServer
+﻿namespace TplSocketServer
 {
-    using AaronLuna.Common.Extensions;
-    using AaronLuna.Common.Numeric;
     using System;
+    using System.Collections.Generic;
 
-    public delegate void ServerEventDelegate(ServerEventInfo serverEventInfo);
-    public class ServerEventInfo
+    using AaronLuna.Common.Extensions;
+    using AaronLuna.Common.IO;
+
+    public class ServerEventArgs : EventArgs
     {
         public ServerEventType EventType { get; set; } = ServerEventType.None;
 
@@ -24,13 +23,13 @@ namespace TplSocketServer
         public string RemoteFolder { get; set; }
         public string FileName { get; set; }
         public long FileSizeInBytes { get; set; }
-        public string FileSizeString => FileSizeInBytes.ConvertBytesForDisplay();
+        public string FileSizeString => FileHelper.FileSizeToString(FileSizeInBytes);
         public List<(string, long)> FileInfoList { get; set; }
         public DateTime FileTransferStartTime { get; set; }
         public DateTime FileTransferCompleteTime { get; set; }
         public TimeSpan FileTransferElapsedTime => FileTransferCompleteTime - FileTransferStartTime;
         public string FileTransferElapsedTimeString => FileTransferElapsedTime.ToFormattedString();
-        public string FileTransferRate => CalculateTransferRate(FileTransferElapsedTime, FileSizeInBytes);
+        public string FileTransferRate => FileHelper.GetTransferRate(FileTransferElapsedTime, FileSizeInBytes);
         public int CurrentBytesReceivedFromSocket { get; set; }
         public long TotalBytesReceivedFromSocket { get; set; }
         public long BytesRemainingInFile { get; set; }
@@ -38,26 +37,5 @@ namespace TplSocketServer
         public float PercentComplete { get; set; }
         public string ConfirmationMessage { get; set; }
         public string ErrorMessage { get; set; }
-
-        private static string CalculateTransferRate(TimeSpan elapsed, long bytesReceived)
-        {
-            if (elapsed == TimeSpan.MinValue || bytesReceived == 0)
-            {
-                return string.Empty;
-            }
-
-            var totalMilliseconds = elapsed.Ticks / 10_000;
-            var bytesPerMs = bytesReceived / (double)totalMilliseconds;
-            var kilobitsPerSecond = (bytesPerMs * 1000) / 1024;
-            var transferRate = $"{kilobitsPerSecond:F1} kb/s";
-
-            if (kilobitsPerSecond > 1024)
-            {
-                var megabitsPerSecond = kilobitsPerSecond / 1024;
-                transferRate = $"{megabitsPerSecond:F1} mb/s";
-            }
-
-            return transferRate;
-        }
     }
 }

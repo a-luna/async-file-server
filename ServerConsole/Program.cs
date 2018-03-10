@@ -7,7 +7,7 @@
 
     internal static class Program
     {
-        private static async Task Main()
+        static async Task Main()
         {
             Console.WriteLine("\nStarting server program...\n");
 
@@ -22,7 +22,7 @@
             }
         }
 
-        private static void HandleServerEvent(ServerEventInfo serverEvent)
+        static void HandleServerEvent(object sender, ServerEventArgs serverEvent)
         {
             string fileCount;
 

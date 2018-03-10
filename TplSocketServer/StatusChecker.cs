@@ -6,7 +6,7 @@
     public delegate void StatusCheckerDelegate();
     public class StatusChecker
     {
-        private readonly Timer _noActivityTimer;
+        readonly Timer _noActivityTimer;
 
         public StatusChecker(int interval, int maxCount)
         {

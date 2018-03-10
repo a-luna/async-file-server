@@ -1,8 +1,5 @@
 ﻿namespace TplSocketServer
 {
-    using System;
-
-    [Flags]
     public enum RequestType
     {
         None                            = 0x00,

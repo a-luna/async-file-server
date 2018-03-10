@@ -17,39 +17,39 @@ namespace TplSocketServerTest
     [TestClass]
     public class TplSocketServerTestFixture
     {
-        private const string FileName = "smallFile.jpg";
+        const string FileName = "smallFile.jpg";
 
-        private CancellationTokenSource _tokenSource;
+        CancellationTokenSource _tokenSource;
 
-        private TplSocketServer _server;
-        private TplSocketServer _client;
+        TplSocketServer _server;
+        TplSocketServer _client;
 
-        private IPAddress _ipAddress;
+        IPAddress _ipAddress;
 
-        private string _localFolder;
-        private string _remoteFolder;
-        private string _restoreFolder;
-        private string _localFilePath;
-        private string _remoteFilePath;
-        private string _restoreFilePath;
-        private string _messageFromClient;
-        private string _messageFromServer;
-        private string _transferFolderPath;
+        string _localFolder;
+        string _remoteFolder;
+        string _restoreFolder;
+        string _localFilePath;
+        string _remoteFilePath;
+        string _restoreFilePath;
+        string _messageFromClient;
+        string _messageFromServer;
+        string _transferFolderPath;
 
-        private bool _serverIsListening;
-        private bool _serverReceivedTextMessage;
-        private bool _serverReceivedAllFileBytes;
-        private bool _serverReceivedConfirmationMessage;
-        private bool _serverListenSocketIsShutdown;
-        private bool _serverErrorOccurred;
+        bool _serverIsListening;
+        bool _serverReceivedTextMessage;
+        bool _serverReceivedAllFileBytes;
+        bool _serverReceivedConfirmationMessage;
+        bool _serverListenSocketIsShutdown;
+        bool _serverErrorOccurred;
 
-        private bool _clientIsListening;
-        private bool _clientReceivedTextMessage;
-        private bool _clientReceivedAllFileBytes;
-        private bool _clientReceivedConfirmationMessage;
-        private bool _clientReceivedTransferFolderPath;
-        private bool _clientListenSocketIsShutdown;
-        private bool _clientErrorOccurred;
+        bool _clientIsListening;
+        bool _clientReceivedTextMessage;
+        bool _clientReceivedAllFileBytes;
+        bool _clientReceivedConfirmationMessage;
+        bool _clientReceivedTransferFolderPath;
+        bool _clientListenSocketIsShutdown;
+        bool _clientErrorOccurred;
 
         [TestInitialize]
         public void Setup()
@@ -65,7 +65,7 @@ namespace TplSocketServerTest
             _ipAddress = Network.GetLocalIPv4AddressFromInternet().Value;
 
             var currentPath = Directory.GetCurrentDirectory();
-            var index = currentPath.IndexOf(@"bin", StringComparison.Ordinal);
+            var index = currentPath.IndexOf("bin", StringComparison.Ordinal);
             _restoreFolder = $"{currentPath.Remove(index - 1)}{Path.DirectorySeparatorChar}TestFiles{Path.DirectorySeparatorChar}";
 
             _localFolder = _restoreFolder + $"Client{Path.DirectorySeparatorChar}";
@@ -112,10 +112,10 @@ namespace TplSocketServerTest
         [TestMethod]
         public async Task VerifySendTextMessage()
         {
-            var localPort = 8001;
-            var remoteServerPort = 8002;
-            var messageForServer = "Hello, fellow TPL $ocket Server! This is a text message with a few special ch@r@cters. `~/|\\~'";
-            var messageForClient = "I don't know who or what you are referring to. I am a normal human, sir, and most definitely NOT some type of server. Good day.";
+            const int localPort = 8001;
+            const int remoteServerPort = 8002;
+            const string messageForServer = "Hello, fellow TPL $ocket Server! This is a text message with a few special ch@r@cters. `~/|\\~'";
+            const string messageForClient = "I don't know who or what you are referring to. I am a normal human, sir, and most definitely NOT some type of server. Good day.";
 
             var token = _tokenSource.Token;
 
@@ -226,8 +226,8 @@ namespace TplSocketServerTest
         [TestMethod]
         public async Task VerifySendFileAsync()
         {
-            var remoteServerPort = 8003;
-            var localPort = 8004;
+            const int remoteServerPort = 8003;
+            const int localPort = 8004;
 
             var sendFilePath = _localFilePath;
             var receiveFilePath = _remoteFilePath;
@@ -347,8 +347,8 @@ namespace TplSocketServerTest
         [TestMethod]
         public async Task VerifyGetFileAsync()
         {
-            var localPort = 8005;
-            var remoteServerPort = 8006;
+            const int localPort = 8005;
+            const int remoteServerPort = 8006;
             var getFilePath = _remoteFilePath;
             var receivedFilePath = _localFilePath;
 
@@ -461,8 +461,8 @@ namespace TplSocketServerTest
         [TestMethod]
         public async Task VerifyRequestTransferFolderPath()
         {
-            var localPort = 8007;
-            var remoteServerPort = 8008;
+            const int localPort = 8007;
+            const int remoteServerPort = 8008;
 
             _server.TransferFolderPath = _remoteFolder;
             var token = _tokenSource.Token;
@@ -557,12 +557,11 @@ namespace TplSocketServerTest
             while (!_clientListenSocketIsShutdown) { }
         }
 
-        private void HandleClientEvent(ServerEventInfo serverEventInfo)
+        void HandleClientEvent(object sender, ServerEventArgs serverEventArgs)
         {
+            Console.WriteLine("(client) " + serverEventArgs.Report());
 
-            Console.WriteLine("(client) " + serverEventInfo.Report());
-
-            switch (serverEventInfo.EventType)
+            switch (serverEventArgs.EventType)
             {
                 case ServerEventType.ListenOnLocalPortCompleted:
                     _clientIsListening = true;
@@ -570,11 +569,11 @@ namespace TplSocketServerTest
 
                 case ServerEventType.ReceiveTextMessageCompleted:
                     _clientReceivedTextMessage = true;
-                    _messageFromServer = serverEventInfo.TextMessage;
+                    _messageFromServer = serverEventArgs.TextMessage;
                     break;
 
                 case ServerEventType.ReceiveTransferFolderResponseCompleted:
-                    _transferFolderPath = serverEventInfo.RemoteFolder;
+                    _transferFolderPath = serverEventArgs.RemoteFolder;
                     _clientReceivedTransferFolderPath = true;
                     break;
 
@@ -596,11 +595,11 @@ namespace TplSocketServerTest
             }
         }
 
-        private void HandleServerEvent(ServerEventInfo serverEventInfo)
+        void HandleServerEvent(object sender, ServerEventArgs serverEventArgs)
         {
-            Console.WriteLine("(server) " + serverEventInfo.Report());
+            Console.WriteLine("(server) " + serverEventArgs.Report());
 
-            switch (serverEventInfo.EventType)
+            switch (serverEventArgs.EventType)
             {
                 case ServerEventType.ListenOnLocalPortCompleted:
                     _serverIsListening = true;
@@ -608,7 +607,7 @@ namespace TplSocketServerTest
 
                 case ServerEventType.ReceiveTextMessageCompleted:
                     _serverReceivedTextMessage = true;
-                    _messageFromClient = serverEventInfo.TextMessage;
+                    _messageFromClient = serverEventArgs.TextMessage;
                     break;
 
                 case ServerEventType.ReceiveFileBytesCompleted:
