@@ -39,7 +39,7 @@
             CidrMask = "192.168.2.0/24";
 
             _localIpAddress = GetLocalIpAddress();
-            TransferFolderPath = TplSocketServer.GetDefaultTransferFolder();
+            TransferFolderPath = GetDefaultTransferFolder();
 
             _maxConnections = 5;
             _bufferSize = 1024;
@@ -56,6 +56,11 @@
 
             _localIpAddress = localIpAddress.ToString();
             TransferFolderPath = appSettings.TransferFolderPath;
+
+            if (!Directory.Exists(TransferFolderPath))
+            {
+                Directory.CreateDirectory(TransferFolderPath);
+            }
 
             _maxConnections = appSettings.SocketSettings.MaxNumberOfConections;
             _bufferSize = appSettings.SocketSettings.BufferSize;
@@ -260,8 +265,7 @@
             new ServerEventArgs
             {
                 EventType = ServerEventType.DetermineMessageLengthCompleted,
-                MessageLength = messageLength,
-                UnreadByteCount = _unreadBytes.Count
+                TotalBytesInMessage = messageLength
             });
 
             EventOccurred?.Invoke(this,
@@ -278,10 +282,7 @@
 
             EventOccurred?.Invoke(this,
             new ServerEventArgs
-            {
-                EventType = ServerEventType.ReceiveAllMessageBytesCompleted,
-                UnreadByteCount = _unreadBytes.Count
-            });
+                { EventType = ServerEventType.ReceiveAllMessageBytesCompleted });
 
             return await ProcessRequestAsync(messageData, token).ConfigureAwait(false);
         }
@@ -337,6 +338,13 @@
                 var unreadBytes = new byte[numberOfUnreadBytes];
                 _buffer.ToList().CopyTo(4, unreadBytes, 0, numberOfUnreadBytes);
                 _unreadBytes = unreadBytes.ToList();
+
+                EventOccurred?.Invoke(this,
+                new ServerEventArgs
+                {
+                    EventType = ServerEventType.LastSocketReadContainedUnreadBytes,
+                    UnreadByteCount = numberOfUnreadBytes
+                });
             }
 
             var messageLength = MessageUnwrapper.ReadInt32(_buffer);
@@ -346,18 +354,29 @@
 
         async Task<Result<byte[]>> ReceiveAllMessageBytesAsync(int messageLength)
         {
+            var socketReadCount = 0;
+            var totalBytesReceived = 0;
+            var bytesRemaining = 0;
             var messageData = new List<byte>();
             if (_unreadBytes.Count > 0)
             {
                 var savedBytes = new byte[_unreadBytes.Count];
                 _unreadBytes.CopyTo(0, savedBytes, 0, _unreadBytes.Count);
                 messageData.AddRange(savedBytes.ToList());
+                bytesRemaining = messageLength - messageData.Count;
+
+                EventOccurred?.Invoke(this,
+                new ServerEventArgs
+                {
+                    EventType = ServerEventType.AppendUnreadBytesToMessageData,
+                    CurrentMessageBytesReceived = messageData.Count,
+                    TotalMessageBytesReceived = messageData.Count,
+                    TotalBytesInMessage = messageLength,
+                    MessageBytesRemaining = bytesRemaining
+                });
             }
 
-            var receiveCount = 0;
-            var totalBytesReceieved = 0;
             _unreadBytes = new List<byte>();
-
             while (messageData.Count < messageLength)
             {
                 var readFromSocketResult = await ReadFromSocketAsync().ConfigureAwait(false);
@@ -372,17 +391,19 @@
                 _buffer.ToList().CopyTo(0, receivedBytes, 0, _lastBytesReceivedCount);
                 messageData.AddRange(receivedBytes.ToList());
 
-                receiveCount++;
-                totalBytesReceieved += _lastBytesReceivedCount;
+                socketReadCount++;
+                totalBytesReceived += _lastBytesReceivedCount;
+                bytesRemaining = messageLength - totalBytesReceived;
 
                 EventOccurred?.Invoke(this,
                 new ServerEventArgs
                 {
-                    EventType = ServerEventType.ReceivedDataFromSocket,
-                    ReceiveBytesCount = receiveCount,
-                    CurrentBytesReceivedFromSocket = _lastBytesReceivedCount,
-                    TotalBytesReceivedFromSocket = totalBytesReceieved,
-                    MessageLength = messageLength
+                    EventType = ServerEventType.ReceivedClientMessageDataFromSocket,
+                    SocketReadCount = socketReadCount,
+                    CurrentMessageBytesReceived = _lastBytesReceivedCount,
+                    TotalMessageBytesReceived = totalBytesReceived,
+                    TotalBytesInMessage = messageLength,
+                    MessageBytesRemaining = bytesRemaining
                 });
             }
 
@@ -391,6 +412,13 @@
             {
                 return Result.Ok(messageData.ToArray());
             }
+
+            EventOccurred?.Invoke(this,
+            new ServerEventArgs
+            {
+                EventType = ServerEventType.LastSocketReadContainedUnreadBytes,
+                UnreadByteCount = unreadByteCount
+            });
 
             var unreadBytes = new byte[unreadByteCount];
             messageData.CopyTo(messageData.Count, unreadBytes, 0, unreadByteCount);
@@ -405,7 +433,7 @@
         {
             EventOccurred?.Invoke(this,
             new ServerEventArgs
-            { EventType = ServerEventType.DetermineRequestTypeStarted });
+                { EventType = ServerEventType.DetermineRequestTypeStarted });
 
             var transferTypeData = MessageUnwrapper.ReadInt32(messageData).ToString();
             var transferType = (RequestType)Enum.Parse(typeof(RequestType), transferTypeData);
@@ -529,7 +557,7 @@
             }
         }
 
-        Result ReceiveTextMessage(byte[] buffer, CancellationToken token)
+        Result ReceiveTextMessage(byte[] messageData, CancellationToken token)
         {
             EventOccurred?.Invoke(this,
             new ServerEventArgs
@@ -537,7 +565,7 @@
 
             var (message,
                 remoteIpAddress,
-                remotePortNumber) = MessageUnwrapper.ReadTextMessage(buffer);
+                remotePortNumber) = MessageUnwrapper.ReadTextMessage(messageData);
 
             if (token.IsCancellationRequested)
             {
@@ -600,41 +628,19 @@
                     ? Result.Ok()
                     : sendResult;
             }
-
-            var startTime = DateTime.Now;
-
-            EventOccurred?.Invoke(this,
-            new ServerEventArgs
-            {
-                EventType = ServerEventType.ReceiveFileBytesStarted,
-                FileTransferStartTime = startTime,
-                FileSizeInBytes = fileSizeBytes
-            });
-
+            
             var receiveFileResult =
                 await ReceiveFileAsync(
+                        remoteIpAddress,
+                        remotePort,
                         localFilePath,
                         fileSizeBytes,
-                        _buffer,
-                        0,
-                        _bufferSize,
-                        0,
-                        _receiveTimeoutMs,
                         token).ConfigureAwait(false);
 
             if (receiveFileResult.Failure)
             {
                 return receiveFileResult;
             }
-
-            EventOccurred?.Invoke(this,
-            new ServerEventArgs
-            {
-                EventType = ServerEventType.ReceiveFileBytesCompleted,
-                FileTransferStartTime = startTime,
-                FileTransferCompleteTime = DateTime.Now,
-                FileSizeInBytes = fileSizeBytes
-            });
 
             EventOccurred?.Invoke(this,
             new ServerEventArgs
@@ -666,15 +672,13 @@
         }
 
         async Task<Result> ReceiveFileAsync(
+            string remoteIpAddress,
+            int remotePort,
             string localFilePath,
             long fileSizeInBytes,
-            byte[] buffer,
-            int offset,
-            int size,
-            SocketFlags socketFlags,
-            int receiveTimout,
             CancellationToken token)
         {
+            var receiveCount = 0;
             long totalBytesReceived = 0;
             float percentComplete = 0;
 
@@ -692,7 +696,28 @@
                 {
                     return writeBytesResult;
                 }
+
+                EventOccurred?.Invoke(this,
+                new ServerEventArgs
+                {
+                    EventType = ServerEventType.AppendUnreadBytesToInboundFileTransfer,
+                    CurrentFileBytesReceived = _unreadBytes.Count,
+                    TotalFileBytesReceived = totalBytesReceived,
+                    FileSizeInBytes = fileSizeInBytes,
+                    FileBytesRemaining = fileSizeInBytes - totalBytesReceived,
+                    PercentComplete = percentComplete
+                });
             }
+
+            var startTime = DateTime.Now;
+
+            EventOccurred?.Invoke(this,
+            new ServerEventArgs
+            {
+                EventType = ServerEventType.ReceiveFileBytesStarted,
+                FileTransferStartTime = startTime,
+                FileSizeInBytes = fileSizeInBytes
+            });
 
             //var receiveCount = 0;
 
@@ -713,6 +738,17 @@
                         PercentComplete = percentComplete
                     });
 
+                    EventOccurred?.Invoke(this,
+                    new ServerEventArgs
+                    {
+                        EventType = ServerEventType.ReceiveFileBytesCompleted,
+                        FileTransferStartTime = startTime,
+                        FileTransferCompleteTime = DateTime.Now,
+                        FileSizeInBytes = fileSizeInBytes,
+                        RemoteServerIpAddress = remoteIpAddress,
+                        RemoteServerPortNumber = remotePort
+                    });
+
                     return Result.Ok();
                 }
 
@@ -721,60 +757,52 @@
                     token.ThrowIfCancellationRequested();
                 }
 
-                int bytesReceived;
-                try
+                var readFromSocketResult = await ReadFromSocketAsync().ConfigureAwait(false);
+                if (readFromSocketResult.Failure)
                 {
-                    var receiveBytesResult =
-                        await _clientSocket.ReceiveWithTimeoutAsync(
-                            buffer,
-                            offset,
-                            size,
-                            socketFlags,
-                            receiveTimout).ConfigureAwait(false);
-
-                    bytesReceived = receiveBytesResult.Value;
-                }
-                catch (SocketException ex)
-                {
-                    return Result.Fail($"{ex.Message} ({ex.GetType()} raised in method TplSocketServer.ReceiveFileAsync)");
-                }
-                catch (TimeoutException ex)
-                {
-                    return Result.Fail($"{ex.Message} ({ex.GetType()} raised in method TplSocketServer.ReceiveFileAsync)");
+                    return Result.Fail<byte[]>(readFromSocketResult.Error);
                 }
 
-                if (bytesReceived == 0)
+                _lastBytesReceivedCount = readFromSocketResult.Value;
+                var receivedBytes = new byte[_lastBytesReceivedCount];                
+                if (_lastBytesReceivedCount == 0)
                 {
                     return Result.Fail("Socket is no longer receiving data, must abort file transfer");
                 }
 
-                totalBytesReceived += bytesReceived;
-
                 var writeBytesResult =
-                    FileHelper.WriteBytesToFile(localFilePath, buffer, bytesReceived);
+                    FileHelper.WriteBytesToFile(localFilePath, receivedBytes, _lastBytesReceivedCount);
 
                 if (writeBytesResult.Failure)
                 {
                     return writeBytesResult;
                 }
 
-                // THese two lines and the event raised below are useful when debugging socket errors
-                //receiveCount++;
+                receiveCount++;
+                totalBytesReceived += _lastBytesReceivedCount;
                 var bytesRemaining = fileSizeInBytes - totalBytesReceived;
-
-                //EventOccurred?.Invoke(this,new ServerEventArgs
-                //{
-                //    EventType = ServerEventType.ReceivedDataFromSocket,
-                //    ReceiveBytesCount = receiveCount,
-                //    CurrentBytesReceivedFromSocket = bytesReceived,
-                //    TotalBytesReceivedFromSocket = totalBytesReceived,
-                //    FileSizeInBytes = fileSizeInBytes,
-                //    BytesRemainingInFile = bytesRemaining
-                //});
-
                 var checkPercentComplete = totalBytesReceived / (float)fileSizeInBytes;
                 var changeSinceLastUpdate = checkPercentComplete - percentComplete;
 
+                // this method fires on every socket read event, which could be hurdreds of thousands
+                // of times or millions of times dependingon the file size. Since this event is only 
+                // being used by myself when debugging small test files, I limited this event to only 
+                // fire when the size of the incoming file is less than 200 KB
+                if (fileSizeInBytes < (1024 * 200))
+                {
+                    EventOccurred?.Invoke(this,
+                        new ServerEventArgs
+                        {
+                            EventType = ServerEventType.ReceivedFileBytesFromSocket,
+                            SocketReadCount = receiveCount,
+                            CurrentFileBytesReceived = _lastBytesReceivedCount,
+                            TotalFileBytesReceived = totalBytesReceived,
+                            FileSizeInBytes = fileSizeInBytes,
+                            FileBytesRemaining = bytesRemaining,
+                            PercentComplete = percentComplete
+                        });
+                }
+                
                 // Report progress only if at least 1% of file has been received since the last update
                 if (changeSinceLastUpdate > (float).01)
                 {
@@ -783,9 +811,9 @@
                     new ServerEventArgs
                     {
                         EventType = ServerEventType.FileTransferProgress,
-                        TotalBytesReceivedFromSocket = totalBytesReceived,
+                        TotalFileBytesReceived = totalBytesReceived,
                         FileSizeInBytes = fileSizeInBytes,
-                        BytesRemainingInFile = bytesRemaining,
+                        FileBytesRemaining = bytesRemaining,
                         PercentComplete = percentComplete
                     });
                 }

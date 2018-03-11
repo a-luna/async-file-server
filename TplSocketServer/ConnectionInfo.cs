@@ -1,10 +1,10 @@
-﻿using System.Xml.Serialization;
-using AaronLuna.Common.Enums;
-
-namespace TplSocketServer
+﻿namespace TplSocketServer
 {
-    using AaronLuna.Common.Network;
     using System.Net;
+    using System.Xml.Serialization;
+
+    using AaronLuna.Common.Enums;
+    using AaronLuna.Common.Network;
 
     public class ConnectionInfo
     {
@@ -69,7 +69,7 @@ namespace TplSocketServer
         public static bool IsEqualTo(this ConnectionInfo myInfo, ConnectionInfo otherInfo)
         {
             //// Transfer Folder not used to determine equality, ip address
-            //// and port number combination  must be unique 
+            //// and port number combination must be unique 
 
             var localIpSimilarity = Network.CompareTwoIpAddresses(myInfo.LocalIpAddress, otherInfo.LocalIpAddress);
             var publicIpSimilarity = Network.CompareTwoIpAddresses(myInfo.PublicIpAddress, otherInfo.PublicIpAddress);

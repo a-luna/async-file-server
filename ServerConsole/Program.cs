@@ -9,12 +9,12 @@
     {
         static async Task Main()
         {
-            Console.WriteLine("\nStarting server program...\n");
+            Console.WriteLine("\nStarting asynchronous server...\n");
 
-            var serverProgram = new ServerProgram();
-            serverProgram.EventOccurred += HandleServerEvent;
+            var serverConsole = new ServerConsole();
+            serverConsole.EventOccurred += HandleServerEvent;
 
-            var result = await serverProgram.RunAsyncServer().ConfigureAwait(false);
+            var result = await serverConsole.RunServerAsync().ConfigureAwait(false);
             if (result.Success)
             {
                 Console.WriteLine("Press enter to exit.");

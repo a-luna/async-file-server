@@ -10,8 +10,11 @@
     {
         public ServerEventType EventType { get; set; } = ServerEventType.None;
 
-        public int MessageLength { get; set; }
         public int UnreadByteCount { get; set; }
+        public int TotalBytesInMessage { get; set; }
+        public int CurrentMessageBytesReceived { get; set; }
+        public int TotalMessageBytesReceived { get; set; }
+        public int MessageBytesRemaining { get; set; }
         public RequestType RequestType { get; set; }
         public string TextMessage { get; set; }
         public string RemoteServerIpAddress { get; set; }
@@ -30,10 +33,10 @@
         public TimeSpan FileTransferElapsedTime => FileTransferCompleteTime - FileTransferStartTime;
         public string FileTransferElapsedTimeString => FileTransferElapsedTime.ToFormattedString();
         public string FileTransferRate => FileHelper.GetTransferRate(FileTransferElapsedTime, FileSizeInBytes);
-        public int CurrentBytesReceivedFromSocket { get; set; }
-        public long TotalBytesReceivedFromSocket { get; set; }
-        public long BytesRemainingInFile { get; set; }
-        public int ReceiveBytesCount { get;set; }
+        public int CurrentFileBytesReceived { get; set; }
+        public long TotalFileBytesReceived { get; set; }
+        public long FileBytesRemaining { get; set; }
+        public int SocketReadCount { get;set; }
         public float PercentComplete { get; set; }
         public string ConfirmationMessage { get; set; }
         public string ErrorMessage { get; set; }

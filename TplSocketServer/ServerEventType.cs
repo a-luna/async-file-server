@@ -18,6 +18,8 @@
         ReceiveAllMessageBytesStarted,
         ReceiveAllMessageBytesCompleted,
 
+        AppendUnreadBytesToMessageData,
+
         DetermineRequestTypeStarted,
         DetermineRequestTypeCompleted,
 
@@ -66,8 +68,13 @@
         SendFileBytesStarted,
         SendFileBytesCompleted,
 
+        AppendUnreadBytesToInboundFileTransfer,
         ReceiveFileBytesStarted,
-        ReceivedDataFromSocket,
+        ReceivedClientMessageDataFromSocket,
+        ReceivedFileBytesFromSocket,
+        LastSocketReadContainedUnreadBytes,
+        CopiedUnreadBytesToIncomingMessageData,
+        CopiedUnreadBytesToIncomingFileTransfer,
         FileTransferProgress,
         ReceiveFileBytesCompleted,
 

@@ -2,7 +2,7 @@
 {
     using System;
 
-    public static class ServerEventInfoExtensions
+    public static class ServerEventArgsExtensions
     {
         public static string Report(this ServerEventArgs serverEventArgs)
         {
@@ -36,20 +36,33 @@
                     report += "Completed Process: Connect to remote server";
                     break;
 
+                case ServerEventType.ReceivedClientMessageDataFromSocket:
+                    report +=
+                        $"Received Data From Socket:\n\n\tSocket Read Count:\t\t{serverEventArgs.SocketReadCount}\n\tCurrent Bytes Received:\t{serverEventArgs.CurrentMessageBytesReceived}\n\tTotal Bytes Received:\t{serverEventArgs.TotalMessageBytesReceived}\n\tTotal Bytes In Message:\t\t{serverEventArgs.TotalBytesInMessage}\n\tMessage Bytes Remaining:\t\t{serverEventArgs.MessageBytesRemaining}\n";
+                    break;
+
                 case ServerEventType.DetermineMessageLengthStarted:
                     report += "Started Process: Determine incoming message length";
                     break;
 
                 case ServerEventType.DetermineMessageLengthCompleted:
-                    report += $"Completed Process: Determine incoming message length\n\n\tMessage Length:\t\t\t{serverEventArgs.MessageLength}\n\tUnread Byte Count:\t\t{serverEventArgs.UnreadByteCount}\n";
+                    report += $"Completed Process: Determine incoming message length\n\n\tMessage Length:\t\t\t{serverEventArgs.TotalBytesInMessage}\n";
                     break;
-
+                    
                 case ServerEventType.ReceiveAllMessageBytesStarted:
                     report += "Started Process: Receive incoming message bytes";
                     break;
 
                 case ServerEventType.ReceiveAllMessageBytesCompleted:
-                    report += $"Completed Process: Receive incoming message bytes\n\n\tUnread Byte Count:\t{serverEventArgs.UnreadByteCount}\n";
+                    report += "Completed Process: Receive incoming message bytes";
+                    break;
+
+                case ServerEventType.LastSocketReadContainedUnreadBytes:
+                    report += $"Last socket.Receive call returned {serverEventArgs.UnreadByteCount} more bytes than expected";
+                    break;
+
+                case ServerEventType.AppendUnreadBytesToMessageData:
+                    report += $"Pre-pended {serverEventArgs.CurrentMessageBytesReceived} bytes from previous socket read to message data\n\n\tTotal Bytes Received:\t\t{serverEventArgs.TotalMessageBytesReceived}\n\tTotal Bytes In Message:\t\t{serverEventArgs.TotalBytesInMessage}\n\tMessage Bytes Remaining:\t{serverEventArgs.MessageBytesRemaining}\n";
                     break;
 
                 case ServerEventType.DetermineRequestTypeStarted:
@@ -222,13 +235,18 @@
                     report += "Completed Process: Send file bytes";
                     break;
 
+                case ServerEventType.AppendUnreadBytesToInboundFileTransfer:
+                    report +=
+                        $"Pre-pended {serverEventArgs.CurrentFileBytesReceived} bytes from previous socket read to message data\n\n\tTotal Bytes Received:\t{serverEventArgs.TotalFileBytesReceived}\n\tFile Size In Bytes:\t\t{serverEventArgs.FileSizeInBytes}\n\tBytes Remaining:\t\t{serverEventArgs.FileBytesRemaining}\n";
+                    break;
+
                 case ServerEventType.ReceiveFileBytesStarted:
                     report += $"Started Process: Receive file bytes";
                     break;
 
-                case ServerEventType.ReceivedDataFromSocket:
+                case ServerEventType.ReceivedFileBytesFromSocket:
                     report +=
-                        $"Received Data From Socket:\n\n\tData Received Count:\t{serverEventArgs.ReceiveBytesCount}\n\tCurrent Bytes Received:\t{serverEventArgs.CurrentBytesReceivedFromSocket}\n\tTotal Bytes Received:\t{serverEventArgs.TotalBytesReceivedFromSocket}\n\tFile Size In Bytes:\t\t{serverEventArgs.FileSizeInBytes}\n\tBytes Remaining:\t\t{serverEventArgs.BytesRemainingInFile}\n";
+                        $"Received Data From Socket:\n\n\tSocket Read Count:\t\t{serverEventArgs.SocketReadCount}\n\tCurrent Bytes Received:\t{serverEventArgs.CurrentFileBytesReceived}\n\tTotal Bytes Received:\t{serverEventArgs.TotalFileBytesReceived}\n\tFile Size In Bytes:\t\t{serverEventArgs.FileSizeInBytes}\n\tBytes Remaining:\t\t{serverEventArgs.FileBytesRemaining}\n";
                     break;
 
                 case ServerEventType.FileTransferProgress:

@@ -2,16 +2,16 @@
 {
     public enum RequestType
     {
-        None                            = 0x00,
-        TextMessage                     = 0x01,
-        InboundFileTransfer             = 0x02,
-        OutboundFileTransfer            = 0x03,
-        GetFileList                     = 0x04,
-        ReceiveFileList                 = 0x05,
-        TransferFolderPathRequest       = 0x06,
-        TransferFolderPathResponse      = 0x07,
-        PublicIpAddressRequest          = 0x08,
-        PublicIpAddressResponse         = 0x09,
-        DataIsNoLongerBeingReceived     = 0x10
+        None                            = 0,
+        TextMessage                     = 1,
+        InboundFileTransfer             = 2,
+        OutboundFileTransfer            = 3,
+        GetFileList                     = 4,
+        ReceiveFileList                 = 5,
+        TransferFolderPathRequest       = 6,
+        TransferFolderPathResponse      = 7,
+        PublicIpAddressRequest          = 8,
+        PublicIpAddressResponse         = 9,
+        DataIsNoLongerBeingReceived     = 10
     }
 }
