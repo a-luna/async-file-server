@@ -231,6 +231,10 @@
                     report += "Started Process: Send file bytes";
                     break;
 
+                case ServerEventType.SentFileChunkToClient:
+                    report += $"Send file chunk to client:\n\n\tFile Chunk Sent Count:\t{serverEventArgs.FileChunkSentCount}\n\tSocket Send Count:\t{serverEventArgs.SocketSendCount}\n\tCurrent Bytes Sent:\t{serverEventArgs.CurrentFileBytesSent}\n\tFile Size In Bytes:\t{serverEventArgs.FileSizeInBytes}\n\tBytes Remaining:\t{serverEventArgs.FileBytesRemaining}\n";
+                    break;
+
                 case ServerEventType.SendFileBytesCompleted:
                     report += "Completed Process: Send file bytes";
                     break;

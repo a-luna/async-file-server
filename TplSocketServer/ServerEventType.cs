@@ -66,6 +66,7 @@
         SendFileListRequestCompleted,
 
         SendFileBytesStarted,
+        SentFileChunkToClient,
         SendFileBytesCompleted,
 
         AppendUnreadBytesToInboundFileTransfer,

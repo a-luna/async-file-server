@@ -356,7 +356,7 @@
         {
             var socketReadCount = 0;
             var totalBytesReceived = 0;
-            var bytesRemaining = 0;
+            int bytesRemaining;
             var messageData = new List<byte>();
             if (_unreadBytes.Count > 0)
             {
@@ -724,7 +724,7 @@
             // Read file bytes from transfer socket until 
             //      1. the entire file has been received OR 
             //      2. Data is no longer being received OR
-            //      3, Transfer is cancelled by server receiving the file
+            //      3, Transfer is cancelled
             while (true)
             {
                 if (totalBytesReceived == fileSizeInBytes)
@@ -788,19 +788,19 @@
                 // of times or millions of times dependingon the file size. Since this event is only 
                 // being used by myself when debugging small test files, I limited this event to only 
                 // fire when the size of the incoming file is less than 200 KB
-                if (fileSizeInBytes < (1024 * 200))
+                if (fileSizeInBytes < (10 * 1024))
                 {
                     EventOccurred?.Invoke(this,
-                        new ServerEventArgs
-                        {
-                            EventType = ServerEventType.ReceivedFileBytesFromSocket,
-                            SocketReadCount = receiveCount,
-                            CurrentFileBytesReceived = _lastBytesReceivedCount,
-                            TotalFileBytesReceived = totalBytesReceived,
-                            FileSizeInBytes = fileSizeInBytes,
-                            FileBytesRemaining = bytesRemaining,
-                            PercentComplete = percentComplete
-                        });
+                    new ServerEventArgs
+                    {
+                        EventType = ServerEventType.ReceivedFileBytesFromSocket,
+                        SocketReadCount = receiveCount,
+                        CurrentFileBytesReceived = _lastBytesReceivedCount,
+                        TotalFileBytesReceived = totalBytesReceived,
+                        FileSizeInBytes = fileSizeInBytes,
+                        FileBytesRemaining = bytesRemaining,
+                        PercentComplete = percentComplete
+                    });
                 }
                 
                 // Report progress only if at least 1% of file has been received since the last update
@@ -1501,7 +1501,8 @@
             return Result.Ok();
         }
 
-        public async Task<Result> SendFileAsync(string remoteServerIpAddress,
+        public async Task<Result> SendFileAsync(
+            string remoteServerIpAddress,
             int remoteServerPort,
             string localFilePath,
             string remoteFolderPath,
@@ -1591,23 +1592,15 @@
             EventOccurred?.Invoke(this,
             new ServerEventArgs
                 { EventType = ServerEventType.SendOutboundFileTransferInfoCompleted });
-
-            EventOccurred?.Invoke(this,
-            new ServerEventArgs
-                { EventType = ServerEventType.SendFileBytesStarted });
-
-            var sendFileResult =
-                await transferSocket.SendFileAsync(localFilePath).ConfigureAwait(false);
+            
+            var sendFileResult = 
+                await SendFileBytesAsync(transferSocket, localFilePath, fileSizeBytes, token);
 
             if (sendFileResult.Failure)
             {
                 return sendFileResult;
             }
-
-            EventOccurred?.Invoke(this,
-            new ServerEventArgs
-                { EventType = ServerEventType.SendFileBytesCompleted });
-
+            
             var receiveConfirationMessageResult =
                 await ReceiveConfirmationAsync(transferSocket).ConfigureAwait(false);
 
@@ -1621,6 +1614,81 @@
 
             return Result.Ok();
         }
+
+        async Task<Result> SendFileBytesAsync(Socket transferSocket, string localFilePath, long fileSizeBytes,
+            CancellationToken token)
+        {
+            EventOccurred?.Invoke(this,
+            new ServerEventArgs
+                { EventType = ServerEventType.SendFileBytesStarted });
+
+            var totalBytesRemaining = fileSizeBytes;
+            var fileChunkSentCount = 0;
+            var socketSendCount = 0;
+            using (var file = File.OpenRead(localFilePath))
+            {
+                while (totalBytesRemaining > 0)
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        token.ThrowIfCancellationRequested();
+                    }
+
+                    var fileChunkSize = (int) Math.Min(_bufferSize, totalBytesRemaining);
+                    _buffer = new byte[fileChunkSize];
+
+                    var numberOfBytesToSend = file.Read(_buffer, 0, fileChunkSize);                    
+
+                    var offset = 0;
+                    while (numberOfBytesToSend > 0)
+                    {
+                        var bytesSentResult = 
+                            await transferSocket.SendWithTimeoutAsync(
+                                _buffer,
+                                offset,
+                                _bufferSize,
+                                0,
+                                _sendTimeoutMs).ConfigureAwait(false);
+
+                        if (bytesSentResult.Failure)
+                        {
+                            return Result.Fail("Error occurred sending file chunk to client");
+                        }
+
+                        var numberOfBytesSent = bytesSentResult.Value;
+                        numberOfBytesToSend -= numberOfBytesSent;
+                        offset += numberOfBytesSent;
+                        socketSendCount++;
+                    }
+
+                    totalBytesRemaining -= numberOfBytesToSend;
+                    fileChunkSentCount++;
+
+                    if (fileSizeBytes > (10 * 1024)) continue;
+                    EventOccurred?.Invoke(this,
+                    new ServerEventArgs
+                    {
+                        EventType = ServerEventType.SentFileChunkToClient,
+                        FileSizeInBytes = fileSizeBytes,
+                        CurrentFileBytesSent = numberOfBytesToSend,
+                        FileBytesRemaining = totalBytesRemaining,
+                        FileChunkSentCount = fileChunkSentCount,
+                        SocketSendCount = socketSendCount
+                    });
+                }
+
+                EventOccurred?.Invoke(this,
+                new ServerEventArgs
+                    { EventType = ServerEventType.SendFileBytesCompleted });
+
+                return Result.Ok();
+            }
+        }
+
+        //async Task<int> SendFileChunkAsync()
+        //{
+
+        //}
 
         async Task<Result> ReceiveConfirmationAsync(Socket transferSocket)
         {

@@ -35,8 +35,11 @@
         public string FileTransferRate => FileHelper.GetTransferRate(FileTransferElapsedTime, FileSizeInBytes);
         public int CurrentFileBytesReceived { get; set; }
         public long TotalFileBytesReceived { get; set; }
+        public int CurrentFileBytesSent { get; set; }        
         public long FileBytesRemaining { get; set; }
         public int SocketReadCount { get;set; }
+        public int SocketSendCount { get; set; }
+        public int FileChunkSentCount { get; set; }
         public float PercentComplete { get; set; }
         public string ConfirmationMessage { get; set; }
         public string ErrorMessage { get; set; }

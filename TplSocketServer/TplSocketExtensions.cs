@@ -61,7 +61,7 @@ namespace TplSocketServer
             return Result.Ok(transferSocket);
         }
 
-        public static async Task<Result> SendWithTimeoutAsync(
+        public static async Task<Result<int>> SendWithTimeoutAsync(
             this Socket socket,
             byte[] buffer,
             int offset,
@@ -69,6 +69,7 @@ namespace TplSocketServer
             SocketFlags socketFlags,
             int timeoutMs)
         {
+            var bytesSent = 0;
             try
             {
                 var asyncResult = socket.BeginSend(buffer, offset, size, socketFlags, null, null);
@@ -78,17 +79,19 @@ namespace TplSocketServer
                 {
                     throw new TimeoutException();
                 }
+
+                bytesSent = await sendBytesTask;
             }
             catch (SocketException ex)
             {
-                return Result.Fail($"{ex.Message} ({ex.GetType()})");
+                return Result.Fail<int>($"{ex.Message} ({ex.GetType()})");
             }
             catch (TimeoutException ex)
             {
-                return Result.Fail($"{ex.Message} ({ex.GetType()})");
+                return Result.Fail<int>($"{ex.Message} ({ex.GetType()})");
             }
 
-            return Result.Ok();
+            return Result.Ok(bytesSent);
         }
 
         public static async Task<Result<int>> ReceiveAsync(
