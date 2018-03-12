@@ -567,12 +567,12 @@ namespace TplSocketServerTest
                     _clientIsListening = true;
                     break;
 
-                case ServerEventType.ReceiveTextMessageCompleted:
+                case ServerEventType.ReadTextMessageCompleted:
                     _clientReceivedTextMessage = true;
                     _messageFromServer = serverEventArgs.TextMessage;
                     break;
 
-                case ServerEventType.ReceiveTransferFolderResponseCompleted:
+                case ServerEventType.ReadTransferFolderResponseCompleted:
                     _transferFolderPath = serverEventArgs.RemoteFolder;
                     _clientReceivedTransferFolderPath = true;
                     break;
@@ -605,7 +605,7 @@ namespace TplSocketServerTest
                     _serverIsListening = true;
                     break;
 
-                case ServerEventType.ReceiveTextMessageCompleted:
+                case ServerEventType.ReadTextMessageCompleted:
                     _serverReceivedTextMessage = true;
                     _messageFromClient = serverEventArgs.TextMessage;
                     break;

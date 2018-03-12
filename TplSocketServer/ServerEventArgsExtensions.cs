@@ -38,7 +38,7 @@
 
                 case ServerEventType.ReceivedClientMessageDataFromSocket:
                     report +=
-                        $"Received Data From Socket:\n\n\tSocket Read Count:\t\t{serverEventArgs.SocketReadCount}\n\tCurrent Bytes Received:\t{serverEventArgs.CurrentMessageBytesReceived}\n\tTotal Bytes Received:\t{serverEventArgs.TotalMessageBytesReceived}\n\tTotal Bytes In Message:\t\t{serverEventArgs.TotalBytesInMessage}\n\tMessage Bytes Remaining:\t\t{serverEventArgs.MessageBytesRemaining}\n";
+                        $"Received Data From Socket:\n\n\tSocket Read Count:\t\t\t\t{serverEventArgs.SocketReadCount}\n\tCurrent Bytes Received:\t\t\t{serverEventArgs.CurrentMessageBytesReceived}\n\tTotal Message Bytes Received:\t{serverEventArgs.TotalMessageBytesReceived}\n\tTotal Bytes In Message:\t\t\t{serverEventArgs.TotalBytesInMessage}\n\tMessage Bytes Remaining:\t\t{serverEventArgs.MessageBytesRemaining}\n";
                     break;
 
                 case ServerEventType.DetermineMessageLengthStarted:
@@ -70,7 +70,7 @@
                     break;
 
                 case ServerEventType.DetermineRequestTypeCompleted:
-                    report += $"Completed Process: Determine reqeust type\n\n\tTransfer Type:\t{serverEventArgs.RequestType}\n";
+                    report += $"Completed Process: Determine request type\n\n\tTransfer Type:\t{serverEventArgs.RequestType}\n";
                     break;
 
                 case ServerEventType.ShutdownListenSocketStarted:
@@ -97,12 +97,12 @@
                     report += "Completed Process: Send Public IP Request";
                     break;
 
-                case ServerEventType.ReceivePublicIpRequestStarted:
-                    report += "Started Process: Receive Public IP Request";
+                case ServerEventType.ReadPublicIpRequestStarted:
+                    report += "Started Process: Read Public IP Request";
                     break;
 
-                case ServerEventType.ReceivePublicIpRequestCompleted:
-                    report += $"Completed Process: Receive Public IP Request\n\n\tServer Endpoint:\t\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}\n";
+                case ServerEventType.ReadPublicIpRequestCompleted:
+                    report += $"Completed Process: Read Public IP Request\n\n\tServer Endpoint:\t\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}\n";
                     break;
 
                 case ServerEventType.SendPublicIpResponseStarted:
@@ -113,12 +113,12 @@
                     report += "Completed Process: Send Public IP Response";
                     break;
 
-                case ServerEventType.ReceivePublicIpResponseStarted:
-                    report += "Started Process: Receive Public IP Response";
+                case ServerEventType.ReadPublicIpResponseStarted:
+                    report += "Started Process: Read Public IP Response";
                     break;
 
-                case ServerEventType.ReceivePublicIpResponseCompleted:
-                    report += $"Completed Process: Receive Public IP Response\n\n\tPublic IP:\t\t{serverEventArgs.PublicIpAddress} files available\n\tServer Endpoint:\t\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}";
+                case ServerEventType.ReadPublicIpResponseCompleted:
+                    report += $"Completed Process: Read Public IP Response\n\n\tPublic IP:\t\t{serverEventArgs.PublicIpAddress} files available\n\tServer Endpoint:\t\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}";
                     break;
 
                 case ServerEventType.SendTransferFolderRequestStarted:
@@ -129,12 +129,12 @@
                     report += "Completed Process: Send Transfer Folder Request";
                     break;
 
-                case ServerEventType.ReceiveTransferFolderRequestStarted:
-                    report += "Started Process: Receive Transfer Folder Request";
+                case ServerEventType.ReadTransferFolderRequestStarted:
+                    report += "Started Process: Read Transfer Folder Request";
                     break;
 
-                case ServerEventType.ReceiveTransferFolderRequestCompleted:
-                    report += $"Completed Process: Receive Transfer Folder Request\n\n\tServer Endpoint:\t\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}\n";
+                case ServerEventType.ReadTransferFolderRequestCompleted:
+                    report += $"Completed Process: Read Transfer Folder Request\n\n\tServer Endpoint:\t\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}\n";
                     break;
 
                 case ServerEventType.SendTransferFolderResponseStarted:
@@ -145,12 +145,12 @@
                     report += "Completed Process: Send Transfer Folder Response";
                     break;
 
-                case ServerEventType.ReceiveTransferFolderResponseStarted:
-                    report += "Started Process: Receive Transfer Folder Response";
+                case ServerEventType.ReadTransferFolderResponseStarted:
+                    report += "Started Process: Read Transfer Folder Response";
                     break;
 
-                case ServerEventType.ReceiveTransferFolderResponseCompleted:
-                    report += $"Completed Process: Receive Transfer Folder Response\n\n\tTransfer Folder Path:\t{serverEventArgs.RemoteFolder}\n\tServer Endpoint:\t\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}\n";
+                case ServerEventType.ReadTransferFolderResponseCompleted:
+                    report += $"Completed Process: Read Transfer Folder Response\n\n\tTransfer Folder Path:\t{serverEventArgs.RemoteFolder}\n\tServer Endpoint:\t\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}\n";
                     break;
 
                 case ServerEventType.SendFileListRequestStarted:
@@ -161,12 +161,12 @@
                     report += "Completed Process: Send File List Request";
                     break;
 
-                case ServerEventType.ReceiveFileListRequestStarted:
-                    report += "Started Process: Receive File List Request";
+                case ServerEventType.ReadFileListRequestStarted:
+                    report += "Started Process: Read File List Request";
                     break;
 
-                case ServerEventType.ReceiveFileListRequestCompleted:
-                    report += $"Completed Process: Receive File List Request\n\n\tServer Endpoint:\t\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}\n";
+                case ServerEventType.ReadFileListRequestCompleted:
+                    report += $"Completed Process: Read File List Request\n\n\tServer Endpoint:\t\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}\n";
                     break;
 
                 case ServerEventType.SendFileListResponseStarted:
@@ -177,12 +177,12 @@
                     report += "Completed Process: Send File List Response";
                     break;
 
-                case ServerEventType.ReceiveFileListResponseStarted:
-                    report += "Started Process: Receive File List Response";
+                case ServerEventType.ReadFileListResponseStarted:
+                    report += "Started Process: Read File List Response";
                     break;
 
-                case ServerEventType.ReceiveFileListResponseCompleted:
-                    report += $"Completed Process: Receive File List Response\n\n\tFile Info List:\t\t{serverEventArgs.FileInfoList.Count} files available\n\tServer Endpoint:\t\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}\n\tTarget Folder:\t\t{serverEventArgs.LocalFolder}";
+                case ServerEventType.ReadFileListResponseCompleted:
+                    report += $"Completed Process: Read File List Response\n\n\tFile Info List:\t\t{serverEventArgs.FileInfoList.Count} files available\n\tServer Endpoint:\t\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}\n\tTarget Folder:\t\t{serverEventArgs.LocalFolder}";
                     break;
 
                 case ServerEventType.SendInboundFileTransferInfoStarted:
@@ -201,30 +201,30 @@
                     report += "Completed Process: Send outbound transfer info";
                     break;
 
-                case ServerEventType.ReceiveTextMessageStarted:
-                    report += "Started Process: Receive Text Message";
+                case ServerEventType.ReadTextMessageStarted:
+                    report += "Started Process: Read Text Message";
                     break;
 
-                case ServerEventType.ReceiveTextMessageCompleted:
-                    report += $"Completed Process: Receive Text Message\n\n\tMessage:\t{serverEventArgs.TextMessage}\n\tSent From:\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}\n";
+                case ServerEventType.ReadTextMessageCompleted:
+                    report += $"Completed Process: Read Text Message\n\n\tMessage:\t{serverEventArgs.TextMessage}\n\tSent From:\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}\n";
                     break;
 
-                case ServerEventType.ReceiveInboundFileTransferInfoStarted:
-                    report += "Started Process: Receive inbound transfer info";
+                case ServerEventType.ReadInboundFileTransferInfoStarted:
+                    report += "Started Process: Read inbound transfer info";
                     break;
 
-                case ServerEventType.ReceiveInboundFileTransferInfoCompleted:
+                case ServerEventType.ReadInboundFileTransferInfoCompleted:
                     report +=
-                        $"Completed Process: Receive inbound transfer info\n\n\tFile Name:\t\t\t{serverEventArgs.FileName}\n\tFile Size:\t\t\t{serverEventArgs.FileSizeString}\n\tDownload Location:\t{serverEventArgs.LocalFolder}\n";
+                        $"Completed Process: Read inbound transfer info\n\n\tFile Name:\t\t\t{serverEventArgs.FileName}\n\tFile Size:\t\t\t{serverEventArgs.FileSizeString}\n\tDownload Location:\t{serverEventArgs.LocalFolder}\n";
                     break;
 
-                case ServerEventType.ReceiveOutboundFileTransferInfoStarted:
-                    report += "Started Process: Receive outbound transfer info";
+                case ServerEventType.ReadOutboundFileTransferInfoStarted:
+                    report += "Started Process: Read outbound transfer info";
                     break;
 
-                case ServerEventType.ReceiveOutboundFileTransferInfoCompleted:
+                case ServerEventType.ReadOutboundFileTransferInfoCompleted:
                     report +=
-                        $"Completed Process: Receive outbound transfer info\n\n\tFile Requested:\t\t{serverEventArgs.FileName}\n\tFile Size:\t\t\t{serverEventArgs.FileSizeString}\n\tClient Endpoint:\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}\n\tTarget Directory:\t{serverEventArgs.RemoteFolder}\n";
+                        $"Completed Process: Read outbound transfer info\n\n\tFile Requested:\t\t{serverEventArgs.FileName}\n\tFile Size:\t\t\t{serverEventArgs.FileSizeString}\n\tClient Endpoint:\t{serverEventArgs.RemoteServerIpAddress}:{serverEventArgs.RemoteServerPortNumber}\n\tTarget Directory:\t{serverEventArgs.RemoteFolder}\n";
                     break;
 
                 case ServerEventType.SendFileBytesStarted:
@@ -232,7 +232,7 @@
                     break;
 
                 case ServerEventType.SentFileChunkToClient:
-                    report += $"Send file chunk to client:\n\n\tFile Chunk Sent Count:\t{serverEventArgs.FileChunkSentCount}\n\tSocket Send Count:\t{serverEventArgs.SocketSendCount}\n\tCurrent Bytes Sent:\t{serverEventArgs.CurrentFileBytesSent}\n\tFile Size In Bytes:\t{serverEventArgs.FileSizeInBytes}\n\tBytes Remaining:\t{serverEventArgs.FileBytesRemaining}\n";
+                    report += $"Send file chunk to client:\n\n\tFile Chunk Sent Count:\t{serverEventArgs.FileChunkSentCount}\n\tSocket Send Count:\t\t{serverEventArgs.SocketSendCount}\n\tCurrent Bytes Sent:\t\t{serverEventArgs.CurrentFileBytesSent}\n\tFile Size In Bytes:\t\t{serverEventArgs.FileSizeInBytes}\n\tBytes Remaining:\t\t{serverEventArgs.FileBytesRemaining}\n";
                     break;
 
                 case ServerEventType.SendFileBytesCompleted:
@@ -241,7 +241,7 @@
 
                 case ServerEventType.AppendUnreadBytesToInboundFileTransfer:
                     report +=
-                        $"Pre-pended {serverEventArgs.CurrentFileBytesReceived} bytes from previous socket read to message data\n\n\tTotal Bytes Received:\t{serverEventArgs.TotalFileBytesReceived}\n\tFile Size In Bytes:\t\t{serverEventArgs.FileSizeInBytes}\n\tBytes Remaining:\t\t{serverEventArgs.FileBytesRemaining}\n";
+                        $"Pre-pended {serverEventArgs.CurrentFileBytesReceived} bytes from previous socket read to file data\n\n\tTotal Bytes Received:\t{serverEventArgs.TotalFileBytesReceived}\n\tFile Size In Bytes:\t\t{serverEventArgs.FileSizeInBytes}\n\tBytes Remaining:\t\t{serverEventArgs.FileBytesRemaining}\n";
                     break;
 
                 case ServerEventType.ReceiveFileBytesStarted:
@@ -254,7 +254,7 @@
                     break;
 
                 case ServerEventType.FileTransferProgress:
-                    report += $"File Transfer In Progress:\t{serverEventArgs.PercentComplete:P0} Complete";
+                    report += $"File Transfer Progress Update:\t{serverEventArgs.PercentComplete:P0} Complete";
                     break;
 
                 case ServerEventType.ReceiveFileBytesCompleted:
