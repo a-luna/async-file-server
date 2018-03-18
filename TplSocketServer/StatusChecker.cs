@@ -7,39 +7,31 @@
     public class StatusChecker
     {
         readonly Timer _noActivityTimer;
+        readonly int _noActivityInterval;
 
-        public StatusChecker(int interval, int maxCount)
+        public StatusChecker(int interval)
         {
-            NoActivityInterval = interval;
-            MaxCount = maxCount;
-            NoActivityCount = 0;
-
+            _noActivityInterval = interval;
             LastUpdateTime = DateTime.Now;
-            _noActivityTimer = new Timer(CheckInNoActivity, true, NoActivityInterval, NoActivityInterval);
-        }
 
-        public int NoActivityInterval { get; set; }
-        public int NoActivityCount { get; set; }
-        public int MaxCount { get; set; }
+            _noActivityTimer = new Timer(CheckInNoActivity, true, _noActivityInterval, Timeout.Infinite);
+        }
+        
         public DateTime LastUpdateTime { get; set; }
+        public event StatusCheckerDelegate NoActivityEvent;
 
-        public event StatusCheckerDelegate FileTransferIsDead;
-
-        public void CheckInNoActivity(object state)
+        void CheckInNoActivity(object state)
         {
-            NoActivityCount++;
+            _noActivityTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            _noActivityTimer.Dispose();
 
-            if (NoActivityCount >= MaxCount)
-            {
-                _noActivityTimer.Dispose();
-                FileTransferIsDead?.Invoke();
-            }
+            NoActivityEvent?.Invoke();
         }
 
-        public void CheckInTransferProgress()
+        public void CheckInStatusIsActive()
         {
             LastUpdateTime = DateTime.Now;
-            NoActivityCount = 0;
+            _noActivityTimer.Change(_noActivityInterval, Timeout.Infinite);
         }
 
         public void FileTransferComplete()

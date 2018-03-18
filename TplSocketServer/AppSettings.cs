@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Xml.Serialization;
@@ -11,6 +12,8 @@ namespace TplSocketServer
 
     public class AppSettings
     {
+        float _transferFolderPath;
+
         public AppSettings()
         {
             TransferFolderPath = string.Empty;
@@ -18,11 +21,32 @@ namespace TplSocketServer
             RemoteServers = new List<RemoteServer>();
         }
 
+        [XmlIgnore]
+        public float TransferUpdateInterval
+        {
+            get => _transferFolderPath;
+            set => _transferFolderPath = value;
+        }
+
+        [XmlElement("TransferUpdateInterval")]
+        public string CustomTransferUpdateInterval
+        {
+            get => TransferUpdateInterval.ToString("#0.0000", CultureInfo.InvariantCulture);
+            set => float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _transferFolderPath);
+        }
+
+        public int MaxDownloadAttempts { get; set; }
         public string TransferFolderPath { get; set; }
+        
         public SocketSettings SocketSettings { get; set; }
         public List<RemoteServer> RemoteServers { get; set; }
 
-        public static void Serialize(AppSettings settings, string filePath)
+        public static void SaveToFile(AppSettings settings, string filePath)
+        {
+            AppSettings.Serialize(settings, filePath);
+        }
+
+        static void Serialize(AppSettings settings, string filePath)
         {
             var serializer = new XmlSerializer(typeof(AppSettings));
             using (var writer = new StreamWriter(filePath))

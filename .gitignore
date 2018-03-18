@@ -37,6 +37,11 @@ CodeGraphData/
 DevTracker*
 *.dt
 
+# Code coverage files
+coverage-html
+coverage.json
+coverage-hits.txt
+
 # User-specific files
 *.suo
 *.user

@@ -15,6 +15,8 @@
 
     public static class ConsoleStatic
     {
+        const string IpChoiceClient = "\nWhich IP address would you like to use for this request?";
+
         const int PortRangeMin = 49152;
         const int PortRangeMax = 65535;
 
@@ -81,6 +83,11 @@
             var localIps = Network.GetLocalIPv4AddressList();
             if (localIps.Count == 0)
             {
+                return IPAddress.Any;
+            }
+
+            if (localIps.Count == 1)
+            {
                 return localIps.Find(ip => ip.AddressFamily == AddressFamily.InterNetwork);
             }
 
@@ -111,23 +118,33 @@
 
         public static Result<RemoteServer> GetRemoteServerConnectionInfoFromUser()
         {
+            var clientIpAddressIsValid = false;
+            var userMenuChoice = 0;
+            var input = string.Empty;
+
+            var clientIp = IPAddress.None;
             var remoteServerInfo = new RemoteServer();
 
-            Console.WriteLine("Enter the client's IPv4 address:");
-            var input = Console.ReadLine();
-
-            var ipValidationResult = ValidateIpV4Address(input);
-            if (ipValidationResult.Failure)
+            while (!clientIpAddressIsValid)
             {
-                return Result.Fail<RemoteServer>(ipValidationResult.Error);
+                Console.WriteLine("Enter the client's IPv4 address:");
+                input = Console.ReadLine();
+
+                var ipValidationResult = ValidateIpV4Address(input);
+                if (ipValidationResult.Failure)
+                {
+                    Console.WriteLine(ipValidationResult.Error);
+                    continue;
+                }
+
+                var parseIp = Network.ParseSingleIPv4Address(ipValidationResult.Value);
+                clientIp = parseIp.Value;
+
+                remoteServerInfo.ConnectionInfo.SessionIpAddress = clientIp;
+                clientIpAddressIsValid = true;
             }
 
-            var parseIp = Network.ParseSingleIPv4Address(ipValidationResult.Value);
-            var clientIp = parseIp.Value;
-
-            var userInputIsValid = false;
-            var userMenuChoice = 0;
-            while (!userInputIsValid)
+            while (userMenuChoice == 0)
             {
                 Console.WriteLine($"\nIs {clientIp} a local or public IP address?");
                 Console.WriteLine("1. Local");
@@ -141,7 +158,6 @@
                     continue;
                 }
 
-                userInputIsValid = true;
                 userMenuChoice = ipTypeValidationResult.Value;
             }
 
@@ -155,19 +171,19 @@
                     remoteServerInfo.ConnectionInfo.LocalIpAddress = clientIp;
                     break;
             }
-
+            
             remoteServerInfo.ConnectionInfo.Port =
                 GetPortNumberFromUser("\nEnter the client's port number:", false);
 
             return Result.Ok(remoteServerInfo);
         }
 
-        public static int ChoosePublicOrLocalIpAddress(RemoteServer remoteServer, string userPrompt)
+        public static Result SetSessionIpAddress(RemoteServer remoteServer)
         {
             var ipChoice = 0;
             while (ipChoice == 0)
             {
-                Console.WriteLine(userPrompt);
+                Console.WriteLine(IpChoiceClient);
                 Console.WriteLine($"1. Local IP ({remoteServer.ConnectionInfo.LocalIpString})");
                 Console.WriteLine($"2. Public IP ({remoteServer.ConnectionInfo.PublicIpString})");
 
@@ -184,7 +200,20 @@
                 ipChoice = validationResult.Value;
             }
 
-            return ipChoice;
+            var sessionIp = IPAddress.None;
+            if (ipChoice == PublicIpAddress)
+            {
+                sessionIp = remoteServer.ConnectionInfo.PublicIpAddress;
+            }
+
+            if (ipChoice == LocalIpAddress)
+            {
+                sessionIp = remoteServer.ConnectionInfo.LocalIpAddress;
+            }
+
+            remoteServer.ConnectionInfo.SessionIpAddress = sessionIp;
+
+            return Result.Ok();
         }
 
         public static Result<string> ChooseFileToSend(string transferFolderPath)
@@ -242,12 +271,12 @@
             return Result.Ok(listOfFiles[fileMenuChoice - 1]);
         }
 
-        public static bool PromptUserToShutdownServer()
+        public static bool PromptUserYesOrNo(string prompt)
         {
             var shutdownChoice = 0;
             while (shutdownChoice is 0)
             {
-                Console.WriteLine("\nShutdown server?");
+                Console.WriteLine($"\n{prompt}");
                 Console.WriteLine("1. Yes");
                 Console.WriteLine("2. No");
 
@@ -263,23 +292,7 @@
             }
 
             return shutdownChoice == 1;
-        }
-
-        public static IPAddress GetChosenIpAddress(ConnectionInfo conectionInfo, int ipChoice)
-        {
-            var ip = IPAddress.None;
-            if (ipChoice == PublicIpAddress)
-            {
-                ip = conectionInfo.PublicIpAddress;
-            }
-
-            if (ipChoice == LocalIpAddress)
-            {
-                ip = conectionInfo.LocalIpAddress;
-            }
-
-            return ip;
-        }
+        }       
 
         public static Result<string> ValidateIpV4Address(string input)
         {

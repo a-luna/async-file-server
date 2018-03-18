@@ -16,7 +16,7 @@ namespace TplSocketServer
 
         public static byte[] ConstuctTextMessageRequest(string message, string localIpAddress, int localPort)
         {
-            var requestFlag = BitConverter.GetBytes((int) RequestType.TextMessage);
+            var requestFlag = BitConverter.GetBytes((int) MessageType.TextMessage);
             var messageData = Encoding.UTF8.GetBytes(message);
             var messageDataLen = BitConverter.GetBytes(messageData.Length);
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
@@ -42,7 +42,7 @@ namespace TplSocketServer
             int localPort,
             string localFolderPath)
         {
-            var requestFlag = BitConverter.GetBytes((int) RequestType.OutboundFileTransfer);
+            var requestFlag = BitConverter.GetBytes((int) MessageType.OutboundFileTransfer);
             var remoteFilePathData = Encoding.UTF8.GetBytes(remoteFilePath);
             var remoteFilePathLen = BitConverter.GetBytes(remoteFilePathData.Length);
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
@@ -73,7 +73,7 @@ namespace TplSocketServer
             int remotePort,
             string remoteFolderPath)
         {
-            var requestFlag = BitConverter.GetBytes((int) RequestType.InboundFileTransfer);
+            var requestFlag = BitConverter.GetBytes((int) MessageType.InboundFileTransfer);
             var fileName = Path.GetFileName(localFilePath);
 
             var fileNameData = Encoding.UTF8.GetBytes(fileName);
@@ -107,9 +107,9 @@ namespace TplSocketServer
             return messageWrapper.ToArray();
         }
 
-        public static byte[] ConstructGenericMessage(RequestType requestType, string localIpAddress, int localPort)
+        public static byte[] ConstructGenericMessage(MessageType messageType, string localIpAddress, int localPort)
         {
-            var requestFlag = BitConverter.GetBytes((int)requestType);
+            var requestFlag = BitConverter.GetBytes((int)messageType);
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
             var thisServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));
@@ -127,7 +127,7 @@ namespace TplSocketServer
 
         public static byte[] ConstructFileListRequest(string localIpAddress, int localPort, string targetFolder)
         {
-            var requestFlag = BitConverter.GetBytes((int) RequestType.GetFileList);
+            var requestFlag = BitConverter.GetBytes((int) MessageType.FileListRequest);
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
             var thisServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));
@@ -157,7 +157,7 @@ namespace TplSocketServer
             int requestorPort,
             string remoteFolderPath)
         {
-            var requestFlag = BitConverter.GetBytes((int) RequestType.ReceiveFileList);
+            var requestFlag = BitConverter.GetBytes((int) MessageType.FileListResponse);
 
             var localServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var localServerIpLen = BitConverter.GetBytes(localServerIpData.Length);
@@ -220,7 +220,7 @@ namespace TplSocketServer
         public static byte[] ConstructTransferFolderResponse(string localIpAddress, int localPort,
             string transferFolder)
         {
-            var requestFlag = BitConverter.GetBytes((int) RequestType.TransferFolderPathResponse);
+            var requestFlag = BitConverter.GetBytes((int) MessageType.TransferFolderPathResponse);
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
             var thisServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));
@@ -243,7 +243,7 @@ namespace TplSocketServer
         public static byte[] ConstructPublicIpAddressResponse(string localIpAddress, int localPort,
             string publicIp)
         {
-            var requestFlag = BitConverter.GetBytes((int)RequestType.PublicIpAddressResponse);
+            var requestFlag = BitConverter.GetBytes((int)MessageType.PublicIpAddressResponse);
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
             var thisServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));

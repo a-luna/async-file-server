@@ -42,6 +42,9 @@
             }
         }
 
+        [XmlIgnore]
+        public IPAddress SessionIpAddress { get; set; }
+
         public string LocalIpString { get; set; }
 
         public string PublicIpString { get; set; }
