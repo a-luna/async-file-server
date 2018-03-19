@@ -16,7 +16,7 @@
         FileTransferAccepted                  = 11,
         FileTransferRejected                  = 12,
         FileTransferStalled                   = 13,
-        FileTransferCanceled                  = 14,
+        //FileTransferCanceled                  = 14,
         RetryOutboundFileTransfer             = 15,
         RequestedFolderDoesNotExist           = 16,
         ShutdownServer                        = 17

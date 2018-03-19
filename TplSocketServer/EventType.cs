@@ -75,10 +75,10 @@
         ReceiveFileTransferStalledStarted,
         ReceiveFileTransferStalledComplete,
 
-        SendFileTransferCanceledStarted,
-        SendFileTransferCanceledComplete,
-        ReceiveFileTransferCanceledStarted,
-        ReceiveFileTransferCanceledComplete,
+        //SendFileTransferCanceledStarted,
+        //SendFileTransferCanceledComplete,
+        //ReceiveFileTransferCanceledStarted,
+        //ReceiveFileTransferCanceledComplete,
 
         SendRetryOutboundFileTransferStarted,
         SendRetryOutboundFileTransferComplete,

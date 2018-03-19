@@ -390,11 +390,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-
-ServerConsole/settings.xml
-
-
-
-
-ServerConsole/transfer/*
+# Custom for this project
+*/settings.xml
+*/transfer/*
 *.jpg

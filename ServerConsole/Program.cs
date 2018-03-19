@@ -70,10 +70,10 @@ namespace ServerConsole
                     Console.WriteLine("\nSending file to client...");
                     break;
 
-                case EventType.SendFileTransferCanceledStarted:
-                case EventType.ReceiveFileTransferCanceledComplete:
-                    Console.WriteLine("File transfer successfully canceled");
-                    break;
+                //case EventType.SendFileTransferCanceledStarted:
+                //case EventType.ReceiveFileTransferCanceledComplete:
+                //    Console.WriteLine("File transfer successfully canceled");
+                //    break;
 
                 case EventType.ReceiveConfirmationMessageComplete:
                     Console.WriteLine("Client confirmed file transfer completed successfully");

@@ -392,21 +392,21 @@
                     report += $"Completed Process:\tReceive notification that file transfer is incomplete and data has stopped being received ({RemoteServerIpAddress}:{RemoteServerPortNumber})";
                     break;
 
-                case EventType.SendFileTransferCanceledStarted:
-                    report += $"Started Process:\tNotify client that the file transfer has been canceled ({RemoteServerIpAddress}:{RemoteServerPortNumber})";
-                    break;
+                //case EventType.SendFileTransferCanceledStarted:
+                //    report += $"Started Process:\tNotify client that the file transfer has been canceled ({RemoteServerIpAddress}:{RemoteServerPortNumber})";
+                //    break;
 
-                case EventType.SendFileTransferCanceledComplete:
-                    report += "Completed Process:\tNotify client that the file transfer has been canceled";
-                    break;
+                //case EventType.SendFileTransferCanceledComplete:
+                //    report += "Completed Process:\tNotify client that the file transfer has been canceled";
+                //    break;
 
-                case EventType.ReceiveFileTransferCanceledStarted:
-                    report += "Started Process:\t\tReceive notification that the file transfer was canceled by the remote host";
-                    break;
+                //case EventType.ReceiveFileTransferCanceledStarted:
+                //    report += "Started Process:\t\tReceive notification that the file transfer was canceled by the remote host";
+                //    break;
 
-                case EventType.ReceiveFileTransferCanceledComplete:
-                    report += $"Completed Process:\tReceive notification that the file transfer was canceled by the remote host ({RemoteServerIpAddress}:{RemoteServerPortNumber})";
-                    break;
+                //case EventType.ReceiveFileTransferCanceledComplete:
+                //    report += $"Completed Process:\tReceive notification that the file transfer was canceled by the remote host ({RemoteServerIpAddress}:{RemoteServerPortNumber})";
+                //    break;
 
                 case EventType.SendRetryOutboundFileTransferStarted:
                     report += $"Started Process:\tSend request to retry stalled/canceled file transfer to remote host ({RemoteServerIpAddress}:{RemoteServerPortNumber})";

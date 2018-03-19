@@ -65,7 +65,7 @@ namespace ServerConsole
         bool _fileTransferStalled;
         bool _fileTransferCanceled;
 
-         string _downloadFileName;
+        string _downloadFileName;
         int _retryCounter;
         ProgressEventArgs _fileStalledInfo;
 
@@ -106,12 +106,12 @@ namespace ServerConsole
             _server = new TplSocketServer(_myInfo.LocalIpAddress, _myInfo.Port)
             {
                 SocketSettings = _settings.SocketSettings,
-                TransferFolderPath = _settings.TransferFolderPath
+                TransferFolderPath = _settings.TransferFolderPath,
+                TransferUpdateInterval = _settings.TransferUpdateInterval,
+                LoggingEnabled = true
             };
 
             _server.EventOccurred += HandleServerEvent;
-            _server.LoggingEnabled = true;
-
             _waitingForServerToBeginAcceptingConnections = true;
 
             var result = Result.Fail(string.Empty);
@@ -179,9 +179,6 @@ namespace ServerConsole
                 TransferFolderPath = _defaultTransferFolderPath,
                 TransferUpdateInterval = 0.0025f
             };
-
-            var filePath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}";
-            AppSettings.SaveToFile(settings, filePath);
 
             if (!File.Exists(_settingsFilePath)) return settings;
 
@@ -542,8 +539,7 @@ namespace ServerConsole
             Console.WriteLine("Thank you! Connection info for client has been successfully configured.\n");
 
             _settings.RemoteServers.Add(client);
-            var filePath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}";
-            AppSettings.SaveToFile(_settings, filePath);
+            AppSettings.SaveToFile(_settings, _settingsFilePath);
             return Result.Ok(client);
         }
 
