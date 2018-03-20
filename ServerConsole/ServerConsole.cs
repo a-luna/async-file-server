@@ -1,6 +1,7 @@
 ﻿using System.Net.Sockets;
 using AaronLuna.Common.Extensions;
 using AaronLuna.Common.Logging;
+using ServerConsole.Commands;
 
 namespace ServerConsole
 {
@@ -22,10 +23,7 @@ namespace ServerConsole
     public class ServerConsole
     {
         const string SettingsFileName = "settings.xml";
-        const string DefaultTransferFolderName = "transfer";
 
-        const string PortChoicePrompt = "Enter the port number this server will use to handle connections";
-        const string NotifyLanTrafficOnly = "Unable to determine public IP address, this server will only be able to communicate with machines in the same local network.";
         const string ConnectionRefusedAdvice = "\nPlease verify that the port number on the client server is properly opened, this could entail modifying firewall or port forwarding settings depending on the operating system.";
         const string FileAlreadyExists = "\nThe client rejected the file transfer since a file by the same name already exists";
         const string FileTransferCancelled = "\nCancelled file transfer, client stopped receiving data and file transfer is incomplete.";
@@ -43,11 +41,15 @@ namespace ServerConsole
         const int EndTextSession = 2;
 
         readonly string _settingsFilePath;
-        readonly string _defaultTransferFolderPath;
 
         string _clientIpAddress;
         int _clientPort;
         string _clientTransferFolder;
+
+        IPAddress _localIpAddress;
+        IPAddress _pubicIpAddress;
+        int _port;
+        string _transferFolder;
 
         bool _waitingForServerToBeginAcceptingConnections = true;
         bool _waitingForTransferFolderResponse = true;
@@ -72,11 +74,7 @@ namespace ServerConsole
         string _clientTransferFolderPath;
         IPAddress _clientPublicIp;
         List<(string filePath, long fileSize)> _fileInfoList;
-
-        readonly CancellationTokenSource _cts;
-        CancellationToken _token;
         ConsoleProgressBar _progress;
-        //StatusChecker _statusChecker;
 
         AppSettings _settings;
         ConnectionInfo _myInfo;
@@ -88,33 +86,48 @@ namespace ServerConsole
         readonly Logger _log = new Logger(typeof(TplSocketServer));
         AutoResetEvent _signalExitRetryDownloadLogic = new AutoResetEvent(false);
 
+        CancellationToken _token = new CancellationToken();
+
         public ServerConsole()
         {
-            _cts = new CancellationTokenSource();
-            _settingsFilePath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}";
-            _defaultTransferFolderPath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{DefaultTransferFolderName}";
+            _settingsFilePath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}";            
         }
 
         public event EventHandler<ServerEvent> EventOccurred;
 
         public async Task<Result> RunServerAsync()
         {
-            _token = _cts.Token;
-            _settings = InitializeAppSettings();
-            _myInfo = await GetLocalServerSettingsFromUser().ConfigureAwait(false);
+            var getSettingsCommand = new GetAppSettingsFromFileCommand("Read server settings from file", _settingsFilePath);
+            var getSettingsResult = await getSettingsCommand.ExecuteAsync();
+            _settings = getSettingsResult.Value;
 
-            _server = new TplSocketServer(_myInfo.LocalIpAddress, _myInfo.Port)
+            var initializeServerCommand = new InitializeServerCommand("Initialize Local Server", _settings);
+            var initializeServerResult = await initializeServerCommand.ExecuteAsync();
+
+            if (initializeServerResult.Failure)
             {
-                SocketSettings = _settings.SocketSettings,
-                TransferFolderPath = _settings.TransferFolderPath,
-                TransferUpdateInterval = _settings.TransferUpdateInterval,
-                LoggingEnabled = true
+                return Result.Fail(initializeServerResult.Error);
+            }
+
+            _server = initializeServerResult.Value;
+            _server.EventOccurred += HandleServerEvent;
+
+            _localIpAddress = _server.LocalIpAddress;
+            _pubicIpAddress = _server.PublicIpAddress;
+            _port = _server.LocalPort;
+            _transferFolder = _server.TransferFolderPath;
+
+            _myInfo = new ConnectionInfo
+            {
+                LocalIpAddress = _localIpAddress,
+                PublicIpAddress = _pubicIpAddress,
+                Port = _port
             };
 
-            _server.EventOccurred += HandleServerEvent;
             _waitingForServerToBeginAcceptingConnections = true;
 
             var result = Result.Fail(string.Empty);
+            
             try
             {
                 var listenTask =
@@ -171,56 +184,6 @@ namespace ServerConsole
             _server.CloseListenSocket();
         }
 
-        AppSettings InitializeAppSettings()
-        {
-            var settings = new AppSettings
-            {
-                MaxDownloadAttempts = 3,
-                TransferFolderPath = _defaultTransferFolderPath,
-                TransferUpdateInterval = 0.0025f
-            };
-
-            if (!File.Exists(_settingsFilePath)) return settings;
-
-            var deserialized = AppSettings.Deserialize(_settingsFilePath);
-            if (deserialized.Success)
-            {
-                settings = deserialized.Value;
-            }
-            else
-            {
-                Console.WriteLine(deserialized.Error);
-            }
-
-            return settings;
-        }
-
-        async Task<ConnectionInfo> GetLocalServerSettingsFromUser()
-        {
-            var portChoice =
-                ConsoleStatic.GetPortNumberFromUser(PortChoicePrompt, true);
-            
-            var localIp = ConsoleStatic.GetLocalIpToBindTo();
-            var publicIp = IPAddress.None;
-
-            var retrievePublicIp = await Network.GetPublicIPv4AddressAsync().ConfigureAwait(false);
-            if (retrievePublicIp.Failure)
-            {
-                Console.WriteLine(NotifyLanTrafficOnly);
-            }
-            else
-            {
-                publicIp = retrievePublicIp.Value;
-            }
-
-            return new ConnectionInfo
-            {
-                LocalIpAddress = localIp,
-                PublicIpAddress = publicIp,
-                Port = portChoice
-            };
-        }
-
         async Task<Result> ServerMenuAsync()
         {
             while (true)
@@ -269,7 +232,7 @@ namespace ServerConsole
                 if (result.Failure)
                 {
                     Console.WriteLine(result.Error);
-                    if (ConsoleStatic.PromptUserYesOrNo("Shutdown server?"))
+                    if (OldStatic.PromptUserYesOrNo("Shutdown server?"))
                     {
                         return Result.Ok();
                     }
@@ -310,7 +273,7 @@ namespace ServerConsole
         async Task<Result> PromptUserToReplyToTextMessageAsync()
         {
             var userPrompt = $"Reply to {_textSessionClientIpAddress}:{_textSessionClientPort}?";
-            if (ConsoleStatic.PromptUserYesOrNo(userPrompt))
+            if (OldStatic.PromptUserYesOrNo(userPrompt))
             {
                 await SendTextMessageToClientAsync(
                     _textSessionClientIpAddress,
@@ -333,7 +296,7 @@ namespace ServerConsole
                 return;
             }
 
-            Console.WriteLine($"\nServer is listening for incoming requests on port {_myInfo.Port}\nLocal IP:\t{_myInfo.LocalIpString}\nPublic IP:\t{_myInfo.PublicIpString}");
+            Console.WriteLine($"\nServer is listening for incoming requests on port {_port}\nLocal IP:\t{_localIpAddress}\nPublic IP:\t{_pubicIpAddress}");
             Console.WriteLine("\nPlease make a choice from the menu below:");
             Console.WriteLine("1. Send Text Message");
             Console.WriteLine("2. Send File");
@@ -385,14 +348,14 @@ namespace ServerConsole
                 return await AddNewClientAsync().ConfigureAwait(false);
             }
 
-            var clientInfo = _settings.RemoteServers[clientMenuChoice - 1];
+            var clientInfo = _settings.RemoteServers[clientMenuChoice - 1];            
             if (clientInfo.ConnectionInfo.IsEqualTo(_myInfo))
             {
                 return Result.Fail<RemoteServer>(
                     $"{clientInfo.ConnectionInfo.LocalIpAddress}:{clientInfo.ConnectionInfo.Port} is the same IP address and port number used by this server.");
             }
 
-            ConsoleStatic.SetSessionIpAddress(clientInfo);
+            OldStatic.SetSessionIpAddress(clientInfo);
 
             return Result.Ok(_settings.RemoteServers[clientMenuChoice - 1]);
         }
@@ -404,7 +367,7 @@ namespace ServerConsole
 
             while (!clientInfoIsValid)
             {
-                var addClientResult = ConsoleStatic.GetRemoteServerConnectionInfoFromUser();
+                var addClientResult = OldStatic.GetRemoteServerConnectionInfoFromUser();
                 if (addClientResult.Failure)
                 {
                     return addClientResult;
@@ -621,7 +584,7 @@ namespace ServerConsole
 
         async Task<Result> SendFileToClientAsync(string ipAddress, int port, string transferFolderPath, CancellationToken token)
         {
-            var selectFileResult = ConsoleStatic.ChooseFileToSend(_settings.TransferFolderPath);
+            var selectFileResult = OldStatic.ChooseFileToSend(_settings.TransferFolderPath);
             if (selectFileResult.Failure)
             {
                 Console.WriteLine(selectFileResult.Error);
@@ -977,7 +940,7 @@ namespace ServerConsole
             }
 
             var userPrompt = $"Try again to download file \"{_downloadFileName}\" from {_clientIpAddress}:{_clientPort}?";
-            if (ConsoleStatic.PromptUserYesOrNo(userPrompt))
+            if (OldStatic.PromptUserYesOrNo(userPrompt))
             {
                 _retryCounter++;
                 await _server.RetryCanceledFileTransfer(

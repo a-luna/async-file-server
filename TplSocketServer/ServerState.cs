@@ -39,8 +39,10 @@ namespace TplSocketServer
         public int ReceiveTimeout => SocketSettings.ReceiveTimeoutMs;
         public int SendTimeout => SocketSettings.SendTimeoutMs;
 
-        public string LocalIpAddress => MyEndPoint.Address.ToString();
+        public IPAddress PublicIpAddress { get;set; }
+        public IPAddress LocalIpAddress => MyEndPoint.Address;
         public int LocalPort => MyEndPoint.Port;
+        
         public string OutgoingFilePath => OutgoingFile.ToString();
         public string LocalFolderPath => LocalFolder.ToString();
         public string RemoteFolderPath => RemoteFolder.ToString();

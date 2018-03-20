@@ -44,6 +44,9 @@
             };
         }
 
+        public IPAddress LocalIpAddress => _state.LocalIpAddress;
+        public int LocalPort => _state.LocalPort;
+
         public bool LoggingEnabled
         {
             get => _state.LoggingEnabled;
@@ -66,6 +69,12 @@
         {
             get => _state.SocketSettings;
             set => _state.SocketSettings = value;
+        }
+
+        public IPAddress PublicIpAddress
+        {
+            get => _state.PublicIpAddress;
+            set => _state.PublicIpAddress = value;
         }
         
         public event EventHandler<ServerEvent> EventOccurred;
@@ -849,7 +858,7 @@
                 new ServerEvent
                 {
                     EventType = EventType.SendOutboundFileTransferInfoStarted,
-                    LocalIpAddress = _state.LocalIpAddress,
+                    LocalIpAddress = _state.LocalIpAddress.ToString(),
                     LocalPortNumber = _state.LocalPort,
                     LocalFolder = Path.GetDirectoryName(localFilePath),
                     FileName = Path.GetFileName(localFilePath),
@@ -863,7 +872,7 @@
                 MessageWrapper.ConstructOutboundFileTransferRequest(
                     localFilePath,
                     fileSizeBytes,
-                    _state.LocalIpAddress,
+                    _state.LocalIpAddress.ToString(),
                     _state.LocalPort,
                     remoteFolderPath);
 
@@ -1163,7 +1172,7 @@
                         EventType.SendFileTransferRejectedComplete,
                         remoteIpAddress,
                         remotePort,
-                        _state.LocalIpAddress,
+                        _state.LocalIpAddress.ToString(),
                         _state.LocalPort,
                         token);
             }
@@ -1175,7 +1184,7 @@
                     EventType.SendFileTransferAcceptedComplete,
                     remoteIpAddress,
                     remotePort,
-                    _state.LocalIpAddress,
+                    _state.LocalIpAddress.ToString(),
                     _state.LocalPort,
                     token);
 
@@ -1444,7 +1453,7 @@
                 EventType.SendRetryOutboundFileTransferComplete,
                 remoteServerIpAddress,
                 remoteServerPort,
-                _state.LocalIpAddress,
+                _state.LocalIpAddress.ToString(),
                 _state.LocalPort,
                 token);
         }
@@ -1739,7 +1748,7 @@
                         EventType.SendNotificationFolderDoesNotExistComplete,
                         requestorIpAddress,
                         requestorPortNumber,
-                        _state.LocalIpAddress,
+                        _state.LocalIpAddress.ToString(),
                         _state.LocalPort,
                         token);
             }
@@ -1763,7 +1772,7 @@
                     EventType.SendNotificationNoFilesToDownloadComplete,
                     requestorIpAddress,
                     requestorPortNumber,
-                    _state.LocalIpAddress,
+                    _state.LocalIpAddress.ToString(),
                     _state.LocalPort,
                     token);
             }
@@ -1787,7 +1796,7 @@
                 new ServerEvent
                 {
                     EventType = EventType.SendFileListResponseStarted,
-                    LocalIpAddress = _state.LocalIpAddress,
+                    LocalIpAddress = _state.LocalIpAddress.ToString(),
                     LocalPortNumber = _state.LocalPort,
                     RemoteServerIpAddress = requestorIpAddress,
                     RemoteServerPortNumber = requestorPortNumber,
@@ -1800,7 +1809,7 @@
                     fileInfoList,
                     "*",
                     "|",
-                    _state.LocalIpAddress,
+                    _state.LocalIpAddress.ToString(),
                     _state.LocalPort,
                     requestorIpAddress,
                     requestorPortNumber,
@@ -1949,7 +1958,7 @@
 
             var responseData =
                 MessageWrapper.ConstructTransferFolderResponse(
-                    _state.LocalIpAddress,
+                    _state.LocalIpAddress.ToString(),
                     _state.LocalPort,
                     TransferFolderPath);
 
@@ -2052,14 +2061,14 @@
                     EventType = EventType.SendPublicIpResponseStarted,
                     RemoteServerIpAddress = requestorIpAddress,
                     RemoteServerPortNumber = requestorPortNumber,
-                    LocalIpAddress = _state.LocalIpAddress,
+                    LocalIpAddress = _state.LocalIpAddress.ToString(),
                     LocalPortNumber = _state.LocalPort,
                     PublicIpAddress = publicIp
                 });
 
             var responseData =
                 MessageWrapper.ConstructPublicIpAddressResponse(
-                    _state.LocalIpAddress,
+                    _state.LocalIpAddress.ToString(),
                     _state.LocalPort,
                     publicIp);
 
@@ -2112,9 +2121,9 @@
                     MessageType.ShutdownServer,
                     EventType.SendShutdownServerCommandStarted,
                     EventType.SendShutdownServerCommandComplete,
-                    _state.LocalIpAddress,
+                    _state.LocalIpAddress.ToString(),
                     _state.LocalPort,
-                    _state.LocalIpAddress,
+                    _state.LocalIpAddress.ToString(),
                     _state.LocalPort,
                     new CancellationToken());
 
