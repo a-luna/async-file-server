@@ -1,36 +1,36 @@
-﻿using System.Net.Sockets;
-using AaronLuna.Common.Extensions;
-using AaronLuna.Common.Logging;
-using ServerConsole.Commands;
+﻿
+using ServerConsole.Commands.Menus;
+using ServerConsole.Commands.ServerCommands;
 
 namespace ServerConsole
 {
     using System;
-    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Net;
+    using System.Net.Sockets;
     using System.Threading;
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Console;
+    using AaronLuna.Common.Extensions;
     using AaronLuna.Common.IO;
+    using AaronLuna.Common.Logging;
     using AaronLuna.Common.Network;
     using AaronLuna.Common.Result;
+
+    using Commands.CompositeCommands;
+    using Commands.Getters;
 
     using TplSocketServer;
 
     public class ServerConsole
     {
         const string SettingsFileName = "settings.xml";
-
-        const string ConnectionRefusedAdvice = "\nPlease verify that the port number on the client server is properly opened, this could entail modifying firewall or port forwarding settings depending on the operating system.";
         const string FileAlreadyExists = "\nThe client rejected the file transfer since a file by the same name already exists";
         const string FileTransferCancelled = "\nCancelled file transfer, client stopped receiving data and file transfer is incomplete.";
 
         const int OneHalfSecondInMilliseconds = 500;
-        const int TwoSecondsInMillisconds = 2000;
-        const int FiveSecondsInMilliseconds = 5000;
 
         const int SendMessage = 1;
         const int SendFile = 2;
@@ -39,92 +39,58 @@ namespace ServerConsole
         
         const int ReplyToTextMessage = 1;
         const int EndTextSession = 2;
-
-        readonly string _settingsFilePath;
-
-        string _clientIpAddress;
-        int _clientPort;
-        string _clientTransferFolder;
-
-        IPAddress _localIpAddress;
-        IPAddress _pubicIpAddress;
-        int _port;
-        string _transferFolder;
-
-        bool _waitingForServerToBeginAcceptingConnections = true;
-        bool _waitingForTransferFolderResponse = true;
-        bool _waitingForPublicIpResponse = true;
-        bool _waitingForFileListResponse = true;
-        bool _waitingForDownloadToComplete = true;
-        bool _waitingForConfirmationMessage = true;
-        bool _activeTextSession;
-        bool _waitingForUserInput;
-        bool _progressBarInstantiated;
-        bool _errorOccurred;
-        bool _clientResponseIsStalled;
-        bool _fileTransferRejected;
-        bool _noFilesAvailableForDownload;
-        bool _fileTransferStalled;
-        bool _fileTransferCanceled;
-
-        string _downloadFileName;
-        int _retryCounter;
-        ProgressEventArgs _fileStalledInfo;
-
-        string _clientTransferFolderPath;
-        IPAddress _clientPublicIp;
-        List<(string filePath, long fileSize)> _fileInfoList;
-        ConsoleProgressBar _progress;
-
-        AppSettings _settings;
-        ConnectionInfo _myInfo;
-        TplSocketServer _server;
-
-        string _textSessionClientIpAddress;
-        int _textSessionClientPort;
-
+        
         readonly Logger _log = new Logger(typeof(TplSocketServer));
-        AutoResetEvent _signalExitRetryDownloadLogic = new AutoResetEvent(false);
 
+        string _settingsFilePath;
+        ConsoleProgressBar _progress;
+        bool _progressBarInstantiated;
+        AutoResetEvent _signalExitRetryDownloadLogic = new AutoResetEvent(false);
         CancellationToken _token = new CancellationToken();
+        AppState _state;
 
         public ServerConsole()
         {
-            _settingsFilePath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}";            
+            _settingsFilePath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}";
+            _state = new AppState();
         }
 
         public event EventHandler<ServerEvent> EventOccurred;
 
         public async Task<Result> RunServerAsync()
         {
-            var getSettingsCommand = new GetAppSettingsFromFileCommand("Read server settings from file", _settingsFilePath);
+            var getSettingsCommand = new GetAppSettingsFromFileCommand(_settingsFilePath);
             var getSettingsResult = await getSettingsCommand.ExecuteAsync();
-            _settings = getSettingsResult.Value;
+            var settings = getSettingsResult.Result.Value;
 
-            var initializeServerCommand = new InitializeServerCommand("Initialize Local Server", _settings);
+            var initializeServerCommand = new InitializeServerCommand(settings);
             var initializeServerResult = await initializeServerCommand.ExecuteAsync();
 
-            if (initializeServerResult.Failure)
+            if (initializeServerResult.Result.Failure)
             {
-                return Result.Fail(initializeServerResult.Error);
+                return Result.Fail(initializeServerResult.Result.Error);
             }
 
-            _server = initializeServerResult.Value;
-            _server.EventOccurred += HandleServerEvent;
+            var server = initializeServerResult.Result.Value;
+            server.EventOccurred += HandleServerEvent;
+            server.FileTransferProgress += HandleFileTransferProgress;
 
-            _localIpAddress = _server.LocalIpAddress;
-            _pubicIpAddress = _server.PublicIpAddress;
-            _port = _server.LocalPort;
-            _transferFolder = _server.TransferFolderPath;
+            var localIpAddress = server.LocalIpAddress;
+            var pubicIpAddress = server.PublicIpAddress;
+            var port = server.LocalPort;
 
-            _myInfo = new ConnectionInfo
+            var myInfo = new ConnectionInfo
             {
-                LocalIpAddress = _localIpAddress,
-                PublicIpAddress = _pubicIpAddress,
-                Port = _port
+                LocalIpAddress = localIpAddress,
+                PublicIpAddress = pubicIpAddress,
+                Port = port
             };
 
-            _waitingForServerToBeginAcceptingConnections = true;
+            _state.Settings = settings;
+            _state.SettingsFile = new FileInfo(_settingsFilePath);
+            _state.Server = server;
+            _state.MyInfo = myInfo;
+            _state.WaitingForServerToBeginAcceptingConnections = true;
 
             var result = Result.Fail(string.Empty);
             
@@ -132,10 +98,10 @@ namespace ServerConsole
             {
                 var listenTask =
                     Task.Run(() =>
-                        _server.HandleIncomingConnectionsAsync(_token),
+                        _state.Server.HandleIncomingConnectionsAsync(_token),
                         _token);
 
-                while (_waitingForServerToBeginAcceptingConnections) { }
+                while (_state.WaitingForServerToBeginAcceptingConnections) { }
 
                 result = await ServerMenuAsync().ConfigureAwait(false);
 
@@ -145,15 +111,15 @@ namespace ServerConsole
                     _progressBarInstantiated = false;
                 }
 
-                _waitingForUserInput = false;
-                await _server.ShutdownServerAsync();
+                _state.WaitingForUserInput = false;
+                await _state.Server.ShutdownServerAsync();
                 var shutdownServerResult = await listenTask;
                 if (shutdownServerResult.Failure)
                 {
                     Console.WriteLine(shutdownServerResult.Error);
                 }
 
-                _server.EventOccurred -= HandleServerEvent;
+                _state.Server.EventOccurred -= HandleServerEvent;
             }
             catch (AggregateException ex)
             {
@@ -173,6 +139,7 @@ namespace ServerConsole
             catch (Exception ex)
             {
                 _log.Error("Error raised in method RunServerAsync", ex);
+
                 Console.WriteLine($"{ex.Message} ({ex.GetType()}) raised in method ServerConsole.RunServerAsync");
             }
 
@@ -181,19 +148,19 @@ namespace ServerConsole
         
         public void CloseListenSocket()
         {
-            _server.CloseListenSocket();
+            _state.Server.CloseListenSocket();
         }
 
         async Task<Result> ServerMenuAsync()
         {
             while (true)
             {
-                _errorOccurred = false;
+                _state.ErrorOccurred = false;
                 var menuResult = await GetMenuChoiceAsync().ConfigureAwait(false);
 
                 if (menuResult.Failure)
                 {
-                    if (_errorOccurred)
+                    if (_state.ErrorOccurred)
                     {
                         return Result.Fail(string.Empty);
                     }
@@ -204,9 +171,9 @@ namespace ServerConsole
 
                 var menuChoice = menuResult.Value;
 
-                if (_activeTextSession)
+                if (_state.ActiveTextSession)
                 {
-                    _activeTextSession = false;
+                    _state.ActiveTextSession = false;
                     continue;
                 }
 
@@ -223,11 +190,9 @@ namespace ServerConsole
                     Console.WriteLine("Returning to main menu...");
                     continue;
                 }
-
-                var clientInfo = chooseClientResult.Value;
-
+                
                 var result =
-                    await ExecuteMenuChoiceAsync(clientInfo, menuChoice).ConfigureAwait(false);
+                    await ExecuteMenuChoiceAsync(menuChoice).ConfigureAwait(false);
 
                 if (result.Failure)
                 {
@@ -247,15 +212,15 @@ namespace ServerConsole
         {
             await WriteMenuToScreenAsync().ConfigureAwait(false);
 
-            _waitingForUserInput = true;
+            _state.WaitingForUserInput = true;
             var input = Console.ReadLine();
 
-            if (_errorOccurred)
+            if (_state.ErrorOccurred)
             {
                 return Result.Fail<int>(string.Empty);
             }
 
-            if (_activeTextSession)
+            if (_state.ActiveTextSession)
             {
                 await PromptUserToReplyToTextMessageAsync().ConfigureAwait(false);
                 return Result.Ok(0);
@@ -272,17 +237,19 @@ namespace ServerConsole
 
         async Task<Result> PromptUserToReplyToTextMessageAsync()
         {
-            var userPrompt = $"Reply to {_textSessionClientIpAddress}:{_textSessionClientPort}?";
+            var textIp = _state.TextMessageEndPoint.Address;
+            var textPort = _state.TextMessageEndPoint.Port;
+            var userPrompt = $"Reply to {textIp}:{textPort}?";
             if (OldStatic.PromptUserYesOrNo(userPrompt))
             {
                 await SendTextMessageToClientAsync(
-                    _textSessionClientIpAddress,
-                    _textSessionClientPort,
+                    textIp.ToString(),
+                    textPort,
                     new CancellationToken()).ConfigureAwait(false);
             }
             else
             {
-                _activeTextSession = false;
+                _state.ActiveTextSession = false;
             }
 
             return Result.Ok();
@@ -290,13 +257,13 @@ namespace ServerConsole
 
         async Task WriteMenuToScreenAsync()
         {
-            if (_activeTextSession)
+            if (_state.ActiveTextSession)
             {
                 await Task.Run(() => SendEnterToConsole.Execute(), _token).ConfigureAwait(false);
                 return;
             }
 
-            Console.WriteLine($"\nServer is listening for incoming requests on port {_port}\nLocal IP:\t{_localIpAddress}\nPublic IP:\t{_pubicIpAddress}");
+            Console.WriteLine($"\nServer is listening for incoming requests on port {_state.MyServerPort}\nLocal IP:\t{_state.MyLocalIpAddress}\nPublic IP:\t{_state.MyPublicIpAddress}");
             Console.WriteLine("\nPlease make a choice from the menu below:");
             Console.WriteLine("1. Send Text Message");
             Console.WriteLine("2. Send File");
@@ -306,255 +273,49 @@ namespace ServerConsole
 
         async Task<Result<RemoteServer>> ChooseClientAsync()
         {
-            var clientMenuChoice = 0;
-            var totalMenuChoices = _settings.RemoteServers.Count + 2;
-            var addNewClient = _settings.RemoteServers.Count + 1;
-            var returnToMainMenu = totalMenuChoices;
+            var selectClientCommand = new SelectRemoteServerMenu(_state);
 
-            while (clientMenuChoice == 0)
-            {
-                Console.WriteLine("\nChoose a remote server for this request:");
+            var result = await selectClientCommand.ExecuteAsync();
+            if (result == null) throw new ArgumentNullException(nameof(result));
 
-                foreach (var i in Enumerable.Range(0, _settings.RemoteServers.Count))
-                {
-                    var thisClient = _settings.RemoteServers[i];
-                    Console.WriteLine($"\n{i + 1}.\tLocal IP: {thisClient.ConnectionInfo.LocalIpString}\n\tPublic IP: {thisClient.ConnectionInfo.PublicIpString}\n\tPort: {thisClient.ConnectionInfo.Port}");
-                }
+            var selectedClient = result.Result.Value;
+            ConsoleStatic.SetSessionIpAddress(selectedClient);
 
-                Console.WriteLine($"\n{addNewClient}. Add New Client");
-                Console.WriteLine($"{returnToMainMenu}. Return to Main Menu");
+            _state.ClientInfo = selectedClient.ConnectionInfo;
+            _state.ClientTransferFolderPath = selectedClient.TransferFolder;
 
-                var input = Console.ReadLine();
-
-                var validationResult = ConsoleStatic.ValidateNumberIsWithinRange(input, 1, totalMenuChoices);
-                if (validationResult.Failure)
-                {
-                    Console.WriteLine(validationResult.Error);
-                    continue;
-                }
-
-                clientMenuChoice = validationResult.Value;
-            }
-
-            if (clientMenuChoice == returnToMainMenu)
-            {
-                // User chooses to return to main menu, we will not display an
-                // error on the console in this case
-                return Result.Fail<RemoteServer>(string.Empty);
-            }
-
-            if (clientMenuChoice == addNewClient)
-            {
-                return await AddNewClientAsync().ConfigureAwait(false);
-            }
-
-            var clientInfo = _settings.RemoteServers[clientMenuChoice - 1];            
-            if (clientInfo.ConnectionInfo.IsEqualTo(_myInfo))
-            {
-                return Result.Fail<RemoteServer>(
-                    $"{clientInfo.ConnectionInfo.LocalIpAddress}:{clientInfo.ConnectionInfo.Port} is the same IP address and port number used by this server.");
-            }
-
-            OldStatic.SetSessionIpAddress(clientInfo);
-
-            return Result.Ok(_settings.RemoteServers[clientMenuChoice - 1]);
+            return result.Result;
         }
 
-        async Task<Result<RemoteServer>> AddNewClientAsync()
+        async Task<Result> ExecuteMenuChoiceAsync(int menuChoice)
         {
-            var newClient = new RemoteServer();
-            var clientInfoIsValid = false;
-
-            while (!clientInfoIsValid)
-            {
-                var addClientResult = OldStatic.GetRemoteServerConnectionInfoFromUser();
-                if (addClientResult.Failure)
-                {
-                    return addClientResult;
-                }
-
-                newClient = addClientResult.Value;
-                clientInfoIsValid = true;
-            }
-
-            var clientIp = IPAddress.None;
-            var localIp = newClient.ConnectionInfo.LocalIpAddress;
-            var publicIp = newClient.ConnectionInfo.PublicIpAddress;
-
-            if (!Equals(localIp, IPAddress.None))
-            {
-                clientIp = localIp;
-            }
-
-            if (Equals(localIp, IPAddress.None) && !Equals(publicIp, IPAddress.None))
-            {
-                clientIp = publicIp;
-            }
-
-            if (Equals(clientIp, IPAddress.None))
-            {
-                return Result.Fail<RemoteServer>("There was an error getting the client's IP address from user input.");
-            }
-
-            Result<RemoteServer> result;
-            try
-            {
-                result = await RequestAdditionalConnectionInfoFromClientAsync(clientIp, newClient).ConfigureAwait(false);
-            }
-            catch (TimeoutException ex)
-            {
-                _log.Error("Error raised in method AddNewClientAsync", ex);
-                return Result.Fail<RemoteServer>($"{ex.Message} ({ex.GetType()})");
-            }
-
-            return result;
-        }
-
-        async Task<Result<RemoteServer>> RequestAdditionalConnectionInfoFromClientAsync(IPAddress clientIp, RemoteServer client)
-        {
-            var clientPort = client.ConnectionInfo.Port;
-
-            if (client.ConnectionInfo.IsEqualTo(_myInfo))
-            {
-                return Result.Fail<RemoteServer>($"{clientIp}:{clientPort} is the same IP address and port number used by this server.");
-            }
-
-            if (ClientAlreadyAdded(client))
-            {
-                return Result.Fail<RemoteServer>(
-                    "A client with the same IP address and Port # has already been added.");
-            }
-
-            Console.WriteLine("\nRequesting additional information from client...\n");
-
-            _waitingForTransferFolderResponse = true;
-            _clientResponseIsStalled = false;
-            _clientTransferFolderPath = string.Empty;
-
-            var sendFolderRequestResult =
-                await _server.RequestTransferFolderPathAsync(
-                        clientIp.ToString(),
-                        clientPort,
-                        _myInfo.LocalIpAddress.ToString(),
-                        _myInfo.Port,
-                        _token)
-                        .ConfigureAwait(false);
-
-            if (sendFolderRequestResult.Failure)
-            {
-                var userHint = string.Empty;
-                if (sendFolderRequestResult.Error.Contains("Connection refused"))
-                {
-                    userHint = ConnectionRefusedAdvice;
-                }
-
-                return Result.Fail<RemoteServer>(
-                    $"{sendFolderRequestResult.Error}{userHint}");
-            }
-            
-            var oneSecondTimer = new Timer(HandleTimeout, true, TwoSecondsInMillisconds, Timeout.Infinite);
-
-            while (_waitingForTransferFolderResponse)
-            {
-                if (_clientResponseIsStalled)
-                {
-                    oneSecondTimer.Dispose();
-                    throw new TimeoutException();
-                }
-            }
-
-            client.TransferFolder = _clientTransferFolderPath;
-
-            if (Equals(client.ConnectionInfo.PublicIpAddress, IPAddress.None))
-            {
-                _waitingForPublicIpResponse = true;
-                _clientResponseIsStalled = false;
-                _clientPublicIp = IPAddress.None;
-
-                var sendIpRequestResult =
-                    await _server.RequestPublicIpAsync(
-                            clientIp.ToString(),
-                            clientPort,
-                            _myInfo.LocalIpAddress.ToString(),
-                            _myInfo.Port,
-                            _token)
-                        .ConfigureAwait(false);
-
-                if (sendIpRequestResult.Failure)
-                {
-                    return Result.Fail<RemoteServer>(
-                        $"Error requesting transfer folder path from new client:\n{sendIpRequestResult.Error}");
-                }
-                
-                oneSecondTimer = new Timer(HandleTimeout, true, TwoSecondsInMillisconds, Timeout.Infinite);
-
-                while (_waitingForPublicIpResponse)
-                {
-                    if (_clientResponseIsStalled)
-                    {
-                        oneSecondTimer.Dispose();
-                        throw new TimeoutException();
-                    }
-                }
-                client.ConnectionInfo.PublicIpAddress = _clientPublicIp;
-            }
-
-            Console.WriteLine("Thank you! Connection info for client has been successfully configured.\n");
-
-            _settings.RemoteServers.Add(client);
-            AppSettings.SaveToFile(_settings, _settingsFilePath);
-            return Result.Ok(client);
-        }
-
-        void HandleTimeout(object state)
-        {
-            _clientResponseIsStalled = true;
-        }
-
-        bool ClientAlreadyAdded(RemoteServer newClient)
-        {
-            var clients = _settings.RemoteServers;
-            var exists = false;
-            foreach (var remoteServer in clients)
-            {
-                if (remoteServer.ConnectionInfo.IsEqualTo(newClient.ConnectionInfo))
-                {
-                    exists = true;
-                    break;
-                }
-            }
-            return exists;
-        }
-
-        async Task<Result> ExecuteMenuChoiceAsync(RemoteServer clientInfo, int menuChoice)
-        {
-            _clientIpAddress = clientInfo.ConnectionInfo.SessionIpAddress.ToString();
-            _clientPort = clientInfo.ConnectionInfo.Port;
-            _clientTransferFolder = clientInfo.TransferFolder;
+            var clientIpAddress = _state.ClientInfo.SessionIpAddress.ToString();
+            var clientPort = _state.ClientInfo.Port;
+            var clientTransferFolder = _state.ClientTransferFolderPath;
             
             switch (menuChoice)
             {
                 case SendMessage:
 
                     return await SendTextMessageToClientAsync(
-                        _clientIpAddress,
-                        _clientPort,
+                        clientIpAddress,
+                        clientPort,
                         _token).ConfigureAwait(false);
 
                 case SendFile:
 
                     return await SendFileToClientAsync(
-                        _clientIpAddress,
-                        _clientPort,
-                        _clientTransferFolder,
+                        clientIpAddress,
+                        clientPort,
+                        clientTransferFolder,
                         _token).ConfigureAwait(false);
 
                 case GetFile:
 
                     return await RequestFileListFromClientAsync(
-                        _clientIpAddress,
-                        _clientPort,
-                        _clientTransferFolder,
+                        clientIpAddress,
+                        clientPort,
+                        clientTransferFolder,
                         _token).ConfigureAwait(false);
             }
 
@@ -566,15 +327,15 @@ namespace ServerConsole
             Console.WriteLine($"Please enter a text message to send to {ipAddress}:{port}");
             var message = Console.ReadLine();
 
-            _waitingForUserInput = false;
+            _state.WaitingForUserInput = false;
 
             var sendMessageResult =
-                await _server.SendTextMessageAsync(
+                await _state.Server.SendTextMessageAsync(
                     message,
                     ipAddress,
                     port,
-                    _myInfo.LocalIpAddress.ToString(),
-                    _myInfo.Port,
+                    _state.MyInfo.LocalIpAddress.ToString(),
+                    _state.MyInfo.Port,
                     token).ConfigureAwait(false);
 
             return sendMessageResult.Success
@@ -584,7 +345,7 @@ namespace ServerConsole
 
         async Task<Result> SendFileToClientAsync(string ipAddress, int port, string transferFolderPath, CancellationToken token)
         {
-            var selectFileResult = OldStatic.ChooseFileToSend(_settings.TransferFolderPath);
+            var selectFileResult = OldStatic.ChooseFileToSend(_state.Settings.TransferFolderPath);
             if (selectFileResult.Failure)
             {
                 Console.WriteLine(selectFileResult.Error);
@@ -593,13 +354,13 @@ namespace ServerConsole
 
             var fileToSend = selectFileResult.Value;
 
-            _waitingForUserInput = false;            
-            _waitingForConfirmationMessage = true;
-            _fileTransferRejected = false;
-            _fileTransferCanceled = false;
+            _state.WaitingForUserInput = false;
+            _state.WaitingForConfirmationMessage = true;
+            _state.FileTransferRejected = false;
+            _state.FileTransferCanceled = false;
 
             var sendFileResult =
-                await _server.SendFileAsync(
+                await _state.Server.SendFileAsync(
                     ipAddress,
                     port,
                     fileToSend,
@@ -611,13 +372,13 @@ namespace ServerConsole
                 return sendFileResult;
             }
 
-            while (_waitingForConfirmationMessage) {}
-            if (_fileTransferRejected)
+            while (_state.WaitingForConfirmationMessage) {}
+            if (_state.FileTransferRejected)
             {
                 return Result.Fail(FileAlreadyExists);
             }
 
-            if (_fileTransferCanceled)
+            if (_state.FileTransferCanceled)
             {
                 return Result.Fail(FileTransferCancelled);
             }
@@ -627,15 +388,15 @@ namespace ServerConsole
 
         async Task<Result> RequestFileListFromClientAsync(string ipAddress, int port, string remoteFolder, CancellationToken token)
         {
-            _waitingForFileListResponse = true;
-            _noFilesAvailableForDownload = false;
+            _state.WaitingForFileListResponse = true;
+            _state.NoFilesAvailableForDownload = false;
 
             var requestFileListResult =
-                await _server.RequestFileListAsync(
+                await _state.Server.RequestFileListAsync(
                         ipAddress,
                         port,
-                        _myInfo.LocalIpAddress.ToString(),
-                        _myInfo.Port,
+                        _state.MyInfo.LocalIpAddress.ToString(),
+                        _state.MyInfo.Port,
                         remoteFolder,
                         token)
                     .ConfigureAwait(false);
@@ -646,15 +407,15 @@ namespace ServerConsole
                     $"Error requesting list of available files from client:\n{requestFileListResult.Error}");
             }
 
-            while (_waitingForFileListResponse) { }
+            while (_state.WaitingForFileListResponse) { }
 
-            if (_noFilesAvailableForDownload)
+            if (_state.NoFilesAvailableForDownload)
             {
                 return Result.Fail("Client has no files available to download.");
             }
 
-            _waitingForDownloadToComplete = true;
-            _fileTransferStalled = false;
+            _state.WaitingForDownloadToComplete = true;
+            _state.FileTransferStalled = false;
 
             var fileDownloadResult = await DownloadFileFromClient(ipAddress, port).ConfigureAwait(false);
             if (fileDownloadResult.Failure)
@@ -662,9 +423,9 @@ namespace ServerConsole
                 return fileDownloadResult;
             }
 
-            while (_waitingForDownloadToComplete) { }
+            while (_state.WaitingForDownloadToComplete) { }
 
-            return _fileTransferStalled
+            return _state.FileTransferStalled
                 ? Result.Fail("Notified client that file transfer has stalled")
                 : Result.Ok();
         }
@@ -676,21 +437,21 @@ namespace ServerConsole
             {
                 // In this case, "Failure" only occcurs because the user chose to 
                 // return to the main menu.
-                _waitingForDownloadToComplete = false;
+                _state.WaitingForDownloadToComplete = false;
                 return Result.Ok();
             }
             
             var fileToGet = selectFileResult.Value;
-            _waitingForUserInput = false;
+            _state.WaitingForUserInput = false;
 
             var getFileResult =
-                await _server.GetFileAsync(
+                await _state.Server.GetFileAsync(
                     remoteIp,
                     remotePort,
                     fileToGet,
-                    _myInfo.LocalIpAddress.ToString(),
-                    _myInfo.Port,
-                    _settings.TransferFolderPath,
+                    _state.MyInfo.LocalIpAddress.ToString(),
+                    _state.MyInfo.Port,
+                    _state.Settings.TransferFolderPath,
                     _token)
                     .ConfigureAwait(false);
 
@@ -702,17 +463,17 @@ namespace ServerConsole
         Result<string> ChooseFileToGet()
         {
             var fileMenuChoice = 0;
-            var totalMenuChoices = _fileInfoList.Count + 1;
+            var totalMenuChoices = _state.FileInfoList.Count + 1;
             var returnToMainMenu = totalMenuChoices;
 
             while (fileMenuChoice == 0)
             {
                 Console.WriteLine("Choose a file to download:");
 
-                foreach (var i in Enumerable.Range(0, _fileInfoList.Count))
+                foreach (var i in Enumerable.Range(0, _state.FileInfoList.Count))
                 {
-                    var fileName = Path.GetFileName(_fileInfoList[i].filePath);
-                    var fileSize = _fileInfoList[i].fileSize;
+                    var fileName = Path.GetFileName(_state.FileInfoList[i].filePath);
+                    var fileSize = _state.FileInfoList[i].fileSize;
                     Console.WriteLine($"{i + 1}. {fileName} ({FileHelper.FileSizeToString(fileSize)})");
                 }
 
@@ -732,7 +493,7 @@ namespace ServerConsole
 
             return fileMenuChoice == returnToMainMenu
                 ? Result.Fail<string>("Returning to main menu")
-                : Result.Ok(_fileInfoList[fileMenuChoice - 1].filePath);
+                : Result.Ok(_state.FileInfoList[fileMenuChoice - 1].filePath);
         }
 
         async void HandleServerEvent(object sender, ServerEvent serverEvent)
@@ -743,7 +504,7 @@ namespace ServerConsole
             switch (serverEvent.EventType)
             {
                 case EventType.AcceptConnectionAttemptStarted:
-                    _waitingForServerToBeginAcceptingConnections = false;
+                    _state.WaitingForServerToBeginAcceptingConnections = false;
                     return;
 
                 case EventType.ReadTextMessageComplete:
@@ -751,19 +512,14 @@ namespace ServerConsole
                     break;
                     
                 case EventType.ReadInboundFileTransferInfoComplete:
-                    _clientIpAddress = serverEvent.RemoteServerIpAddress;
-                    _clientPort = serverEvent.RemoteServerPortNumber;
-                    _downloadFileName = serverEvent.FileName;
-                    _retryCounter = 0;
+                    _state.ClientInfo.SessionIpAddress = Network.ParseSingleIPv4Address(serverEvent.RemoteServerIpAddress).Value;
+                    _state.ClientInfo.Port = serverEvent.RemoteServerPortNumber;
+                    _state.DownloadFileName = serverEvent.FileName;
+                    _state.RetryCounter = 0;
                     return;
 
                 case EventType.ReceiveFileBytesStarted:
                     HandleReceiveFileBytesStarted(serverEvent);
-                    return;
-
-                case EventType.UpdateFileTransferProgress:                    
-                    _progress.BytesReceived = serverEvent.TotalFileBytesReceived;
-                    _progress.Report(serverEvent.PercentComplete);
                     return;
 
                 case EventType.ReceiveFileBytesComplete:
@@ -771,7 +527,7 @@ namespace ServerConsole
                     break;
                     
                 case EventType.ReceiveConfirmationMessageComplete:
-                    _waitingForConfirmationMessage = false;
+                    _state.WaitingForConfirmationMessage = false;
                     break;
 
                 case EventType.ReadFileListRequestComplete:
@@ -779,17 +535,8 @@ namespace ServerConsole
                     return;
 
                 case EventType.ReadFileListResponseComplete:
-                    _waitingForFileListResponse = false;
-                    _fileInfoList = serverEvent.FileInfoList;
-                    return;
-
-                case EventType.ReadTransferFolderResponseComplete:
-                    _clientTransferFolderPath = serverEvent.RemoteFolder;
-                    _waitingForTransferFolderResponse = false;
-                    return;
-                    
-                case EventType.ReadPublicIpResponseComplete:
-                    HandleReadPublicIpResponseComplete(serverEvent);
+                    _state.WaitingForFileListResponse = false;
+                    _state.FileInfoList = serverEvent.FileInfoList;
                     return;
 
                 case EventType.SendFileTransferStalledComplete:
@@ -797,60 +544,59 @@ namespace ServerConsole
                     break;
 
                 case EventType.SendFileTransferRejectedComplete:
-                    _waitingForUserInput = true;
+                    _state.WaitingForUserInput = true;
                     _signalExitRetryDownloadLogic.WaitOne();
                     break;
 
                 case EventType.ReceiveFileTransferRejectedComplete:
-                    _waitingForConfirmationMessage = false;
-                    _fileTransferRejected = true;
+                    _state.WaitingForConfirmationMessage = false;
+                    _state.FileTransferRejected = true;
                     break;
 
                 case EventType.ReceiveFileTransferStalledComplete:
-                    _waitingForConfirmationMessage = false;
-                    _fileTransferCanceled = true;
+                    _state.WaitingForConfirmationMessage = false;
+                    _state.FileTransferCanceled = true;
                     break;
 
                 case EventType.ReceiveNotificationNoFilesToDownloadComplete:
-                    _waitingForFileListResponse = false;
-                    _noFilesAvailableForDownload = true;
+                    _state.WaitingForFileListResponse = false;
+                    _state.NoFilesAvailableForDownload = true;
                     break;
 
                 case EventType.ErrorOccurred:
-                    _errorOccurred = true;
+                    _state.ErrorOccurred = true;
                     break;
 
                 default:
                     return;
             }
 
-            if (_waitingForUserInput)
+            if (_state.WaitingForUserInput)
             {
                 await WriteMenuToScreenAsync().ConfigureAwait(false);
             }
         }
 
-        void HandleReadPublicIpResponseComplete(ServerEvent serverEvent)
+        void HandleFileTransferProgress(object sender, ServerEvent serverEvent)
         {
-            var clientPublicIpString = serverEvent.PublicIpAddress;
-            var parseIp = Network.ParseSingleIPv4Address(clientPublicIpString);
-            _clientPublicIp = parseIp.Value;
-
-            _waitingForPublicIpResponse = false;
+            _progress.BytesReceived = serverEvent.TotalFileBytesReceived;
+            _progress.Report(serverEvent.PercentComplete);
         }
 
         async Task HandleReadTextMessageComplete(ServerEvent serverEvent)
         {
             await SaveNewClientAsync(serverEvent.RemoteServerIpAddress, serverEvent.RemoteServerPortNumber)
                 .ConfigureAwait(false);
-            _textSessionClientIpAddress = serverEvent.RemoteServerIpAddress;
-            _textSessionClientPort = serverEvent.RemoteServerPortNumber;
+
+            var textIpAddress = Network.ParseSingleIPv4Address(serverEvent.RemoteServerIpAddress).Value;
+            var textPort = serverEvent.RemoteServerPortNumber;
+            _state.TextMessageEndPoint = new IPEndPoint(textIpAddress, textPort);
             //_activeTextSession = true;                  
 
             Console.WriteLine($"\n{serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} says:");
             Console.WriteLine(serverEvent.TextMessage);
 
-            _waitingForUserInput = true;
+            _state.WaitingForUserInput = true;
         }
 
         void HandleReceiveFileBytesStarted(ServerEvent serverEvent)
@@ -861,13 +607,14 @@ namespace ServerConsole
             _progress = new ConsoleProgressBar
             {
                 FileSizeInBytes = serverEvent.FileSizeInBytes,
-                NumberOfBlocks = 20,
+                NumberOfBlocks = 15,
                 StartBracket = "|",
                 EndBracket = "|",
                 CompletedBlock = "|",
                 UncompletedBlock = "-",
                 DisplayAnimation = false,
                 DisplayLastRxTime = true,
+                FileStalledInterval = TimeSpan.FromSeconds(10)
             };
 
             _progress.FileTransferStalled += HandleStalledFileTransfer;
@@ -889,31 +636,31 @@ namespace ServerConsole
             Console.WriteLine($"Elapsed Time:\t\t\t{serverEvent.FileTransferElapsedTimeString}");
             Console.WriteLine($"Transfer Rate:\t\t\t{serverEvent.FileTransferRate}");
 
-            if (_waitingForUserInput)
+            if (_state.WaitingForUserInput)
             {
                 await SaveNewClientAsync(
                     serverEvent.RemoteServerIpAddress,
                     serverEvent.RemoteServerPortNumber).ConfigureAwait(false);
             }
 
-            _waitingForDownloadToComplete = false;
-            _retryCounter = 0;
+            _state.WaitingForDownloadToComplete = false;
+            _state.RetryCounter = 0;
             _signalExitRetryDownloadLogic.Set();
         }
         
         async void HandleStalledFileTransfer(object sender, ProgressEventArgs eventArgs)
         {
-            _fileStalledInfo = eventArgs;
-            _fileTransferStalled = true;
-            _waitingForDownloadToComplete = false;
+            _state.FileStalledInfo = eventArgs;
+            _state.FileTransferStalled = true;
+            _state.WaitingForDownloadToComplete = false;
 
             _progress.Dispose();
             _progressBarInstantiated = false;
 
             var notifyStalledResult = 
             await NotifyClientThatFileTransferHasStalledAsync(
-                _clientIpAddress,
-                _clientPort,
+                _state.ClientInfo.SessionIpAddress.ToString(),
+                _state.ClientInfo.Port,
                 new CancellationToken());
 
             if (notifyStalledResult.Failure)
@@ -921,17 +668,17 @@ namespace ServerConsole
                 Console.WriteLine(notifyStalledResult.Error);
             }
 
-            if (_retryCounter >= _settings.MaxDownloadAttempts)
+            if (_state.RetryCounter >= _state.Settings.MaxDownloadAttempts)
             {
                 var maxRetriesReached =
                     "Maximum # of attempts to complete stalled file transfer reached or exceeded " +
-                    $"({_settings.MaxDownloadAttempts} failed attempts for \"{_downloadFileName}\")";
+                    $"({_state.Settings.MaxDownloadAttempts} failed attempts for \"{_state.DownloadFileName}\")";
 
                 Console.WriteLine(maxRetriesReached);
 
-                var folder = _settings.TransferFolderPath;
-                var filePath1 = $"{folder}{Path.DirectorySeparatorChar}{_downloadFileName}";
-                var filePath2 = Path.Combine(folder, _downloadFileName);
+                var folder = _state.Settings.TransferFolderPath;
+                var filePath1 = $"{folder}{Path.DirectorySeparatorChar}{_state.DownloadFileName}";
+                var filePath2 = Path.Combine(folder, _state.DownloadFileName);
 
                 FileHelper.DeleteFileIfAlreadyExists(filePath1);
 
@@ -939,13 +686,13 @@ namespace ServerConsole
                 return;
             }
 
-            var userPrompt = $"Try again to download file \"{_downloadFileName}\" from {_clientIpAddress}:{_clientPort}?";
+            var userPrompt = $"Try again to download file \"{_state.DownloadFileName}\" from {_state.ClientInfo.SessionIpAddress}:{_state.ClientInfo.Port}?";
             if (OldStatic.PromptUserYesOrNo(userPrompt))
             {
-                _retryCounter++;
-                await _server.RetryCanceledFileTransfer(
-                    _clientIpAddress,
-                    _clientPort,
+                _state.RetryCounter++;
+                await _state.Server.RetryCanceledFileTransfer(
+                    _state.ClientInfo.SessionIpAddress.ToString(),
+                    _state.ClientInfo.Port,
                     new CancellationToken());
             }
         }
@@ -956,11 +703,11 @@ namespace ServerConsole
             CancellationToken token)
         {
             var notifyCientResult =
-                await _server.SendNotificationFileTransferStalledAsync(
+                await _state.Server.SendNotificationFileTransferStalledAsync(
                         ipAddress,
                         port,
-                        _myInfo.LocalIpAddress.ToString(),
-                        _myInfo.Port,
+                        _state.MyInfo.LocalIpAddress.ToString(),
+                        _state.MyInfo.Port,
                         token).ConfigureAwait(false);
 
             return notifyCientResult.Failure
@@ -970,7 +717,7 @@ namespace ServerConsole
 
         private void HandleFileTransferStalled()
         {
-            var sinceLastActivity = DateTime.Now - _fileStalledInfo.LastDataReceived;
+            var sinceLastActivity = DateTime.Now - _state.FileStalledInfo.LastDataReceived;
             Console.WriteLine($"\n\nFile transfer has stalled, {sinceLastActivity.ToFormattedString()} elapsed since last data received");
         }
 
@@ -995,31 +742,19 @@ namespace ServerConsole
                 ConnectionInfo = connectionInfo
             };
 
-            if (ClientAlreadyAdded(newClient))
-            {
-                foreach (var server in _settings.RemoteServers)
-                {
-                    var localIp = server.ConnectionInfo.LocalIpAddress;
-                    var publicIp = server.ConnectionInfo.PublicIpAddress;
-                    var port = server.ConnectionInfo.Port;
+            var requestServerInfo = new RequestAdditionalInfoFromRemoteServerCommand(_state, newClient);
+            var requestServerInfoCommandResult = await requestServerInfo.ExecuteAsync();
+            var requestServerInfoResult = requestServerInfoCommandResult.Result;
 
-                    if (Equals(localIp, clientIp) || Equals(publicIp, clientIp))
-                    {
-                        if (port == clientPort)
-                        {
-                            return Result.Ok(server);
-                        }
-                    }
-                }
+            if (requestServerInfoResult.Failure)
+            {
+                Console.WriteLine(requestServerInfoResult.Error);
+                return Result.Fail<RemoteServer>(requestServerInfoResult.Error);
             }
 
-            var clientAdded = await RequestAdditionalConnectionInfoFromClientAsync(clientIp, newClient).ConfigureAwait(false);
-            if (clientAdded.Failure)
-            {
-                Console.WriteLine(clientAdded.Error);
-            }
+            newClient = requestServerInfoResult.Value;
 
-            return clientAdded;
+            return Result.Ok(newClient);
         }
     }
 }

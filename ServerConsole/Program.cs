@@ -113,12 +113,14 @@ namespace ServerConsole
                     Console.WriteLine($"\nReceived request for public IP address from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}...");
                     break;
 
+                case EventType.SendTransferFolderResponseStarted:
                 case EventType.SendPublicIpResponseStarted:
-                    Console.WriteLine($"Sending public IP address to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.PublicIpAddress})");
+                    Console.WriteLine("Sent");
                     break;
 
+                case EventType.ReadTransferFolderResponseComplete:
                 case EventType.ReadPublicIpResponseComplete:
-                    Console.WriteLine($"Received public IP address from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.PublicIpAddress})\n");
+                    Console.Write("Success");
                     break;
 
                 case EventType.SendTransferFolderRequestStarted:
@@ -127,15 +129,7 @@ namespace ServerConsole
 
                 case EventType.ReadTransferFolderRequestComplete:
                     Console.WriteLine($"\nReceived request for transfer folder path from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}...");
-                    break;
-
-                case EventType.SendTransferFolderResponseStarted:
-                    Console.WriteLine($"Sending transfer folder path to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.LocalFolder})");
-                    break;
-
-                case EventType.ReadTransferFolderResponseComplete:
-                    Console.WriteLine($"Received transfer folder path from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({serverEvent.RemoteFolder})");
-                    break;
+                    break;                    
 
                 case EventType.ShutdownListenSocketCompletedWithoutError:
                     Console.WriteLine("Server has been successfully shutdown, press Enter to exit program\n");

@@ -15,6 +15,7 @@
         {
             LocalIpAddress = IPAddress.None;
             PublicIpAddress = IPAddress.None;
+            SessionIpAddress = IPAddress.None;
 
             LocalIpString = string.Empty;
             PublicIpString = string.Empty;

@@ -353,7 +353,7 @@
                     break;
 
                 case EventType.UpdateFileTransferProgress:
-                    report += $"\t\t\t\t\t\tFile Transfer Progress Update:\t{PercentComplete:P0.00} Complete";
+                    report += $"\t\t\t\t\t\tFile Transfer Progress Update:\t{PercentComplete:P2} Complete";
                     break;
 
                 case EventType.ReceiveFileBytesComplete:

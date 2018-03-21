@@ -15,110 +15,6 @@
 
     public static class OldStatic
     {
-        const string IpChoiceClient = "\nWhich IP address would you like to use for this request?";
-
-        const int LocalIpAddress = 1;
-        const int PublicIpAddress = 2;
-        
-        public static Result<RemoteServer> GetRemoteServerConnectionInfoFromUser()
-        {
-            var clientIpAddressIsValid = false;
-            var userMenuChoice = 0;
-            var input = string.Empty;
-
-            var clientIp = IPAddress.None;
-            var remoteServerInfo = new RemoteServer();
-
-            while (!clientIpAddressIsValid)
-            {
-                Console.WriteLine("Enter the client's IPv4 address:");
-                input = Console.ReadLine();
-
-                var ipValidationResult = ValidateIpV4Address(input);
-                if (ipValidationResult.Failure)
-                {
-                    Console.WriteLine(ipValidationResult.Error);
-                    continue;
-                }
-
-                var parseIp = Network.ParseSingleIPv4Address(ipValidationResult.Value);
-                clientIp = parseIp.Value;
-
-                remoteServerInfo.ConnectionInfo.SessionIpAddress = clientIp;
-                clientIpAddressIsValid = true;
-            }
-
-            while (userMenuChoice == 0)
-            {
-                Console.WriteLine($"\nIs {clientIp} a local or public IP address?");
-                Console.WriteLine("1. Local");
-                Console.WriteLine("2. Public/External");
-                input = Console.ReadLine();
-
-                var ipTypeValidationResult = ConsoleStatic.ValidateNumberIsWithinRange(input, 1, 2);
-                if (ipTypeValidationResult.Failure)
-                {
-                    Console.WriteLine(ipTypeValidationResult.Error);
-                    continue;
-                }
-
-                userMenuChoice = ipTypeValidationResult.Value;
-            }
-
-            switch (userMenuChoice)
-            {
-                case PublicIpAddress:
-                    remoteServerInfo.ConnectionInfo.PublicIpAddress = clientIp;
-                    break;
-
-                case LocalIpAddress:
-                    remoteServerInfo.ConnectionInfo.LocalIpAddress = clientIp;
-                    break;
-            }
-            
-            remoteServerInfo.ConnectionInfo.Port =
-                ConsoleStatic.GetPortNumberFromUser("\nEnter the client's port number:", false);
-
-            return Result.Ok(remoteServerInfo);
-        }
-
-        public static Result SetSessionIpAddress(RemoteServer remoteServer)
-        {
-            var ipChoice = 0;
-            while (ipChoice == 0)
-            {
-                Console.WriteLine(IpChoiceClient);
-                Console.WriteLine($"1. Local IP ({remoteServer.ConnectionInfo.LocalIpString})");
-                Console.WriteLine($"2. Public IP ({remoteServer.ConnectionInfo.PublicIpString})");
-
-                var input = Console.ReadLine();
-                Console.WriteLine(string.Empty);
-
-                var validationResult = ConsoleStatic.ValidateNumberIsWithinRange(input, 1, 2);
-                if (validationResult.Failure)
-                {
-                    Console.WriteLine(validationResult.Error);
-                    continue;
-                }
-
-                ipChoice = validationResult.Value;
-            }
-
-            var sessionIp = IPAddress.None;
-            if (ipChoice == PublicIpAddress)
-            {
-                sessionIp = remoteServer.ConnectionInfo.PublicIpAddress;
-            }
-
-            if (ipChoice == LocalIpAddress)
-            {
-                sessionIp = remoteServer.ConnectionInfo.LocalIpAddress;
-            }
-
-            remoteServer.ConnectionInfo.SessionIpAddress = sessionIp;
-
-            return Result.Ok();
-        }
 
         public static Result<string> ChooseFileToSend(string transferFolderPath)
         {
@@ -197,17 +93,6 @@
 
             return shutdownChoice == 1;
         }       
-
-        public static Result<string> ValidateIpV4Address(string input)
-        {
-            var parseIpResult = Network.ParseSingleIPv4Address(input);
-            if (parseIpResult.Failure)
-            {
-                return Result.Fail<string>($"Unable tp parse IPv4 address from input string: {parseIpResult.Error}");
-            }
-
-            return Result.Ok(parseIpResult.Value.ToString());
-        }
 
     }
 }

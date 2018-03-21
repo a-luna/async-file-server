@@ -6,4 +6,5 @@
 
     public interface IAppSettingsCommand : ICommand<AppSettings> { }
     public interface ITplSocketServerCommand : ICommand<TplSocketServer> { }
+    public interface IRemoteServerCommand : ICommand<RemoteServer> { }
 }

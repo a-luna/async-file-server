@@ -1,25 +1,29 @@
-﻿using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Threading.Tasks;
-using AaronLuna.Common.Network;
-
-namespace ServerConsole
+﻿namespace ServerConsole
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
+    using System.Net;
+    using System.Net.Sockets;
+    using System.Threading.Tasks;
 
-    using TplSocketServer;
-
+    using AaronLuna.Common.Network;
     using AaronLuna.Common.Result;
 
+    using TplSocketServer;
+    
     static class ConsoleStatic
     {
         const string PropmptMultipleLocalIPv4Addresses = "There are multiple IPv4 addresses available on this machine, choose the most appropriate local address:";
         const string NotifyLanTrafficOnly = "Unable to determine public IP address, this server will only be able to communicate with machines in the same local network.";
+        const string IpChoiceClient = "\nWhich IP address would you like to use for this request?";
 
         internal const int PortRangeMin = 49152;
         internal const int PortRangeMax = 65535;
+
+        const int LocalIpAddress = 1;
+        const int PublicIpAddress = 2;
 
         public static AppSettings InitializeAppSettings(string settingsFilePath)
         {
@@ -53,6 +57,7 @@ namespace ServerConsole
             var portNumber = 0;
             while (portNumber is 0)
             {
+                Console.Clear();
                 Console.WriteLine($"{prompt} (range {PortRangeMin}-{PortRangeMax}):");
 
                 if (allowRandom)
@@ -111,6 +116,7 @@ namespace ServerConsole
             var totalMenuChoices = localIps.Count;
             while (ipChoice == 0)
             {
+                Console.Clear();
                 Console.WriteLine(PropmptMultipleLocalIPv4Addresses);
 
                 foreach (var i in Enumerable.Range(0, localIps.Count))
@@ -168,6 +174,131 @@ namespace ServerConsole
             }
 
             return Result.Ok(parsedNum);
+        }
+
+        public static Result<RemoteServer> GetRemoteServerConnectionInfoFromUser()
+        {
+            var clientIpAddressIsValid = false;
+            var userMenuChoice = 0;
+            string input;
+
+            var clientIp = IPAddress.None;
+            var remoteServerInfo = new RemoteServer();
+
+            Console.Clear();
+            while (!clientIpAddressIsValid)
+            {
+                Console.WriteLine("Enter the client's IPv4 address:");
+                input = Console.ReadLine();
+
+                var ipValidationResult = ValidateIpV4Address(input);
+                if (ipValidationResult.Failure)
+                {
+                    Console.WriteLine(ipValidationResult.Error);
+                    continue;
+                }
+
+                var parseIp = Network.ParseSingleIPv4Address(ipValidationResult.Value);
+                clientIp = parseIp.Value;
+
+                remoteServerInfo.ConnectionInfo.SessionIpAddress = clientIp;
+                clientIpAddressIsValid = true;
+            }
+
+            while (userMenuChoice == 0)
+            {
+                Console.WriteLine($"\nIs {clientIp} a local or public IP address?");
+                Console.WriteLine("1. Local");
+                Console.WriteLine("2. Public/External");
+                input = Console.ReadLine();
+
+                var ipTypeValidationResult = ValidateNumberIsWithinRange(input, 1, 2);
+                if (ipTypeValidationResult.Failure)
+                {
+                    Console.WriteLine(ipTypeValidationResult.Error);
+                    continue;
+                }
+
+                userMenuChoice = ipTypeValidationResult.Value;
+            }
+
+            switch (userMenuChoice)
+            {
+                case PublicIpAddress:
+                    remoteServerInfo.ConnectionInfo.PublicIpAddress = clientIp;
+                    break;
+
+                case LocalIpAddress:
+                    remoteServerInfo.ConnectionInfo.LocalIpAddress = clientIp;
+                    break;
+            }
+
+            remoteServerInfo.ConnectionInfo.Port = GetPortNumberFromUser("\nEnter the client's port number:", false);
+
+            return Result.Ok(remoteServerInfo);
+        }
+
+        public static Result<string> ValidateIpV4Address(string input)
+        {
+            var parseIpResult = Network.ParseSingleIPv4Address(input);
+            if (parseIpResult.Failure)
+            {
+                return Result.Fail<string>($"Unable tp parse IPv4 address from input string: {parseIpResult.Error}");
+            }
+
+            return Result.Ok(parseIpResult.Value.ToString());
+        }
+
+        public static Result SetSessionIpAddress(RemoteServer remoteServer)
+        {
+            var ipChoice = 0;
+            while (ipChoice == 0)
+            {
+                Console.WriteLine(IpChoiceClient);
+                Console.WriteLine($"1. Local IP ({remoteServer.ConnectionInfo.LocalIpString})");
+                Console.WriteLine($"2. Public IP ({remoteServer.ConnectionInfo.PublicIpString})");
+
+                var input = Console.ReadLine();
+                Console.WriteLine(string.Empty);
+
+                var validationResult = ValidateNumberIsWithinRange(input, 1, 2);
+                if (validationResult.Failure)
+                {
+                    Console.WriteLine(validationResult.Error);
+                    continue;
+                }
+
+                ipChoice = validationResult.Value;
+            }
+
+            var sessionIp = IPAddress.None;
+            if (ipChoice == PublicIpAddress)
+            {
+                sessionIp = remoteServer.ConnectionInfo.PublicIpAddress;
+            }
+
+            if (ipChoice == LocalIpAddress)
+            {
+                sessionIp = remoteServer.ConnectionInfo.LocalIpAddress;
+            }
+
+            remoteServer.ConnectionInfo.SessionIpAddress = sessionIp;
+
+            return Result.Ok();
+        }
+
+        public static bool ClientAlreadyAdded(RemoteServer newClient, List<RemoteServer> clients)
+        {
+            var exists = false;
+            foreach (var remoteServer in clients)
+            {
+                if (remoteServer.ConnectionInfo.IsEqualTo(newClient.ConnectionInfo))
+                {
+                    exists = true;
+                    break;
+                }
+            }
+            return exists;
         }
     }
 }

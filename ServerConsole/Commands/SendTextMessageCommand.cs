@@ -1,6 +1,0 @@
-﻿namespace ServerConsole
-{
-    class SendTextMessageCommand
-    {
-    }
-}

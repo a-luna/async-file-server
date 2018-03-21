@@ -79,6 +79,7 @@
         
         public event EventHandler<ServerEvent> EventOccurred;
         public event EventHandler<ServerEvent> SocketEventOccurred;
+        public event EventHandler<ServerEvent> FileTransferProgress; 
 
         void SetTransferFolderPath(string folderPath)
         {
@@ -1326,7 +1327,7 @@
                 if (changeSinceLastUpdate > TransferUpdateInterval)
                 {
                     percentComplete = checkPercentComplete;
-                    EventOccurred?.Invoke(this,
+                    FileTransferProgress?.Invoke(this,
                         new ServerEvent
                         {
                             EventType = EventType.UpdateFileTransferProgress,
@@ -1756,7 +1757,9 @@
             List<string> listOfFiles;
             try
             {
-                listOfFiles = Directory.GetFiles(targetFolderPath).ToList();
+                listOfFiles = Directory.GetFiles(targetFolderPath).ToList()
+                    .Select(f => new FileInfo(f)).Where(fi => !fi.Name.StartsWith('.'))
+                    .Select(fi => fi.ToString()).ToList();
             }
             catch (IOException ex)
             {
