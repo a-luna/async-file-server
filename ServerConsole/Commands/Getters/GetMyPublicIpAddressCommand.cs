@@ -7,28 +7,28 @@
     using AaronLuna.Common.Console.Menu;
     using AaronLuna.Common.Result;
 
-    class GetPublicIpAddressForThisServerCommand : ICommand<IPAddress>
+    class GetMyPublicIpAddressCommand : ICommand
     {
-        public GetPublicIpAddressForThisServerCommand()
+        AppState _state;
+
+        public GetMyPublicIpAddressCommand(AppState state)
         {
             ReturnToParent = false;
             ItemText = "Get public IP address for this machine";
+
+            _state = state;
         }
 
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
 
-        public async Task<CommandResult<IPAddress>> ExecuteAsync()
+        public async Task<Result> ExecuteAsync()
         {
             Console.Clear();
-            var publicIp = await ConsoleStatic.GetPublicIpAddressForLocalMachineAsync();
+            _state.MyInfo.PublicIpAddress = await ConsoleStatic.GetPublicIpAddressForLocalMachineAsync();
 
             await Task.Delay(1);
-            return new CommandResult<IPAddress>
-            {
-                ReturnToParent = ReturnToParent,
-                Result = Result.Ok(publicIp)
-            };
+            return Result.Ok();
         }
     }
 }

@@ -31,8 +31,10 @@ namespace ServerConsole
         public bool WaitingForFileListResponse { get; set; }
         public bool WaitingForDownloadToComplete { get; set; }
         public bool WaitingForConfirmationMessage { get; set; }
-        public bool ActiveTextSession { get; set; }
         public bool WaitingForUserInput { get; set; }
+        public bool ServerIsListening { get; set; }
+        public bool ClientSelected { get; set; }
+        public bool ActiveTextSession { get; set; }
         public bool ErrorOccurred { get; set; }
         public bool ClientResponseIsStalled { get; set; }
         public bool FileTransferRejected { get; set; }
@@ -53,12 +55,13 @@ namespace ServerConsole
 
         public string SettingsFilePath => SettingsFile.ToString();
 
-        public string MyTransferFolderPath { get; set; }
+        public string MyTransferFolderPath => Server.TransferFolderPath;
         public string MyLocalIpAddress => MyInfo.LocalIpAddress.ToString();
         public string MyPublicIpAddress => MyInfo.PublicIpAddress.ToString();
         public int MyServerPort => MyInfo.Port;
 
         public string ClientTransferFolderPath { get; set; }
+        public string ClientSessionIpAddress => ClientInfo.SessionIpAddress.ToString();
         public string ClientLocalIpAddress => ClientInfo.LocalIpAddress.ToString();
         public string ClientPublicIpAddress => ClientInfo.PublicIpAddress.ToString();
         public int ClientServerPort => ClientInfo.Port;

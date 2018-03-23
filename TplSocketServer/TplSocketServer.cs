@@ -20,7 +20,7 @@
         const string ConfirmationMessage = "handshake";
         const string FileTransferStalledErrorMessage = "Aborting file transfer, client says that data is no longer being received";
 
-        ServerState _state;
+        readonly ServerState _state;
         readonly AutoResetEvent _signalSendNextFileChunk = new AutoResetEvent(true);
         readonly AutoResetEvent _signalServerShutdown = new AutoResetEvent(false);
         readonly Logger _log = new Logger(typeof(TplSocketServer));
@@ -31,7 +31,7 @@
             {
                 LoggingEnabled = false,
                 MyEndPoint = new IPEndPoint(localIpAddress, port),
-                LocalFolder = new DirectoryInfo(GetDefaultTransferFolder()),
+                MyTransferFolder = new DirectoryInfo(GetDefaultTransferFolder()),
                 SocketSettings = new SocketSettings
                 {
                     MaxNumberOfConections = 5,
@@ -55,7 +55,7 @@
 
         public string TransferFolderPath
         {
-            get => _state.LocalFolderPath;
+            get => _state.MyTransferFolderPath;
             set => SetTransferFolderPath(value);
         }
 
@@ -70,12 +70,6 @@
             get => _state.SocketSettings;
             set => _state.SocketSettings = value;
         }
-
-        public IPAddress PublicIpAddress
-        {
-            get => _state.PublicIpAddress;
-            set => _state.PublicIpAddress = value;
-        }
         
         public event EventHandler<ServerEvent> EventOccurred;
         public event EventHandler<ServerEvent> SocketEventOccurred;
@@ -88,7 +82,7 @@
                 Directory.CreateDirectory(folderPath);
             }
 
-            _state.LocalFolder = new DirectoryInfo(folderPath);
+            _state.MyTransferFolder = new DirectoryInfo(folderPath);
         }
         
         static string GetDefaultTransferFolder()
@@ -824,7 +818,7 @@
             CancellationToken token)
         {
             _state.OutgoingFile = new FileInfo(localFilePath);
-            _state.RemoteFolder = new DirectoryInfo(remoteFolderPath);
+            _state.ClientTransferFolder = new DirectoryInfo(remoteFolderPath);
 
             return await SendOutboundFileTransferRequestAsync(
                 remoteServerIpAddress,
@@ -1481,7 +1475,7 @@
                     requestorIpAddress,
                     requestorPortNumber,
                     _state.OutgoingFilePath,
-                    _state.RemoteFolderPath,
+                    _state.ClientTransferFolderPath,
                     token).ConfigureAwait(false);
 
             //if (_state.FileTransferCanceled)

@@ -20,8 +20,8 @@ namespace TplSocketServer
         public Socket ListenSocket { get; set; }
         public Socket ClientSocket { get; set; }
         public Socket ServerSocket { get; set; }
-        public DirectoryInfo LocalFolder { get; set; }
-        public DirectoryInfo RemoteFolder { get; set; }
+        public DirectoryInfo MyTransferFolder { get; set; }
+        public DirectoryInfo ClientTransferFolder { get; set; }
         public FileInfo OutgoingFile { get; set; }
         public byte[] Buffer { get; set; }
         public List<byte> UnreadBytes { get; set; }
@@ -38,13 +38,12 @@ namespace TplSocketServer
         public int ConnectTimeout => SocketSettings.ConnectTimeoutMs;
         public int ReceiveTimeout => SocketSettings.ReceiveTimeoutMs;
         public int SendTimeout => SocketSettings.SendTimeoutMs;
-
-        public IPAddress PublicIpAddress { get;set; }
+        
         public IPAddress LocalIpAddress => MyEndPoint.Address;
         public int LocalPort => MyEndPoint.Port;
         
         public string OutgoingFilePath => OutgoingFile.ToString();
-        public string LocalFolderPath => LocalFolder.ToString();
-        public string RemoteFolderPath => RemoteFolder.ToString();
+        public string MyTransferFolderPath => MyTransferFolder.ToString();
+        public string ClientTransferFolderPath => ClientTransferFolder.ToString();
     }
 }

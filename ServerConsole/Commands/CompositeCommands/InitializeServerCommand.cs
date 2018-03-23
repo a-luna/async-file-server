@@ -1,4 +1,6 @@
-﻿namespace ServerConsole.Commands.CompositeCommands
+﻿using System.IO;
+
+namespace ServerConsole.Commands.CompositeCommands
 {
     using System.Threading.Tasks;
     using AaronLuna.Common.Console.Menu;
@@ -7,61 +9,58 @@
     using Setters;
     using TplSocketServer;
 
-    class InitializeServerCommand : ICommand<TplSocketServer>
+    class InitializeServerCommand : ICommand
     {
-        readonly AppSettings _settings;
+        readonly AppState _state;
+        readonly string _settingsFilePath;
 
-        public InitializeServerCommand(AppSettings settings)
+        public InitializeServerCommand(AppState state, string settingsFilePath)
         {
             ReturnToParent = false;
             ItemText = "Initialize Local Server";
 
-            _settings = settings;
+            _state = state;
+            _settingsFilePath = settingsFilePath;
         }
 
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
 
-        public async Task<CommandResult<TplSocketServer>> ExecuteAsync()
+        public async Task<Result> ExecuteAsync()
         {
-            var setPortCommand = new SetPortNumberForLocalServerCommand();
+            _state.SettingsFile = new FileInfo(_settingsFilePath);
+
+            var getSettingsCommand = new GetAppSettingsFromFileCommand(_state, _settingsFilePath);
+            var getSettingsResult = await getSettingsCommand.ExecuteAsync();
+            
+            var setPortCommand = new SetPortNumberForLocalServerCommand(_state);
             var setPortResult = await setPortCommand.ExecuteAsync();
 
-            var getLocalIpCommand = new GetLocalIpAddressForThisServerCommand();
+            var getLocalIpCommand = new GetMyLocalIpAddressCommand(_state);
             var getLocalIpResult = await getLocalIpCommand.ExecuteAsync();
 
-            var getPublicIpCommand = new GetPublicIpAddressForThisServerCommand();
+            var getPublicIpCommand = new GetMyPublicIpAddressCommand(_state);
             var getPublicIpResult = await getPublicIpCommand.ExecuteAsync();
 
-            var result =  Result.Combine(
-                        setPortResult.Result,
-                        getLocalIpResult.Result,
-                        getPublicIpResult.Result)
-                            .OnSuccess(() =>
-                            {
-                                var connectionInfo = new ConnectionInfo
-                                {
-                                    LocalIpAddress = getLocalIpResult.Result.Value,
-                                    PublicIpAddress = getPublicIpResult.Result.Value,
-                                    Port = setPortResult.Result.Value
-                                };
-
-                                return
-                                    new TplSocketServer(connectionInfo.LocalIpAddress, connectionInfo.Port)
-                                    {
-                                        SocketSettings = _settings.SocketSettings,
-                                        TransferFolderPath = _settings.TransferFolderPath,
-                                        TransferUpdateInterval = _settings.TransferUpdateInterval,
-                                        PublicIpAddress = getPublicIpResult.Result.Value,
-                                        LoggingEnabled = true
-                                    };
-                            });
-
-            return new CommandResult<TplSocketServer>
+            var result = Result.Combine(getSettingsResult, setPortResult, getLocalIpResult, getPublicIpResult);
+            if (result.Failure)
             {
-                ReturnToParent = ReturnToParent,
-                Result = result
-            };
+                return Result.Fail("There was an error initializing the server");
+            }
+
+            var localIp = _state.MyInfo.LocalIpAddress;
+            var port = _state.MyInfo.Port;
+
+            _state.Server =
+                new TplSocketServer(localIp, port)
+                {
+                    SocketSettings = _state.Settings.SocketSettings,
+                    TransferFolderPath = _state.Settings.TransferFolderPath,
+                    TransferUpdateInterval = _state.Settings.TransferUpdateInterval,
+                    LoggingEnabled = true
+                };
+
+            return Result.Ok();
         }
     }
 }

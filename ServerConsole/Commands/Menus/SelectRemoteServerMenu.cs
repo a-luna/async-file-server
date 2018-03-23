@@ -1,29 +1,35 @@
-﻿using ServerConsole.Commands.CompositeCommands;
+﻿using System.Collections.Generic;
 
 namespace ServerConsole.Commands.Menus
 {
-    using System.Linq;
-
     using AaronLuna.Common.Console.Menu;
 
-    using TplSocketServer;
+    using CompositeCommands;
 
     using Getters;
 
-    class SelectRemoteServerMenu : SelectionMenuSingleChoice<RemoteServer>
+    class SelectRemoteServerMenu : SelectionMenuSingleChoice
     {
         public SelectRemoteServerMenu(AppState state)
         {
             ReturnToParent = false;
             ItemText = "Select remote server";
             MenuText = "\nChoose a remote server for this request:";
+            Options = new List<ICommand>();
 
-            Options = 
-                state.Settings.RemoteServers.Select(
-                        s => (ICommand<RemoteServer>) new GetSelectedRemoteServerCommand(s)).ToList();
+            var savedClients = new List<ICommand>();
+            foreach (var server in state.Settings.RemoteServers)
+            {
+                savedClients.Add(new GetSelectedRemoteServerCommand(state, server));
+            }
+
+            if (savedClients.Count > 0)
+            {
+                Options.AddRange(savedClients);
+            }
 
             var addNewClientCommand = new GetRemoteServerInfoFromUserCommand(state);
-            var returnToParentCommand = new ReturnToParentCommand<RemoteServer>("Return to main menu");
+            var returnToParentCommand = new ReturnToParentCommand("Return to main menu", false);
             
             Options.Add(addNewClientCommand);
             Options.Add(returnToParentCommand);

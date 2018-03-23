@@ -10,6 +10,7 @@
     {
         IPAddress _localIp;
         IPAddress _pubilcIp;
+        IPAddress _sessionIp;
 
         public ConnectionInfo()
         {
@@ -19,6 +20,17 @@
 
             LocalIpString = string.Empty;
             PublicIpString = string.Empty;
+        }
+
+        [XmlIgnore]
+        public IPAddress SessionIpAddress
+        {
+            get => _sessionIp;
+            set
+            {
+                _sessionIp = value;
+                SessionIpString = value.ToString();
+            }
         }
 
         [XmlIgnore]
@@ -42,9 +54,8 @@
                 PublicIpString = value.ToString();
             }
         }
-
-        [XmlIgnore]
-        public IPAddress SessionIpAddress { get; set; }
+        
+        public string SessionIpString { get; set; }
 
         public string LocalIpString { get; set; }
 

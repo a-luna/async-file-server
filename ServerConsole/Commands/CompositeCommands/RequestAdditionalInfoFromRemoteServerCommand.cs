@@ -1,14 +1,17 @@
-﻿using System;
-using System.Net;
-using System.Threading.Tasks;
-using AaronLuna.Common.Console.Menu;
-using AaronLuna.Common.Result;
-using ServerConsole.Commands.ServerCommands;
-using TplSocketServer;
-
-namespace ServerConsole.Commands.CompositeCommands
+﻿namespace ServerConsole.Commands.CompositeCommands
 {
-    class RequestAdditionalInfoFromRemoteServerCommand : ICommand<RemoteServer>
+    using System;
+    using System.Net;
+    using System.Threading.Tasks;
+
+    using AaronLuna.Common.Console.Menu;
+    using AaronLuna.Common.Result;
+
+    using ServerCommands;
+
+    using TplSocketServer;
+
+    class RequestAdditionalInfoFromRemoteServerCommand : ICommand
     {
         readonly AppState _state;
         RemoteServer _newClient;
@@ -24,7 +27,7 @@ namespace ServerConsole.Commands.CompositeCommands
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
 
-        public async Task<CommandResult<RemoteServer>> ExecuteAsync()
+        public async Task<Result> ExecuteAsync()
         {
             var publicIp = _newClient.ConnectionInfo.PublicIpAddress;
             var clientIp = _newClient.ConnectionInfo.SessionIpAddress;
@@ -32,67 +35,39 @@ namespace ServerConsole.Commands.CompositeCommands
 
             if (_newClient.ConnectionInfo.IsEqualTo(_state.MyInfo))
             {
-                var result = Result.Fail<RemoteServer>(
-                    $"{clientIp}:{clientPort} is the same IP address and port number used by this server.");
-
-                return new CommandResult<RemoteServer>
-                {
-                    ReturnToParent = ReturnToParent,
-                    Result = result
-                };
+                var error = $"{clientIp}:{clientPort} is the same IP address and port number used by this server.";
+                return Result.Fail(error);
             }
 
             if (ConsoleStatic.ClientAlreadyAdded(_newClient, _state.Settings.RemoteServers))
             {
-                var result = Result.Fail<RemoteServer>(
-                    "A client with the same IP address and Port # has already been added.");
-
-                return new CommandResult<RemoteServer>
-                {
-                    ReturnToParent = ReturnToParent,
-                    Result = result
-                };
+                _newClient = ConsoleStatic.GetRemoteServer(_newClient, _state.Settings.RemoteServers);
+                return Result.Ok();
             }
 
             var requestFolderPathCommand =
-                new RequestTransferFolderPathFromRemoteServerCommand(_state, clientIp, clientPort);
+                new RequestTransferFolderCommand(_state, clientIp, clientPort);
 
-            var requestFolderPathCommandResult = await requestFolderPathCommand.ExecuteAsync();
-            var requestFolderPathResult = requestFolderPathCommandResult.Result;
-
+            var requestFolderPathResult = await requestFolderPathCommand.ExecuteAsync();
             if (requestFolderPathResult.Failure)
             {
-                var result = Result.Fail<RemoteServer>(requestFolderPathResult.Error);
-
-                return new CommandResult<RemoteServer>
-                {
-                    ReturnToParent = ReturnToParent,
-                    Result = result
-                };
+                return Result.Fail(requestFolderPathResult.Error);
             }
 
-            _newClient.TransferFolder = requestFolderPathResult.Value;
+            _newClient.TransferFolder = _state.ClientTransferFolderPath;
 
-            if (!Equals(clientIp, publicIp) || publicIp == IPAddress.None)
+            if (!Equals(clientIp, publicIp) || Equals(publicIp, IPAddress.None))
             {
                 var requestPublicIpCommand =
-                    new RequestPublicIpAddressFromRemoteServerCommand(_state, clientIp, clientPort);
+                    new RequestPublicIpAddressCommand(_state, clientIp, clientPort);
 
-                var requestPublicICommandResult = await requestPublicIpCommand.ExecuteAsync();
-                var requestPublicIpResult = requestPublicICommandResult.Result;
-
+                var requestPublicIpResult = await requestPublicIpCommand.ExecuteAsync();
                 if (requestPublicIpResult.Failure)
                 {
-                    var result = Result.Fail<RemoteServer>(requestPublicIpResult.Error);
-
-                    return new CommandResult<RemoteServer>
-                    {
-                        ReturnToParent = ReturnToParent,
-                        Result = result
-                    };
+                    return Result.Fail<RemoteServer>(requestPublicIpResult.Error);
                 }
 
-                _newClient.ConnectionInfo.PublicIpAddress = requestPublicIpResult.Value;
+                _newClient.ConnectionInfo.PublicIpAddress = _state.ClientInfo.PublicIpAddress;
             }
 
             Console.WriteLine($"{Environment.NewLine}Thank you! Connection info for new client has been successfully configured.\n");
@@ -100,11 +75,7 @@ namespace ServerConsole.Commands.CompositeCommands
             _state.Settings.RemoteServers.Add(_newClient);
             AppSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
 
-            return new CommandResult<RemoteServer>
-            {
-                ReturnToParent = ReturnToParent,
-                Result = Result.Ok(_newClient)
-            };
+            return Result.Ok();
         }
     }
 }

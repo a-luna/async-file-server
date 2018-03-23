@@ -88,6 +88,21 @@ namespace TplSocketServer
                         server.ConnectionInfo.PublicIpAddress = parsePublicIpResult.Value;
                     }
                 }
+
+                var thisSessionIp = server.ConnectionInfo.SessionIpString;
+
+                if (string.IsNullOrEmpty(thisSessionIp))
+                {
+                    server.ConnectionInfo.SessionIpAddress = IPAddress.None;
+                }
+                else
+                {
+                    var parseSessionIpResult = Network.ParseSingleIPv4Address(thisSessionIp);
+                    if (parseSessionIpResult.Success)
+                    {
+                        server.ConnectionInfo.SessionIpAddress = parseSessionIpResult.Value;
+                    }
+                }
             }
         }
 

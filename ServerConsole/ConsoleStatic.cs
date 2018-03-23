@@ -15,6 +15,8 @@
     
     static class ConsoleStatic
     {
+        public const string NoClientSelectedError = "Please select a client before choosing an action to perform.";
+
         const string PropmptMultipleLocalIPv4Addresses = "There are multiple IPv4 addresses available on this machine, choose the most appropriate local address:";
         const string NotifyLanTrafficOnly = "Unable to determine public IP address, this server will only be able to communicate with machines in the same local network.";
         const string IpChoiceClient = "\nWhich IP address would you like to use for this request?";
@@ -249,14 +251,14 @@
             return Result.Ok(parseIpResult.Value.ToString());
         }
 
-        public static Result SetSessionIpAddress(RemoteServer remoteServer)
+        public static Result SetSessionIpAddress(ConnectionInfo remoteServer)
         {
             var ipChoice = 0;
             while (ipChoice == 0)
             {
                 Console.WriteLine(IpChoiceClient);
-                Console.WriteLine($"1. Local IP ({remoteServer.ConnectionInfo.LocalIpString})");
-                Console.WriteLine($"2. Public IP ({remoteServer.ConnectionInfo.PublicIpString})");
+                Console.WriteLine($"1. Local IP ({remoteServer.LocalIpString})");
+                Console.WriteLine($"2. Public IP ({remoteServer.PublicIpString})");
 
                 var input = Console.ReadLine();
                 Console.WriteLine(string.Empty);
@@ -274,15 +276,15 @@
             var sessionIp = IPAddress.None;
             if (ipChoice == PublicIpAddress)
             {
-                sessionIp = remoteServer.ConnectionInfo.PublicIpAddress;
+                sessionIp = remoteServer.PublicIpAddress;
             }
 
             if (ipChoice == LocalIpAddress)
             {
-                sessionIp = remoteServer.ConnectionInfo.LocalIpAddress;
+                sessionIp = remoteServer.LocalIpAddress;
             }
 
-            remoteServer.ConnectionInfo.SessionIpAddress = sessionIp;
+            remoteServer.SessionIpAddress = sessionIp;
 
             return Result.Ok();
         }
@@ -299,6 +301,44 @@
                 }
             }
             return exists;
+        }
+
+        public static RemoteServer GetRemoteServer(RemoteServer client, List<RemoteServer> clientList)
+        {
+            var match = new RemoteServer();
+            foreach (var server in clientList)
+            {
+                if (server.ConnectionInfo.IsEqualTo(client.ConnectionInfo))
+                {
+                    match = server;
+                    break;
+                }
+            }
+
+            return match;
+        }
+
+        public static bool PromptUserYesOrNo(string prompt)
+        {
+            var shutdownChoice = 0;
+            while (shutdownChoice is 0)
+            {
+                Console.WriteLine($"\n{prompt}");
+                Console.WriteLine("1. Yes");
+                Console.WriteLine("2. No");
+
+                var input = Console.ReadLine();
+                var validationResult = ConsoleStatic.ValidateNumberIsWithinRange(input, 1, 2);
+                if (validationResult.Failure)
+                {
+                    Console.WriteLine(validationResult.Error);
+                    continue;
+                }
+
+                shutdownChoice = validationResult.Value;
+            }
+
+            return shutdownChoice == 1;
         }
     }
 }

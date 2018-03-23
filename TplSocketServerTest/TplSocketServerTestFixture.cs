@@ -638,22 +638,10 @@ namespace TplSocketServerTest
             var fileName3 = Path.GetFileName(_fileInfoList[2].Item1);
             var fileName4 = Path.GetFileName(_fileInfoList[3].Item1);
 
-            var fileSize1 = _fileInfoList[0].Item2;
-            var fileSize2 = _fileInfoList[1].Item2;
-            var fileSize3 = _fileInfoList[2].Item2;
-            var fileSize4 = _fileInfoList[3].Item2;
-
-            Assert.AreEqual("fake.exe", fileName1);
-            Assert.AreEqual(46692, fileSize1);
-
-            Assert.AreEqual("loremipsum1.txt", fileName2);
-            Assert.AreEqual(6594, fileSize2);
-
+            Assert.AreEqual("fake.exe", fileName1);            
+            Assert.AreEqual("loremipsum1.txt", fileName2);            
             Assert.AreEqual("loremipsum2.txt", fileName3);
-            Assert.AreEqual(4559, fileSize3);
-
             Assert.AreEqual("smallFile.jpg", fileName4);
-            Assert.AreEqual(4876, fileSize4);
         }
 
         [TestMethod]
@@ -926,22 +914,10 @@ namespace TplSocketServerTest
             var fileName3 = Path.GetFileName(_fileInfoList[2].Item1);
             var fileName4 = Path.GetFileName(_fileInfoList[3].Item1);
 
-            var fileSize1 = _fileInfoList[0].Item2;
-            var fileSize2 = _fileInfoList[1].Item2;
-            var fileSize3 = _fileInfoList[2].Item2;
-            var fileSize4 = _fileInfoList[3].Item2;
-
             Assert.AreEqual("fake.exe", fileName1);
-            Assert.AreEqual(46692, fileSize1);
-
             Assert.AreEqual("loremipsum1.txt", fileName2);
-            Assert.AreEqual(6594, fileSize2);
-
             Assert.AreEqual("loremipsum2.txt", fileName3);
-            Assert.AreEqual(4559, fileSize3);
-
             Assert.AreEqual("smallFile.jpg", fileName4);
-            Assert.AreEqual(4876, fileSize4);
         }
 
         [TestMethod]
@@ -1029,22 +1005,10 @@ namespace TplSocketServerTest
             var fileName3 = Path.GetFileName(_fileInfoList[2].Item1);
             var fileName4 = Path.GetFileName(_fileInfoList[3].Item1);
 
-            var fileSize1 = _fileInfoList[0].Item2;
-            var fileSize2 = _fileInfoList[1].Item2;
-            var fileSize3 = _fileInfoList[2].Item2;
-            var fileSize4 = _fileInfoList[3].Item2;
-
             Assert.AreEqual("fake.exe", fileName1);
-            Assert.AreEqual(46692, fileSize1);
-
             Assert.AreEqual("loremipsum1.txt", fileName2);
-            Assert.AreEqual(6594, fileSize2);
-
             Assert.AreEqual("loremipsum2.txt", fileName3);
-            Assert.AreEqual(4559, fileSize3);
-
             Assert.AreEqual("smallFile.jpg", fileName4);
-            Assert.AreEqual(4876, fileSize4);
         }
 
         void HandleClientEvent(object sender, ServerEvent serverEvent)

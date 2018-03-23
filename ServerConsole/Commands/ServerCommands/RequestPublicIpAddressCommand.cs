@@ -11,13 +11,13 @@
 
     using TplSocketServer;
 
-    class RequestPublicIpAddressFromRemoteServerCommand : ICommand<IPAddress>
+    class RequestPublicIpAddressCommand : ICommand
     {
         readonly AppState _state;
         readonly IPAddress _clientIp;
         readonly int _clientPort;
 
-        public RequestPublicIpAddressFromRemoteServerCommand(AppState state, IPAddress clientIp, int clientPort)
+        public RequestPublicIpAddressCommand(AppState state, IPAddress clientIp, int clientPort)
         {
             _state = state;
             _state.Server.EventOccurred += HandleServerEvent;
@@ -32,7 +32,7 @@
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
 
-        public async Task<CommandResult<IPAddress>> ExecuteAsync()
+        public async Task<Result> ExecuteAsync()
         {
             _state.WaitingForPublicIpResponse = true;
             _state.ClientResponseIsStalled = false;
@@ -49,14 +49,8 @@
 
             if (sendIpRequestResult.Failure)
             {
-                var result = Result.Fail<IPAddress>(
-                    $"Error requesting transfer folder path from new client:\n{sendIpRequestResult.Error}");
-
-                return new CommandResult<IPAddress>
-                {
-                    ReturnToParent = ReturnToParent,
-                    Result = result
-                };
+                var error = $"Error requesting transfer folder path from new client:\n{sendIpRequestResult.Error}";
+                return Result.Fail(error);
             }
 
             var twoSecondTimer = new Timer(HandleTimeout, true, 2000, Timeout.Infinite);
@@ -70,11 +64,7 @@
                 }
             }
 
-            return new CommandResult<IPAddress>
-            {
-                ReturnToParent = ReturnToParent,
-                Result = Result.Ok(_state.ClientInfo.PublicIpAddress)
-            };
+            return Result.Ok();
         }
 
         void HandleTimeout(object state)

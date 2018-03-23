@@ -7,18 +7,20 @@
     using AaronLuna.Common.Result;
     using TplSocketServer;
 
-    class GetSelectedRemoteServerCommand : ICommand<RemoteServer>
+    class GetSelectedRemoteServerCommand : ICommand
     {
+        readonly AppState _state;
         readonly RemoteServer _server;
 
-        public GetSelectedRemoteServerCommand(RemoteServer server)
+        public GetSelectedRemoteServerCommand(AppState state, RemoteServer server)
         {
+            _state = state;
             _server = server;
 
             ReturnToParent = false;
 
             ItemText =
-                $"  Local IP: {_server.ConnectionInfo.LocalIpString}{Environment.NewLine}" +
+                $" Local IP: {_server.ConnectionInfo.LocalIpString}{Environment.NewLine}" +
                 $"   Public IP: {_server.ConnectionInfo.PublicIpString}{Environment.NewLine}" +
                 $"        Port: {_server.ConnectionInfo.Port}{Environment.NewLine}";
         }
@@ -26,14 +28,14 @@
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
 
-        public async Task<CommandResult<RemoteServer>> ExecuteAsync()
+        public async Task<Result> ExecuteAsync()
         {
+            _state.ClientInfo = _server.ConnectionInfo;
+            _state.ClientTransferFolderPath = _server.TransferFolder;
+            _state.ClientSelected = true;
+
             await Task.Delay(1);
-            return new CommandResult<RemoteServer>
-            {
-                ReturnToParent = ReturnToParent,
-                Result = Result.Ok(_server)
-            };
+            return Result.Ok();
         }
     }
 }

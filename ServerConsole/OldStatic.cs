@@ -70,29 +70,5 @@
 
             return Result.Ok(listOfFiles[fileMenuChoice - 1]);
         }
-
-        public static bool PromptUserYesOrNo(string prompt)
-        {
-            var shutdownChoice = 0;
-            while (shutdownChoice is 0)
-            {
-                Console.WriteLine($"\n{prompt}");
-                Console.WriteLine("1. Yes");
-                Console.WriteLine("2. No");
-
-                var input = Console.ReadLine();
-                var validationResult = ConsoleStatic.ValidateNumberIsWithinRange(input, 1, 2);
-                if (validationResult.Failure)
-                {
-                    Console.WriteLine(validationResult.Error);
-                    continue;
-                }
-
-                shutdownChoice = validationResult.Value;
-            }
-
-            return shutdownChoice == 1;
-        }       
-
     }
 }

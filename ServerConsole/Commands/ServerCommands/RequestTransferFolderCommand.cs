@@ -10,7 +10,7 @@
 
     using TplSocketServer;
 
-    class RequestTransferFolderPathFromRemoteServerCommand : ICommand<string>
+    class RequestTransferFolderCommand : ICommand
     {
         const string ConnectionRefusedAdvice =
             "\nPlease verify that the port number on the client server is properly opened, this could entail modifying firewall or port forwarding settings depending on the operating system.";
@@ -19,7 +19,7 @@
         readonly IPAddress _clientIp;
         readonly int _clientPort;
 
-        public RequestTransferFolderPathFromRemoteServerCommand(AppState state, IPAddress clientIp, int clientPort)
+        public RequestTransferFolderCommand(AppState state, IPAddress clientIp, int clientPort)
         {
             _state = state;
             _state.Server.EventOccurred += HandleServerEvent;
@@ -34,7 +34,7 @@
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
 
-        public async Task<CommandResult<string>> ExecuteAsync()
+        public async Task<Result> ExecuteAsync()
         {
             _state.WaitingForTransferFolderResponse = true;
             _state.ClientResponseIsStalled = false;
@@ -57,12 +57,7 @@
                     userHint = ConnectionRefusedAdvice;
                 }
 
-                var result =  Result.Fail<string>($"{sendFolderRequestResult.Error}{userHint}");
-                return new CommandResult<string>
-                {
-                    ReturnToParent = ReturnToParent,
-                    Result = result
-                };
+                return Result.Fail($"{sendFolderRequestResult.Error}{userHint}");
             }
 
             var twoSecondTimer = new Timer(HandleTimeout, true, 2000, Timeout.Infinite);
@@ -76,12 +71,7 @@
                 }
             }
             
-            var anotherResult = Result.Ok(_state.ClientTransferFolderPath);
-            return new CommandResult<string>
-            {
-                ReturnToParent = ReturnToParent,
-                Result = anotherResult
-            };
+            return Result.Ok();
         }
 
         void HandleTimeout(object state)

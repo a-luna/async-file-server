@@ -5,28 +5,28 @@
     using AaronLuna.Common.Console.Menu;
     using AaronLuna.Common.Result;
 
-    class SetPortNumberForLocalServerCommand : ICommand<int>
+    class SetPortNumberForLocalServerCommand : ICommand
     {
-        public SetPortNumberForLocalServerCommand()
+        AppState _state;
+
+        public SetPortNumberForLocalServerCommand(AppState state)
         {
             ReturnToParent = false;
             ItemText = "Set the port number used by this server";
+
+            _state = state;
         }
 
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
 
-        public async Task<CommandResult<int>> ExecuteAsync()
+        public async Task<Result> ExecuteAsync()
         {
             const string prompt = "Enter the port number this server will use to handle connections";
-            var portNumber = ConsoleStatic.GetPortNumberFromUser(prompt, true);
+            _state.MyInfo.Port = ConsoleStatic.GetPortNumberFromUser(prompt, true);
 
             await Task.Delay(1);
-            return new CommandResult<int>
-            {
-                ReturnToParent = ReturnToParent,
-                Result = Result.Ok(portNumber)
-            };
+            return Result.Ok();
         }
     }
 }

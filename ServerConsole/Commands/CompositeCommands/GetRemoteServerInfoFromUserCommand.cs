@@ -7,7 +7,7 @@
     using AaronLuna.Common.Result;
     using TplSocketServer;
 
-    class GetRemoteServerInfoFromUserCommand : ICommand<RemoteServer>
+    class GetRemoteServerInfoFromUserCommand : ICommand
     {
         AppState _state;
         RemoteServer _newClient;
@@ -23,7 +23,7 @@
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
 
-        public async Task<CommandResult<RemoteServer>> ExecuteAsync()
+        public async Task<Result> ExecuteAsync()
         {
             _newClient = new RemoteServer();
             var clientInfoIsValid = false;
@@ -34,11 +34,7 @@
                 if (addClientResult.Failure)
                 {
                     Console.WriteLine(addClientResult.Error);
-                    return new CommandResult<RemoteServer>
-                    {
-                        ReturnToParent = ReturnToParent,
-                        Result = addClientResult
-                    };
+                    return Result.Fail(addClientResult.Error);
                 }
 
                 _newClient = addClientResult.Value;
@@ -46,27 +42,20 @@
             }
 
             var requestServerInfo = new RequestAdditionalInfoFromRemoteServerCommand(_state, _newClient);
-            var requestServerInfoCommandResult = await requestServerInfo.ExecuteAsync();
-            var requestServerInfoResult = requestServerInfoCommandResult.Result;
+            var requestServerInfoResult = await requestServerInfo.ExecuteAsync();
 
-            if (requestServerInfoResult.Failure)
+            if (requestServerInfoResult.Success)
             {
-                Console.WriteLine(requestServerInfoResult.Error);
-                return new CommandResult<RemoteServer>
-                {
-                    ReturnToParent = ReturnToParent,
-                    Result = Result.Fail<RemoteServer>(requestServerInfoResult.Error)
-                };
+                _state.ClientInfo = _newClient.ConnectionInfo;
+                _state.ClientTransferFolderPath = _newClient.TransferFolder;
+                _state.ClientSelected = true;
+
+                return Result.Ok();
             }
 
-            _newClient = requestServerInfoResult.Value;
+            Console.WriteLine(requestServerInfoResult.Error);
+            return Result.Fail(requestServerInfoResult.Error);
 
-            await Task.Delay(1);
-            return new CommandResult<RemoteServer>
-            {
-                ReturnToParent = ReturnToParent,
-                Result = Result.Ok(_newClient)
-            };
         }
     }
 }
