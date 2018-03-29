@@ -4,6 +4,7 @@
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Console.Menu;
+    using AaronLuna.Common.Logging;
     using AaronLuna.Common.Result;
 
     using ServerCommands;
@@ -11,9 +12,12 @@
     class SelectServerActionMenu : SelectionMenuLoop, ICommand
     {
         AppState _state;
+        readonly Logger _log = new Logger(typeof(SelectServerActionMenu));
 
         public SelectServerActionMenu(AppState state)
         {
+            _log.Info("Begin: Instantiate SelectServerActionMenu");
+
             ReturnToParent = false;
             ItemText = "All server actions";
             MenuText = $"\nServer is listening for incoming requests on port {state.MyServerPort}" +
@@ -32,6 +36,8 @@
             Options.Add(returnToMainMenuCommand);
 
             _state = state;
+
+            _log.Info("Complete: Instantiate SelectServerActionMenu");
         }
 
         Task<Result> ICommand.ExecuteAsync()
@@ -41,9 +47,13 @@
 
         public new async Task<Result> ExecuteAsync()
         {
+            _log.Info("Begin: SelectServerActionMenu.ExecuteAsync");
+
             if (!_state.ClientSelected)
             {
                 ReturnToParent = false;
+                _log.Error($"Error: User tried to perform a server action before selecting a remote server/" +
+                           $" (SelectServerActionMenu.ExecuteAsync)");
                 return Result.Fail(ConsoleStatic.NoClientSelectedError);
             }
 
@@ -73,10 +83,13 @@
                 exit = selectedOption.ReturnToParent;
 
                 if (result.Success) continue;
+
+                _log.Error($"Error: {result.Error} (SelectServerActionMenu.ExecuteAsync)");
                 Console.WriteLine(result.Error);
                 exit = true;
             }
 
+            _log.Info("Complete: SelectServerActionMenu.ExecuteAsync");
             return result;
         }
     }

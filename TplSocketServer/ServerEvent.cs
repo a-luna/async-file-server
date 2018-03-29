@@ -26,6 +26,8 @@
         public string PublicIpAddress { get; set; }
         public string LocalFolder { get; set; }
         public string RemoteFolder { get; set; }
+        public int TotalUnknownHosts { get; set; }
+        public int UnknownHostsProcessed { get; set; }
         public string FileName { get; set; }
         public long FileSizeInBytes { get; set; }
         public string FileSizeString => FileHelper.FileSizeToString(FileSizeInBytes);
@@ -57,19 +59,19 @@
             switch (EventType)
             {
                 case EventType.ListenOnLocalPortStarted:
-                    report += "Started Process:\t\tListen on local port";
+                    report += $"Started Process:\t\tListen on local port (Port# {LocalPortNumber})";
                     break;
 
                 case EventType.ListenOnLocalPortComplete:
-                    report += "Completed Process:\tListen on local port";
+                    report += "Completed Process:\t\tListen on local port";
                     break;
 
                 case EventType.EnterMainAcceptConnectionLoop:
-                    report += "\t\t\t\t\t\tEntering main loop to accept incoming connection requests";
+                    report += "\t\t\t\t\t\tServer is now accepting incoming connections";
                     break;
 
                 case EventType.ExitMainAcceptConnectionLoop:
-                    report += "\t\t\t\t\t\tExiting main loop to accept incoming connection requests";
+                    report += "\t\t\t\t\t\tServer has been shutdown, no longer accepting incoming connections";
                     break;
 
                 case EventType.AcceptConnectionAttemptStarted:
@@ -77,7 +79,7 @@
                     break;
 
                 case EventType.AcceptConnectionAttemptComplete:
-                    report += $"Completed Process:\tAccept connection from remote client ({RemoteServerIpAddress})";
+                    report += $"Completed Process:\t\tAccept connection from remote client ({RemoteServerIpAddress})";
                     break;
 
                 case EventType.ConnectToRemoteServerStarted:
@@ -85,7 +87,7 @@
                     break;
 
                 case EventType.ConnectToRemoteServerComplete:
-                    report += "Completed Process:\tConnect to remote server";
+                    report += "Completed Process:\t\tConnect to remote server";
                     break;
 
                 case EventType.ReceiveMessageFromClientStarted:
@@ -93,7 +95,7 @@
                     break;
 
                 case EventType.ReceiveMessageFromClientComplete:
-                    report += "Completed Process:\tReceive message from client";
+                    report += "Completed Process:\t\tReceive message from client";
                     break;
 
                 case EventType.DetermineMessageLengthStarted:
@@ -101,7 +103,7 @@
                     break;
 
                 case EventType.DetermineMessageLengthComplete:
-                    report += $"Completed Process:\tDetermine message length ({MessageLengthInBytes:N0} bytes)";
+                    report += $"Completed Process:\t\tDetermine message length ({MessageLengthInBytes:N0} bytes)";
                     break;
 
                 case EventType.ReceivedMessageLengthFromSocket:
@@ -125,7 +127,7 @@
                     break;
 
                 case EventType.ReceiveMessageBytesComplete:
-                    report += "Completed Process:\tReceive message bytes";
+                    report += "Completed Process:\t\tReceive message bytes";
                     break;
 
                 case EventType.SaveUnreadBytesAfterReceiveMessage:
@@ -137,7 +139,15 @@
                     break;
 
                 case EventType.DetermineMessageTypeComplete:
-                    report += $"Completed Process:\tDetermine message type{Environment.NewLine}{Environment.NewLine}\tMessage Type:\t{MessageType}{Environment.NewLine}";
+                    report += $"Completed Process:\t\tDetermine message type{Environment.NewLine}{Environment.NewLine}\tMessage Type:\t{MessageType}{Environment.NewLine}";
+                    break;
+
+                case EventType.ProcessUnknownHostStarted:
+                    report += $"Started Process:\t\tProcess unknown host {UnknownHostsProcessed}/{TotalUnknownHosts}";
+                    break;
+
+                case EventType.ProcessUnkownHostComplete:
+                    report += $"Completed Process:\tProcess unknown host {UnknownHostsProcessed}/{TotalUnknownHosts}";
                     break;
 
                 case EventType.ShutdownListenSocketStarted:
@@ -149,7 +159,7 @@
                     break;
 
                 case EventType.ShutdownListenSocketCompletedWithError:
-                    report += $"Error occurred while attempting to shutdown listening socket:{Environment.NewLine}{ErrorMessage}";
+                    report += $"\t\t\t\t\t\tError occurred while attempting to shutdown listening socket:{Environment.NewLine}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t{ErrorMessage}";
                     break;
 
                 case EventType.SendTextMessageStarted:
@@ -233,27 +243,27 @@
                     break;
 
                 case EventType.SendFileListRequestStarted:
-                    report += $"Started Process:\tSend File List Request{Environment.NewLine}{Environment.NewLine}\tSend Request To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tRequested By:\t\t{LocalIpAddress}:{LocalPortNumber}{Environment.NewLine}\tTarget Folder:\t\t{RemoteFolder}{Environment.NewLine}";
+                    report += $"Started Process:\t\tSend file list request{Environment.NewLine}{Environment.NewLine}\tSend Request To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tRequested By:\t\t{LocalIpAddress}:{LocalPortNumber}{Environment.NewLine}\tTarget Folder:\t\t{RemoteFolder}{Environment.NewLine}";
                     break;
 
                 case EventType.SendFileListRequestComplete:
-                    report += "Completed Process:\tSend File List Request";
+                    report += "Completed Process:\t\tSend file list request";
                     break;
 
                 case EventType.ReadFileListRequestStarted:
-                    report += "Started Process:\t\tRead File List Request";
+                    report += "Started Process:\t\tRead file list request";
                     break;
 
                 case EventType.ReadFileListRequestComplete:
-                    report += $"Completed Process:\tRead File List Request{Environment.NewLine}{Environment.NewLine}\tSend Response To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tTarget Folder:\t\t{RemoteFolder}{Environment.NewLine}";
+                    report += $"Completed Process:\t\tRead file list request{Environment.NewLine}{Environment.NewLine}\tSend Response To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tTarget Folder:\t\t{RemoteFolder}{Environment.NewLine}";
                     break;
 
                 case EventType.SendFileListResponseStarted:
-                    report += $"Started Process:\tSend File List Response{Environment.NewLine}{Environment.NewLine}\tSend Response To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tFile Info:\t\t\t{FileInfoList.Count} files available{Environment.NewLine}";
+                    report += $"Started Process:\t\tSend File List Response{Environment.NewLine}{Environment.NewLine}\tSend Response To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tFile Info:\t\t\t{FileInfoList.Count} files available{Environment.NewLine}";
                     break;
 
                 case EventType.SendFileListResponseComplete:
-                    report += "Completed Process:\tSend File List Response";
+                    report += "Completed Process:\t\tSend File List Response";
                     break;
 
                 case EventType.ReadFileListResponseStarted:
@@ -261,15 +271,15 @@
                     break;
 
                 case EventType.ReadFileListResponseComplete:
-                    report += $"Completed Process:\tRead File List Response{Environment.NewLine}{Environment.NewLine}\tSent From:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tFile Info:\t{FileInfoList.Count} files available{Environment.NewLine}";
+                    report += $"Completed Process:\t\tRead File List Response{Environment.NewLine}{Environment.NewLine}\tSent From:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tFile Info:\t{FileInfoList.Count} files available{Environment.NewLine}";
                     break;
 
                 case EventType.SendInboundFileTransferInfoStarted:
-                    report += $"Started Process:\tSend request to retrieve file from remote host{Environment.NewLine}{Environment.NewLine}\tRequest File From:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tSend File To:\t\t{LocalIpAddress}:{LocalPortNumber}{Environment.NewLine}\tFile Name:\t\t\t{FileName}{Environment.NewLine}\tFile Location:\t\t{RemoteFolder}{Environment.NewLine}\tTarget Folder:\t\t{LocalFolder}{Environment.NewLine}";
+                    report += $"Started Process:\t\tSend request to retrieve file from remote host{Environment.NewLine}{Environment.NewLine}\tRequest File From:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tSend File To:\t\t{LocalIpAddress}:{LocalPortNumber}{Environment.NewLine}\tFile Name:\t\t\t{FileName}{Environment.NewLine}\tFile Location:\t\t{RemoteFolder}{Environment.NewLine}\tTarget Folder:\t\t{LocalFolder}{Environment.NewLine}";
                     break;
 
                 case EventType.SendInboundFileTransferInfoComplete:
-                    report += "Completed Process:\tSend request to retrieve file from remote host";
+                    report += "Completed Process:\t\tSend request to retrieve file from remote host";
                     break;
 
                 case EventType.ReadInboundFileTransferInfoStarted:
@@ -277,15 +287,15 @@
                     break;
 
                 case EventType.ReadInboundFileTransferInfoComplete:
-                    report += $"Completed Process:\tRead request to receive file from remote host{Environment.NewLine}{Environment.NewLine}\tFile Sent From:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tFile Name:\t\t{FileName}{Environment.NewLine}\tFile Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}\tTarget Folder:\t{LocalFolder}{Environment.NewLine}";
+                    report += $"Completed Process:\t\tRead request to receive file from remote host{Environment.NewLine}{Environment.NewLine}\tFile Sent From:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tFile Name:\t\t{FileName}{Environment.NewLine}\tFile Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}\tTarget Folder:\t{LocalFolder}{Environment.NewLine}";
                     break;
 
                 case EventType.SendOutboundFileTransferInfoStarted:
-                    report += $"Started Process:\tSend request to transfer file to remote host{Environment.NewLine}{Environment.NewLine}\tSend File To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tFile Name:\t\t{FileName}{Environment.NewLine}\tFile Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}\tFile Location:\t{LocalFolder}{Environment.NewLine}\tTarget Folder:\t{RemoteFolder}{Environment.NewLine}";
+                    report += $"Started Process:\t\tSend request to transfer file to remote host{Environment.NewLine}{Environment.NewLine}\tSend File To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tFile Name:\t\t{FileName}{Environment.NewLine}\tFile Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}\tFile Location:\t{LocalFolder}{Environment.NewLine}\tTarget Folder:\t{RemoteFolder}{Environment.NewLine}";
                     break;
 
                 case EventType.SendOutboundFileTransferInfoComplete:
-                    report += "Completed Process:\tSend request to transfer file to remote host";
+                    report += "Completed Process:\t\tSend request to transfer file to remote host";
                     break;
 
                 case EventType.ReadOutboundFileTransferInfoStarted:
@@ -293,15 +303,15 @@
                     break;
 
                 case EventType.ReadOutboundFileTransferInfoComplete:
-                    report += $"Completed Process:\tRead request to transfer file to remote host{Environment.NewLine}{Environment.NewLine}\tSend File To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tFile Name:\t\t{FileName}{Environment.NewLine}\tFile Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}\tFile Location:\t{LocalFolder}{Environment.NewLine}\tTarget Folder:\t{RemoteFolder}{Environment.NewLine}";
+                    report += $"Completed Process:\t\tRead request to transfer file to remote host{Environment.NewLine}{Environment.NewLine}\tSend File To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}\tFile Name:\t\t{FileName}{Environment.NewLine}\tFile Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}\tFile Location:\t{LocalFolder}{Environment.NewLine}\tTarget Folder:\t{RemoteFolder}{Environment.NewLine}";
                     break;
 
                 case EventType.SendFileTransferAcceptedStarted:
-                    report += $"Started Process:\tNotify client that file transfer has been accepted";
+                    report += $"Started Process:\t\tNotify client that file transfer has been accepted";
                     break;
 
                 case EventType.SendFileTransferAcceptedComplete:
-                    report += "Completed Process:\tNotify client that file transfer has been accepted";
+                    report += "Completed Process:\t\tNotify client that file transfer has been accepted";
                     break;
 
                 case EventType.ReceiveFileTransferAcceptedStarted:
@@ -309,7 +319,7 @@
                     break;
 
                 case EventType.ReceiveFileTransferAcceptedComplete:
-                    report += "Completed Process:\tReceive notification that file transfer has been accepted";
+                    report += "Completed Process:\t\tReceive notification that file transfer has been accepted";
                     break;
 
                 case EventType.SendFileTransferRejectedStarted:
@@ -337,7 +347,7 @@
                     break;
 
                 case EventType.SendFileBytesComplete:
-                    report += "Completed Process:\tSend file bytes";
+                    report += "Completed Process:\t\tSend file bytes";
                     break;
 
                 case EventType.CopySavedBytesToIncomingFile:
@@ -357,7 +367,7 @@
                     break;
 
                 case EventType.ReceiveFileBytesComplete:
-                    report += $"Completed Process:\tReceive file bytes{Environment.NewLine}{Environment.NewLine}\tDownload Started:\t{FileTransferStartTime.ToLongTimeString()}{Environment.NewLine}\tDownload Finished:\t{FileTransferCompleteTime.ToLongTimeString()}{Environment.NewLine}\tElapsed Time:\t\t{FileTransferElapsedTimeString}{Environment.NewLine}\tTransfer Rate:\t\t{FileTransferRate}{Environment.NewLine}";
+                    report += $"Completed Process:\t\tReceive file bytes{Environment.NewLine}{Environment.NewLine}\tDownload Started:\t{FileTransferStartTime.ToLongTimeString()}{Environment.NewLine}\tDownload Finished:\t{FileTransferCompleteTime.ToLongTimeString()}{Environment.NewLine}\tElapsed Time:\t\t{FileTransferElapsedTimeString}{Environment.NewLine}\tTransfer Rate:\t\t{FileTransferRate}{Environment.NewLine}";
                     break;
 
                 case EventType.SendConfirmationMessageStarted:
@@ -365,7 +375,7 @@
                     break;
 
                 case EventType.SendConfirmationMessageComplete:
-                    report += "Completed Process:\tSend confirmation message";
+                    report += "Completed Process:\t\tSend confirmation message";
                     break;
 
                 case EventType.ReceiveConfirmationMessageStarted:
@@ -373,7 +383,7 @@
                     break;
 
                 case EventType.ReceiveConfirmationMessageComplete:
-                    report += "Completed Process:\tReceive confirmation message";
+                    report += "Completed Process:\t\tReceive confirmation message";
                     break;
 
                 case EventType.SendFileTransferStalledStarted:
@@ -445,7 +455,7 @@
                     break;
 
                 case EventType.SendNotificationFolderDoesNotExistComplete:
-                    report += "Completed Process:\tNotify client that the requested folder does not exist";
+                    report += "Completed Process:\t\tNotify client that the requested folder does not exist";
                     break;
 
                 case EventType.ReceiveNotificationFolderDoesNotExistStarted:
@@ -453,15 +463,15 @@
                     break;
 
                 case EventType.ReceiveNotificationFolderDoesNotExistComplete:
-                    report += $"Completed Process:\tReceive notification that the requested folder does not exist ({RemoteServerIpAddress}:{RemoteServerPortNumber})";
+                    report += $"Completed Process:\t\tReceive notification that the requested folder does not exist ({RemoteServerIpAddress}:{RemoteServerPortNumber})";
                     break;
 
                 case EventType.SendShutdownServerCommandStarted:
-                    report += $"Started Process:\tSend shutdown server command started";
+                    report += $"Started Process:\t\tSend shutdown server command started";
                     break;
 
                 case EventType.SendShutdownServerCommandComplete:
-                    report += "Completed Process:\tSend shutdown server command complete";
+                    report += "Completed Process:\t\tSend shutdown server command complete";
                     break;
 
                 case EventType.ReceiveShutdownServerCommandStarted:
@@ -469,7 +479,7 @@
                     break;
 
                 case EventType.ReceiveShutdownServerCommandComplete:
-                    report += $"Completed Process:\tReceive shutdown server command complete";
+                    report += $"Completed Process:\t\tReceive shutdown server command complete";
                     break;
 
                 case EventType.ErrorOccurred:

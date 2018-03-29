@@ -7,7 +7,7 @@ namespace ServerConsole.Commands.Menus
         public ChangeSettingsMenu(AppState state)
         {
             ReturnToParent = true;
-            ItemText = "Change server settings";
+            ItemText = "Change settings";
             MenuText = "\nWhat setting would you like to change?";
 
         }

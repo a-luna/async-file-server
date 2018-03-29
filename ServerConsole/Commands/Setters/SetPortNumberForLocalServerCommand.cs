@@ -24,7 +24,7 @@
         {
             const string prompt = "Enter the port number this server will use to handle connections";
             _state.MyInfo.Port = ConsoleStatic.GetPortNumberFromUser(prompt, true);
-
+            
             await Task.Delay(1);
             return Result.Ok();
         }

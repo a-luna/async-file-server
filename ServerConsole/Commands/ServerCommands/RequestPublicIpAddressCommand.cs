@@ -6,6 +6,7 @@
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Console.Menu;
+    using AaronLuna.Common.Logging;
     using AaronLuna.Common.Network;
     using AaronLuna.Common.Result;
 
@@ -16,9 +17,12 @@
         readonly AppState _state;
         readonly IPAddress _clientIp;
         readonly int _clientPort;
+        readonly Logger _log = new Logger(typeof(RequestPublicIpAddressCommand));
 
         public RequestPublicIpAddressCommand(AppState state, IPAddress clientIp, int clientPort)
         {
+            _log.Info("Begin: Instantiate RequestPublicIpAddressCommand");
+
             _state = state;
             _state.Server.EventOccurred += HandleServerEvent;
 
@@ -27,6 +31,8 @@
 
             ReturnToParent = false;
             ItemText = "Request public IP address";
+
+            _log.Info("Complete: Instantiate RequestPublicIpAddressCommand");
         }
 
         public string ItemText { get; set; }
@@ -34,6 +40,8 @@
 
         public async Task<Result> ExecuteAsync()
         {
+            _log.Info("Begin: RequestPublicIpAddressCommand.ExecuteAsync");
+
             _state.WaitingForPublicIpResponse = true;
             _state.ClientResponseIsStalled = false;
             _state.ClientInfo.PublicIpAddress = IPAddress.None;
@@ -41,49 +49,37 @@
             var sendIpRequestResult =
                 await _state.Server.RequestPublicIpAsync(
                         _clientIp.ToString(),
-                        _clientPort,
-                        _state.MyInfo.LocalIpAddress.ToString(),
-                        _state.MyInfo.Port,
-                        new CancellationToken())
+                        _clientPort)
                     .ConfigureAwait(false);
 
             if (sendIpRequestResult.Failure)
             {
-                var error = $"Error requesting transfer folder path from new client:\n{sendIpRequestResult.Error}";
+                var error = $"Error requesting public IP address from new client:\n{sendIpRequestResult.Error}";
+                _log.Error($"{error} (RequestPublicIpAddressCommand.ExecuteAsync)");
                 return Result.Fail(error);
             }
 
-            var twoSecondTimer = new Timer(HandleTimeout, true, 2000, Timeout.Infinite);
+            while (_state.WaitingForPublicIpResponse) { }
 
-            while (_state.WaitingForPublicIpResponse)
-            {
-                if (_state.ClientResponseIsStalled)
-                {
-                    twoSecondTimer.Dispose();
-                    throw new TimeoutException();
-                }
-            }
+            _log.Info("Complete: RequestPublicIpAddressCommand.ExecuteAsync");
+            _state.Server.EventOccurred -= HandleServerEvent;
 
             return Result.Ok();
         }
-
-        void HandleTimeout(object state)
+        
+        void HandleServerEvent(object sender, ServerEvent serverEvent)
         {
-            _state.ClientResponseIsStalled = true;
-        }
-
-        void HandleServerEvent(object sender, ServerEvent eventInfo)
-        {
-            switch (eventInfo.EventType)
+            switch (serverEvent.EventType)
             {
                 case EventType.ReadPublicIpResponseComplete:
 
                     _state.WaitingForPublicIpResponse = false;
                     _state.ClientInfo.PublicIpAddress = 
-                        Network.ParseSingleIPv4Address(eventInfo.PublicIpAddress).Value;
+                        Network.ParseSingleIPv4Address(serverEvent.PublicIpAddress).Value;
 
                     break;
             }
         }
     }
 }
+

@@ -6,6 +6,7 @@
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Console.Menu;
+    using AaronLuna.Common.Logging;
     using AaronLuna.Common.Result;
 
     using TplSocketServer;
@@ -19,8 +20,12 @@
         readonly IPAddress _clientIp;
         readonly int _clientPort;
 
+        readonly Logger _log = new Logger(typeof(RequestTransferFolderCommand));
+
         public RequestTransferFolderCommand(AppState state, IPAddress clientIp, int clientPort)
         {
+            _log.Info("Begin: Instantiate RequestTransferFolderCommand");
+
             _state = state;
             _state.Server.EventOccurred += HandleServerEvent;
 
@@ -29,6 +34,8 @@
 
             ReturnToParent = false;
             ItemText = "Request transfer folder path";
+
+            _log.Info("Complete: Instantiate RequestTransferFolderCommand");
         }
 
         public string ItemText { get; set; }
@@ -36,6 +43,8 @@
 
         public async Task<Result> ExecuteAsync()
         {
+            _log.Info("Begin: RequestTransferFolderCommand.ExecuteAync");
+
             _state.WaitingForTransferFolderResponse = true;
             _state.ClientResponseIsStalled = false;
             _state.ClientTransferFolderPath = string.Empty;
@@ -43,10 +52,7 @@
             var sendFolderRequestResult =
                 await _state.Server.RequestTransferFolderPathAsync(
                         _clientIp.ToString(),
-                        _clientPort,
-                        _state.MyInfo.LocalIpAddress.ToString(),
-                        _state.MyInfo.Port,
-                        new CancellationToken())
+                        _clientPort)
                     .ConfigureAwait(false);
 
             if (sendFolderRequestResult.Failure)
@@ -57,35 +63,25 @@
                     userHint = ConnectionRefusedAdvice;
                 }
 
+                _log.Error($"Error: {sendFolderRequestResult.Error} (RequestTransferFolderCommand.ExecuteAsync)");
                 return Result.Fail($"{sendFolderRequestResult.Error}{userHint}");
             }
 
-            var twoSecondTimer = new Timer(HandleTimeout, true, 2000, Timeout.Infinite);
+            while (_state.WaitingForTransferFolderResponse) { }
 
-            while (_state.WaitingForTransferFolderResponse)
-            {
-                if (_state.ClientResponseIsStalled)
-                {
-                    twoSecondTimer.Dispose();
-                    throw new TimeoutException();
-                }
-            }
-            
+            _log.Info("Complete: RequestTransferFolderCommand.ExecuteAync");
+            _state.Server.EventOccurred -= HandleServerEvent;
+
             return Result.Ok();
         }
 
-        void HandleTimeout(object state)
+        void HandleServerEvent(object sender, ServerEvent serverEvent)
         {
-            _state.ClientResponseIsStalled = true;
-        }
-
-        void HandleServerEvent(object sender, ServerEvent eventInfo)
-        {
-            switch (eventInfo.EventType)
+            switch (serverEvent.EventType)
             {
                 case EventType.ReadTransferFolderResponseComplete:
                     _state.WaitingForTransferFolderResponse = false;
-                    _state.ClientTransferFolderPath = eventInfo.RemoteFolder;
+                    _state.ClientTransferFolderPath = serverEvent.RemoteFolder;
                     break;
             }
         }

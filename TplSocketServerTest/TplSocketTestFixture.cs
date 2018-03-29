@@ -7,6 +7,7 @@ namespace TplSocketServerTest
     using System.Net;
     using System.Net.Sockets;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
 
     using TplSocketServer;
@@ -137,7 +138,7 @@ namespace TplSocketServerTest
 
         Task<Result<Socket>> AcceptConnectionTask()
         {
-            return _listenSocket.AcceptTaskAsync();
+            return _listenSocket.AcceptTaskAsync(new CancellationToken());
         }
 
         async Task<Result<int>> ReceiveMessageAsync()

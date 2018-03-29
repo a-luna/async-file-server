@@ -36,6 +36,9 @@
         DetermineMessageTypeStarted,
         DetermineMessageTypeComplete,
 
+        ProcessUnknownHostStarted,
+        ProcessUnkownHostComplete,
+
         SendTextMessageStarted,
         SendTextMessageComplete,
         ReadTextMessageStarted,

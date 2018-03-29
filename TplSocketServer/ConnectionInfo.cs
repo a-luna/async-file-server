@@ -12,6 +12,17 @@
         IPAddress _pubilcIp;
         IPAddress _sessionIp;
 
+        public ConnectionInfo(IPAddress ipAddress, int port)
+        {
+            InitializeConnection(ipAddress, port);
+        }
+
+        public ConnectionInfo(string ipAddress, int port)
+        {
+            var sessionIp = Network.ParseSingleIPv4Address(ipAddress).Value;
+            InitializeConnection(sessionIp, port);
+        }
+
         public ConnectionInfo()
         {
             LocalIpAddress = IPAddress.None;
@@ -63,19 +74,25 @@
 
         public int Port { get; set; }
 
-        public string GetPublicEndPoint()
+        void InitializeConnection(IPAddress ipAddress, int port)
         {
-            return $"{PublicIpString}:{Port}";
-        }
+            var sessionIp = ipAddress;
+            var localIp = IPAddress.None;
+            var publicIp = IPAddress.None;
 
-        public byte[] GetLocalIpAddressBytes()
-        {
-            return LocalIpAddress.GetAddressBytes();
-        }
+            if (Network.IpAddressIsInPrivateAddressSpace(ipAddress))
+            {
+                localIp = sessionIp;
+            }
+            else
+            {
+                publicIp = sessionIp;
+            }
 
-        public byte[] GetPublicIpAddressBytes()
-        {
-            return PublicIpAddress.GetAddressBytes();
+            Port = port;
+            SessionIpAddress = sessionIp;
+            LocalIpAddress = localIp;
+            PublicIpAddress = publicIp;
         }
     }
 
@@ -88,13 +105,14 @@
 
             var localIpSimilarity = Network.CompareTwoIpAddresses(myInfo.LocalIpAddress, otherInfo.LocalIpAddress);
             var publicIpSimilarity = Network.CompareTwoIpAddresses(myInfo.PublicIpAddress, otherInfo.PublicIpAddress);
+            var bothPortsMatch = myInfo.Port == otherInfo.Port;
 
-            if (localIpSimilarity == IpAddressSimilarity.AllBytesMatch && myInfo.Port == otherInfo.Port)
+            if (publicIpSimilarity == IpAddressSimilarity.AllBytesMatch && bothPortsMatch)
             {
                 return true;
             }
 
-            if (publicIpSimilarity == IpAddressSimilarity.AllBytesMatch && myInfo.Port == otherInfo.Port)
+            if (localIpSimilarity == IpAddressSimilarity.AllBytesMatch && bothPortsMatch)
             {
                 return true;
             }
@@ -102,4 +120,5 @@
             return false;
         }
     }
+
 }

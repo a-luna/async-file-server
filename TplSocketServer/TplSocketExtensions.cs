@@ -1,4 +1,7 @@
 ﻿
+using System.Threading;
+using AaronLuna.Common.Threading;
+
 namespace TplSocketServer
 {
     using AaronLuna.Common.Result;
@@ -41,13 +44,16 @@ namespace TplSocketServer
             return Result.Ok();
         }
 
-        public static async Task<Result<Socket>> AcceptTaskAsync(this Socket socket)
+        public static async Task<Result<Socket>> AcceptTaskAsync(this Socket socket, CancellationToken token)
         {
             Socket transferSocket;
             try
             {
-                var acceptTask = Task<Socket>.Factory.FromAsync(socket.BeginAccept, socket.EndAccept, null);
-                transferSocket = await acceptTask.ConfigureAwait(false);
+                transferSocket = 
+                    await Task<Socket>.Factory.FromAsync(
+                        socket.BeginAccept,
+                        socket.EndAccept,
+                        null).HandleCancellation(token).ConfigureAwait(false);
             }
             catch (SocketException ex)
             {

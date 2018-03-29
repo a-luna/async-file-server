@@ -1,4 +1,6 @@
 ﻿
+using AaronLuna.Common.Logging;
+
 namespace ServerConsole.Commands.ServerCommands
 {
     using System;
@@ -11,19 +13,26 @@ namespace ServerConsole.Commands.ServerCommands
     class SendTextMessageCommand : ICommand
     {
         readonly AppState _state;
+        readonly Logger _log = new Logger(typeof(SendTextMessageCommand));
 
         public SendTextMessageCommand(AppState state)
         {
+            _log.Info("Begin: Instantiate SendTextMessageCommand");
+
             ReturnToParent = false;
             ItemText = "Send text message";
 
             _state = state;
+
+            _log.Info("Complete: Instantiate SendTextMessageCommand");
         }
 
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
         public async Task<Result> ExecuteAsync()
         {
+            _log.Info("Begin: SendTextMessageCommand.ExecuteAsync");
+
             var ipAddress = _state.ClientSessionIpAddress;
             var port = _state.ClientServerPort;
 
@@ -31,16 +40,18 @@ namespace ServerConsole.Commands.ServerCommands
             Console.WriteLine($"Please enter a text message to send to {ipAddress}:{port}");
             var message = Console.ReadLine();
 
-            _state.WaitingForUserInput = false;
-
             var sendMessageResult =
                 await _state.Server.SendTextMessageAsync(
                     message,
                     ipAddress,
-                    port,
-                    _state.MyLocalIpAddress,
-                    _state.MyServerPort,
-                    new CancellationToken()).ConfigureAwait(false);
+                    port).ConfigureAwait(false);
+
+            if (sendMessageResult.Failure)
+            {
+                _log.Error($"Error: {sendMessageResult.Error} (SendTextMessageCommand.ExecuteAsync)");
+            }
+
+            _log.Info("Complete: SendTextMessageCommand.ExecuteAsync");
 
             return sendMessageResult.Success
                 ? Result.Ok()

@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
-
-namespace ServerConsole.Commands.Menus
+﻿namespace ServerConsole.Commands.Menus
 {
+    using System.Collections.Generic;
+
     using AaronLuna.Common.Console.Menu;
+    using AaronLuna.Common.Logging;
 
     using CompositeCommands;
 
@@ -10,8 +11,12 @@ namespace ServerConsole.Commands.Menus
 
     class SelectRemoteServerMenu : SelectionMenuSingleChoice
     {
+        readonly Logger _log = new Logger(typeof(SelectRemoteServerMenu));
+
         public SelectRemoteServerMenu(AppState state)
         {
+            _log.Info("Begin: Instantiate SelectRemoteServerMenu");
+
             ReturnToParent = false;
             ItemText = "Select remote server";
             MenuText = "\nChoose a remote server for this request:";
@@ -33,6 +38,8 @@ namespace ServerConsole.Commands.Menus
             
             Options.Add(addNewClientCommand);
             Options.Add(returnToParentCommand);
+
+            _log.Info("Complete: Instantiate SelectRemoteServerMenu");
         }
     }
 }

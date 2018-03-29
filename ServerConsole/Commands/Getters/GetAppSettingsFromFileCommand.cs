@@ -10,7 +10,7 @@
     {
         AppState _state;
         readonly string _settingsFilePath;
-
+       
         public GetAppSettingsFromFileCommand(AppState state, string settingsFilePath)
         {
             ReturnToParent = false;
@@ -28,7 +28,6 @@
             Console.Clear();
 
             _state.Settings = ConsoleStatic.InitializeAppSettings(_settingsFilePath);
-
             await Task.Delay(1);
             return Result.Ok();
         }

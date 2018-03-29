@@ -1,4 +1,7 @@
-﻿namespace TplSocketServer
+﻿using System.Net;
+using AaronLuna.Common.Network;
+
+namespace TplSocketServer
 {
     public class RemoteServer
     {
@@ -8,7 +11,14 @@
             ConnectionInfo = new ConnectionInfo();
         }
 
+        public RemoteServer(string ipAddress, int port)
+        {
+            TransferFolder = string.Empty;
+            ConnectionInfo = new ConnectionInfo(ipAddress, port);
+        }
+
         public string TransferFolder { get; set; }
         public ConnectionInfo ConnectionInfo { get; set; }
     }
+
 }

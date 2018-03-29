@@ -15,11 +15,13 @@
     
     static class ConsoleStatic
     {
-        public const string NoClientSelectedError = "Please select a client before choosing an action to perform.";
+        public const string NoClientSelectedError = "Please select a remote server before choosing an action to perform.";
 
         const string PropmptMultipleLocalIPv4Addresses = "There are multiple IPv4 addresses available on this machine, choose the most appropriate local address:";
         const string NotifyLanTrafficOnly = "Unable to determine public IP address, this server will only be able to communicate with machines in the same local network.";
         const string IpChoiceClient = "\nWhich IP address would you like to use for this request?";
+
+        public const int OneHalfSecondInMilliseconds = 500;
 
         internal const int PortRangeMin = 49152;
         internal const int PortRangeMax = 65535;
