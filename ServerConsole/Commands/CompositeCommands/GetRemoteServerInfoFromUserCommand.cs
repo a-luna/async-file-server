@@ -7,7 +7,7 @@
     using AaronLuna.Common.Logging;
     using AaronLuna.Common.Result;
 
-    using TplSocketServer;
+    using TplSockets;
 
     class GetRemoteServerInfoFromUserCommand : ICommand
     {

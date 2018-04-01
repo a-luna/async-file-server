@@ -7,10 +7,7 @@ namespace ServerConsole.Commands.Getters
     using AaronLuna.Common.Console.Menu;
     using AaronLuna.Common.Logging;
     using AaronLuna.Common.Result;
-
-    using Menus;
-
-    using TplSocketServer;
+    using TplSockets;
 
     class GetSelectedRemoteServerCommand : ICommand
     {

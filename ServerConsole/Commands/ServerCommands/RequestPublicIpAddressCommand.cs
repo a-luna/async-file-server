@@ -1,8 +1,6 @@
 ﻿namespace ServerConsole.Commands.ServerCommands
 {
-    using System;
     using System.Net;
-    using System.Threading;
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Console.Menu;
@@ -10,7 +8,7 @@
     using AaronLuna.Common.Network;
     using AaronLuna.Common.Result;
 
-    using TplSocketServer;
+    using TplSockets;
 
     class RequestPublicIpAddressCommand : ICommand
     {
@@ -71,7 +69,7 @@
         {
             switch (serverEvent.EventType)
             {
-                case EventType.ReadPublicIpResponseComplete:
+                case EventType.ReceivedPublicIpAddress:
 
                     _state.WaitingForPublicIpResponse = false;
                     _state.ClientInfo.PublicIpAddress = 

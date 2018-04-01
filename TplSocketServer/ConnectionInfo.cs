@@ -1,11 +1,10 @@
-﻿namespace TplSocketServer
+﻿using System.Net;
+using System.Xml.Serialization;
+using AaronLuna.Common.Enums;
+using AaronLuna.Common.Network;
+
+namespace TplSockets
 {
-    using System.Net;
-    using System.Xml.Serialization;
-
-    using AaronLuna.Common.Enums;
-    using AaronLuna.Common.Network;
-
     public class ConnectionInfo
     {
         IPAddress _localIp;
@@ -31,6 +30,7 @@
 
             LocalIpString = string.Empty;
             PublicIpString = string.Empty;
+            SessionIpString = string.Empty;
         }
 
         [XmlIgnore]
@@ -65,13 +65,10 @@
                 PublicIpString = value.ToString();
             }
         }
-        
+
         public string SessionIpString { get; set; }
-
         public string LocalIpString { get; set; }
-
         public string PublicIpString { get; set; }
-
         public int Port { get; set; }
 
         void InitializeConnection(IPAddress ipAddress, int port)

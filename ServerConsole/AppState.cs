@@ -1,12 +1,13 @@
-﻿using System.Collections.Generic;
-using System.IO;
-using System.Net;
-using System.Threading;
-using AaronLuna.Common.Console;
-
-namespace ServerConsole
+﻿namespace ServerConsole
 {
-    using TplSocketServer;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Net;
+    using System.Threading;
+
+    using AaronLuna.Common.Console;
+
+    using TplSockets;
 
     class AppState
     {

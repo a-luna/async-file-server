@@ -1,14 +1,13 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
 using AaronLuna.Common.Numeric;
 
-namespace TplSocketServer
+namespace TplSockets
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Globalization;
-    using System.IO;
-    using System.Text;
-
     internal static class MessageWrapper
     {
         public const int SizeOfInt32InBytes = 4;
@@ -153,23 +152,15 @@ namespace TplSocketServer
             string fileSeparator,
             string localIpAddress,
             int localPort,
-            string requestorIpAddress,
-            int requestorPort,
             string remoteFolderPath)
         {
-            var requestFlag = BitConverter.GetBytes((int) MessageType.FileListResponse);
+            var requestFlag = BitConverter.GetBytes((int) MessageType.FileList);
 
             var localServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var localServerIpLen = BitConverter.GetBytes(localServerIpData.Length);
 
             var localServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));
             var localServerPortLen = BitConverter.GetBytes(localServerPortData.Length);
-
-            var requestorIpData = Encoding.UTF8.GetBytes(requestorIpAddress);
-            var requestorIpLen = BitConverter.GetBytes(requestorIpData.Length);
-
-            var requestorPortData = Encoding.UTF8.GetBytes(requestorPort.ToString(CultureInfo.InvariantCulture));
-            var requestorPortLen = BitConverter.GetBytes(requestorPortData.Length);
 
             var requestorFolderPathData = Encoding.UTF8.GetBytes(remoteFolderPath);
             var requestorFolderPathLen = BitConverter.GetBytes(requestorFolderPathData.Length);
@@ -180,10 +171,6 @@ namespace TplSocketServer
             messageWrapper.AddRange(localServerIpData);
             messageWrapper.AddRange(localServerPortLen);
             messageWrapper.AddRange(localServerPortData);
-            messageWrapper.AddRange(requestorIpLen);
-            messageWrapper.AddRange(requestorIpData);
-            messageWrapper.AddRange(requestorPortLen);
-            messageWrapper.AddRange(requestorPortData);
             messageWrapper.AddRange(requestorFolderPathLen);
             messageWrapper.AddRange(requestorFolderPathData);
 
@@ -220,7 +207,7 @@ namespace TplSocketServer
         public static byte[] ConstructTransferFolderResponse(string localIpAddress, int localPort,
             string transferFolder)
         {
-            var requestFlag = BitConverter.GetBytes((int) MessageType.TransferFolderPathResponse);
+            var requestFlag = BitConverter.GetBytes((int) MessageType.TransferFolderPath);
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
             var thisServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));
@@ -243,7 +230,7 @@ namespace TplSocketServer
         public static byte[] ConstructPublicIpAddressResponse(string localIpAddress, int localPort,
             string publicIp)
         {
-            var requestFlag = BitConverter.GetBytes((int)MessageType.PublicIpAddressResponse);
+            var requestFlag = BitConverter.GetBytes((int)MessageType.PublicIpAddress);
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
             var thisServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));

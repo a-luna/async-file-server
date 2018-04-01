@@ -1,4 +1,4 @@
-﻿namespace TplSocketServer
+﻿namespace TplSockets
 {
     using System.Collections.Generic;
     using System.IO;
@@ -22,16 +22,17 @@
                 SendTimeoutMs = 5000
             };
 
+            LoggingEnabled = false;
+            UnreadBytes = new List<byte>();
             LastAcceptedConnectionIp = IPAddress.None;
 
+            MyTransferFolderPath = GetDefaultTransferFolder();
             MyInfo = new ConnectionInfo(localIpAddress, port);
             ClientInfo = new ConnectionInfo();
-            
+
             ListenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-            UnreadBytes = new List<byte>();
 
             _outgoingFile = null;
             _incomingFile = null;
@@ -51,7 +52,7 @@
         public int LastBytesSentCount { get; set; }
         public bool LoggingEnabled { get; set; }
         public string MyTransferFolderPath { get; set; }
-        public string ClientTransferFolderPath { get; set; }        
+        public string ClientTransferFolderPath { get; set; }
         public float TransferUpdateInterval { get; set; }
         public bool FileTransferStalled { get; set; }
         public bool FileTransferCanceled { get; set; }
@@ -77,20 +78,32 @@
             get => _remoteFilePath.ToString();
             set => _remoteFilePath = new FileInfo(value);
         }
-        
+
         public int MaxNumberOfConnections => SocketSettings.MaxNumberOfConections;
         public int BufferSize => SocketSettings.BufferSize;
         public int ConnectTimeout => SocketSettings.ConnectTimeoutMs;
         public int ReceiveTimeout => SocketSettings.ReceiveTimeoutMs;
         public int SendTimeout => SocketSettings.SendTimeoutMs;
-        
+
         public string MyLocalIpAddress => MyInfo.LocalIpAddress.ToString();
         public string MyPublicIpAddress => MyInfo.PublicIpAddress.ToString();
         public int MyServerPort => MyInfo.Port;
-        
+
         public string ClientSessionIpAddress => ClientInfo.SessionIpAddress.ToString();
         public string ClientLocalIpAddress => ClientInfo.LocalIpAddress.ToString();
         public string ClientPublicIpAddress => ClientInfo.PublicIpAddress.ToString();
         public int ClientServerPort => ClientInfo.Port;
+
+        static string GetDefaultTransferFolder()
+        {
+            var defaultPath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}transfer";
+
+            if (!Directory.Exists(defaultPath))
+            {
+                Directory.CreateDirectory(defaultPath);
+            }
+
+            return defaultPath;
+        }
     }
 }

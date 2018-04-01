@@ -1,15 +1,13 @@
 ﻿namespace ServerConsole.Commands.ServerCommands
 {
-    using System;
     using System.Net;
-    using System.Threading;
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Console.Menu;
     using AaronLuna.Common.Logging;
     using AaronLuna.Common.Result;
 
-    using TplSocketServer;
+    using TplSockets;
 
     class RequestTransferFolderCommand : ICommand
     {
@@ -79,7 +77,7 @@
         {
             switch (serverEvent.EventType)
             {
-                case EventType.ReadTransferFolderResponseComplete:
+                case EventType.ReceivedTransferFolderPath:
                     _state.WaitingForTransferFolderResponse = false;
                     _state.ClientTransferFolderPath = serverEvent.RemoteFolder;
                     break;

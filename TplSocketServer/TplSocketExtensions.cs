@@ -1,15 +1,12 @@
-﻿
+﻿using System;
+using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
+using AaronLuna.Common.Result;
 using AaronLuna.Common.Threading;
 
-namespace TplSocketServer
+namespace TplSockets
 {
-    using AaronLuna.Common.Result;
-
-    using System;
-    using System.Net.Sockets;
-    using System.Threading.Tasks;
-
     public static class TplSocketExtensions
     {
         public static async Task<Result> ConnectWithTimeoutAsync(this Socket socket, string remoteIpAddress, int port, int timeoutMs)
@@ -49,7 +46,7 @@ namespace TplSocketServer
             Socket transferSocket;
             try
             {
-                transferSocket = 
+                transferSocket =
                     await Task<Socket>.Factory.FromAsync(
                         socket.BeginAccept,
                         socket.EndAccept,

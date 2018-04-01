@@ -1,8 +1,8 @@
-﻿namespace TplSocketServer
-{
-    using System;
-    using System.Threading;
+﻿using System;
+using System.Threading;
 
+namespace TplSockets
+{
     public delegate void StatusCheckerDelegate();
     public class StatusChecker
     {
@@ -16,7 +16,7 @@
 
             _noActivityTimer = new Timer(CheckInNoActivity, true, _noActivityInterval, Timeout.Infinite);
         }
-        
+
         public DateTime LastUpdateTime { get; set; }
         public event StatusCheckerDelegate NoActivityEvent;
 

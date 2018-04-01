@@ -1,26 +1,19 @@
-﻿using ServerConsole.Commands.Menus;
-
-namespace ServerConsole
+﻿namespace ServerConsole
 {
     using System;
     using System.IO;
     using System.Linq;
-    using System.Net;
     using System.Net.Sockets;
     using System.Threading;
     using System.Threading.Tasks;
-
-    using AaronLuna.Common.Console;
-    using AaronLuna.Common.Extensions;
     using AaronLuna.Common.IO;
     using AaronLuna.Common.Logging;
-    using AaronLuna.Common.Network;
     using AaronLuna.Common.Result;
 
     using Commands.CompositeCommands;
-    using Commands.Getters;
+    using Commands.Menus;
 
-    using TplSocketServer;
+    using TplSockets;
 
     public class ServerConsole
     {
@@ -78,7 +71,7 @@ namespace ServerConsole
             {
                 var listenTask =
                     Task.Run(() =>
-                        _state.Server.HandleIncomingConnectionsAsync(token),
+                        _state.Server.HandleIncomingConnectionsAsync(),
                         token);
 
                 while (_state.WaitingForServerToBeginAcceptingConnections) { }
@@ -130,7 +123,7 @@ namespace ServerConsole
         {
             switch (serverEvent.EventType)
             {
-                case EventType.AcceptConnectionAttemptStarted:
+                case EventType.ServerIsListening:
                     _state.WaitingForServerToBeginAcceptingConnections = false;
                     return;
             }

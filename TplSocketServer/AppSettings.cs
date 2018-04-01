@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -6,10 +7,8 @@ using System.Xml.Serialization;
 using AaronLuna.Common.Network;
 using AaronLuna.Common.Result;
 
-namespace TplSocketServer
+namespace TplSockets
 {
-    using System.Collections.Generic;
-
     public class AppSettings
     {
         float _transferFolderPath;
@@ -37,7 +36,7 @@ namespace TplSocketServer
 
         public int MaxDownloadAttempts { get; set; }
         public string TransferFolderPath { get; set; }
-        
+
         public SocketSettings SocketSettings { get; set; }
         public List<RemoteServer> RemoteServers { get; set; }
 

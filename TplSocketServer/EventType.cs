@@ -1,17 +1,14 @@
-﻿namespace TplSocketServer
+﻿namespace TplSockets
 {
     public enum EventType
     {
         None,
-        
-        ListenOnLocalPortStarted,
-        ListenOnLocalPortComplete,
 
-        EnterMainAcceptConnectionLoop,
-        ExitMainAcceptConnectionLoop,
+        ServerIsListening,
+        EnterMainLoop,
+        ExitMainLoop,
 
-        AcceptConnectionAttemptStarted,
-        AcceptConnectionAttemptComplete,
+        ConnectionAccepted,
 
         ConnectToRemoteServerStarted,
         ConnectToRemoteServerComplete,
@@ -25,7 +22,7 @@
 
         SaveUnreadBytesAfterReceiveMessageLength,
         CopySavedBytesToMessageData,
-        
+
         ReceiveMessageBytesStarted,
         ReceivedMessageBytesFromSocket,
         ReceiveMessageBytesComplete,
@@ -33,40 +30,37 @@
         SaveUnreadBytesAfterReceiveMessage,
         CopySavedBytesToIncomingFile,
 
-        DetermineMessageTypeStarted,
-        DetermineMessageTypeComplete,
+        ProcessRequestStarted,
+        ProcessRequestComplete,
 
         ProcessUnknownHostStarted,
         ProcessUnkownHostComplete,
 
         SendTextMessageStarted,
         SendTextMessageComplete,
-        ReadTextMessageStarted,
-        ReadTextMessageComplete,
+        ReceivedTextMessage,
 
-        SendOutboundFileTransferInfoStarted,
-        SendOutboundFileTransferInfoComplete,
-        ReadOutboundFileTransferInfoStarted,
-        ReadOutboundFileTransferInfoComplete,
+        RequestOutboundFileTransferStarted,
+        RequestOutboundFileTransferComplete,
+        ReceivedOutboundFileTransferRequest,
 
         SendFileBytesStarted,
         SentFileChunkToClient,
         SendFileBytesComplete,
 
-        SendInboundFileTransferInfoStarted,
-        SendInboundFileTransferInfoComplete,
-        ReadInboundFileTransferInfoStarted,
-        ReadInboundFileTransferInfoComplete,
+        RequestInboundFileTransferStarted,
+        RequestInboundFileTransferComplete,
+        ReceivedInboundFileTransferRequest,
 
         SendFileTransferRejectedStarted,
         SendFileTransferRejectedComplete,
         ReceiveFileTransferRejectedStarted,
-        ReceiveFileTransferRejectedComplete,
+        ClientRejectedFileTransfer,
 
         SendFileTransferAcceptedStarted,
         SendFileTransferAcceptedComplete,
         ReceiveFileTransferAcceptedStarted,
-        ReceiveFileTransferAcceptedComplete,
+        ClientAcceptedFileTransfer,
 
         ReceiveFileBytesStarted,
         ReceivedFileBytesFromSocket,
@@ -75,63 +69,54 @@
 
         SendFileTransferStalledStarted,
         SendFileTransferStalledComplete,
-        ReceiveFileTransferStalledStarted,
-        ReceiveFileTransferStalledComplete,
+        FileTransferStalled,
 
         //SendFileTransferCanceledStarted,
         //SendFileTransferCanceledComplete,
         //ReceiveFileTransferCanceledStarted,
         //ReceiveFileTransferCanceledComplete,
 
-        SendRetryOutboundFileTransferStarted,
-        SendRetryOutboundFileTransferComplete,
+        RetryOutboundFileTransferStarted,
+        RetryOutboundFileTransferComplete,
         ReceiveRetryOutboundFileTransferStarted,
-        ReceiveRetryOutboundFileTransferComplete,
+        ReceivedRetryOutboundFileTransferRequest,
 
         SendConfirmationMessageStarted,
         SendConfirmationMessageComplete,
         ReceiveConfirmationMessageStarted,
         ReceiveConfirmationMessageComplete,
 
-        SendPublicIpRequestStarted,
-        SendPublicIpRequestComplete,
-        ReadPublicIpRequestStarted,
-        ReadPublicIpRequestComplete,
+        RequestPublicIpAddressStarted,
+        RequestPublicIpAddressComplete,
+        ReceivedPublicIpAddressRequest,
 
-        SendPublicIpResponseStarted,
-        SendPublicIpResponseComplete,
-        ReadPublicIpResponseStarted,
-        ReadPublicIpResponseComplete,
+        SendPublicIpAddressStarted,
+        SendPublicIpAddressComplete,
+        ReceivedPublicIpAddress,
 
-        SendTransferFolderRequestStarted,
-        SendTransferFolderRequestComplete,
-        ReadTransferFolderRequestStarted,
-        ReadTransferFolderRequestComplete,
+        RequestTransferFolderPathStarted,
+        RequestTransferFolderPathComplete,
+        ReceivedTransferFolderPathRequest,
 
-        SendTransferFolderResponseStarted,
-        SendTransferFolderResponseComplete,
-        ReadTransferFolderResponseStarted,
-        ReadTransferFolderResponseComplete,
+        SendTransferFolderPathStarted,
+        SendTransferFolderPathComplete,
+        ReceivedTransferFolderPath,
 
-        SendFileListRequestStarted,
-        SendFileListRequestComplete,
-        ReadFileListRequestStarted,
-        ReadFileListRequestComplete,
+        RequestFileListStarted,
+        RequestFileListComplete,
+        ReceivedFileListRequest,
 
-        SendFileListResponseStarted,
-        SendFileListResponseComplete,
-        ReadFileListResponseStarted,
-        ReadFileListResponseComplete,
+        SendFileListStarted,
+        SendFileListComplete,
+        ReceivedFileList,
 
         SendNotificationNoFilesToDownloadStarted,
         SendNotificationNoFilesToDownloadComplete,
-        ReceiveNotificationNoFilesToDownloadStarted,
-        ReceiveNotificationNoFilesToDownloadComplete,
+        ReceivedNotificationNoFilesToDownload,
 
         SendNotificationFolderDoesNotExistStarted,
         SendNotificationFolderDoesNotExistComplete,
-        ReceiveNotificationFolderDoesNotExistStarted,
-        ReceiveNotificationFolderDoesNotExistComplete,
+        ReceivedNotificationFolderDoesNotExist,
 
         ShutdownListenSocketStarted,
         ShutdownListenSocketCompletedWithoutError,
@@ -141,8 +126,7 @@
 
         SendShutdownServerCommandStarted,
         SendShutdownServerCommandComplete,
-        ReceiveShutdownServerCommandStarted,
-        ReceiveShutdownServerCommandComplete,
+        ReceivedShutdownServerCommand,
 
         ErrorOccurred
     }

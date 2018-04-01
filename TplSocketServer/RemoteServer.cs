@@ -1,7 +1,4 @@
-﻿using System.Net;
-using AaronLuna.Common.Network;
-
-namespace TplSocketServer
+﻿namespace TplSockets
 {
     public class RemoteServer
     {

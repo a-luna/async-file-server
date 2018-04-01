@@ -1,25 +1,25 @@
-﻿using System.IO;
-using System.Net;
-using System.Threading;
-using AaronLuna.Common.Console;
-using AaronLuna.Common.Extensions;
-using AaronLuna.Common.IO;
-using AaronLuna.Common.Network;
-using ServerConsole.Commands.CompositeCommands;
-
-namespace ServerConsole.Commands.Menus
+﻿namespace ServerConsole.Commands.Menus
 {
     using System;
+    using System.IO;
     using System.Collections.Generic;
+    using System.Net;
+    using System.Threading;
     using System.Threading.Tasks;
 
+    using AaronLuna.Common.Console;
     using AaronLuna.Common.Console.Menu;
+    using AaronLuna.Common.Extensions;
+    using AaronLuna.Common.IO;
     using AaronLuna.Common.Logging;
+    using AaronLuna.Common.Network;
     using AaronLuna.Common.Result;
 
     using ServerCommands;
 
-    using TplSocketServer;
+    using TplSockets;
+
+    using CompositeCommands;
 
     class MainMenu : SelectionMenuLoop
     {
@@ -133,12 +133,12 @@ namespace ServerConsole.Commands.Menus
 
             switch (serverEvent.EventType)
             {
-                case EventType.ReadOutboundFileTransferInfoComplete:
+                case EventType.ReceivedOutboundFileTransferRequest:
                     Console.WriteLine("\nReceived Outbound File Transfer Request");
                     Console.WriteLine($"File Requested:\t\t{serverEvent.FileName}\nFile Size:\t\t{serverEvent.FileSizeString}\nRemote Endpoint:\t{serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}\nTarget Directory:\t{serverEvent.RemoteFolder}");
                     break;
 
-                case EventType.ReadInboundFileTransferInfoComplete:
+                case EventType.ReceivedInboundFileTransferRequest:
                     Console.WriteLine($"\nIncoming file transfer from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}:");
                     Console.WriteLine($"File Name:\t{serverEvent.FileName}\nFile Size:\t{serverEvent.FileSizeString}\nSave To:\t{serverEvent.LocalFolder}");
                     break;
@@ -147,7 +147,7 @@ namespace ServerConsole.Commands.Menus
                     Console.WriteLine($"\nClient ({serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}) requested list of files available to download, but transfer folder is empty");
                     break;
 
-                case EventType.ReceiveNotificationNoFilesToDownloadComplete:
+                case EventType.ReceivedNotificationNoFilesToDownload:
                     Console.WriteLine("\nClient has no files available for download.");
                     break;
 
@@ -168,15 +168,15 @@ namespace ServerConsole.Commands.Menus
                     Console.WriteLine("Client confirmed file transfer completed successfully");
                     break;
 
-                case EventType.SendFileListRequestStarted:
+                case EventType.RequestFileListStarted:
                     Console.WriteLine($"Sending request for list of available files to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}...");
                     break;
 
-                case EventType.ReadFileListRequestComplete:
+                case EventType.ReceivedFileListRequest:
                     Console.WriteLine($"\nReceived request for list of available files from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}...");
                     break;
 
-                case EventType.SendFileListResponseStarted:
+                case EventType.SendFileListStarted:
 
                     fileCount = serverEvent.FileInfoList.Count == 1
                         ? $"{serverEvent.FileInfoList.Count} file in list"
@@ -185,7 +185,7 @@ namespace ServerConsole.Commands.Menus
                     Console.WriteLine($"Sending list of files to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({fileCount})");
                     break;
 
-                case EventType.ReadFileListResponseComplete:
+                case EventType.ReceivedFileList:
 
                     fileCount = serverEvent.FileInfoList.Count == 1
                         ? $"{serverEvent.FileInfoList.Count} file in list"
@@ -194,29 +194,29 @@ namespace ServerConsole.Commands.Menus
                     Console.WriteLine($"Received list of files from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} ({fileCount})\n");
                     break;
 
-                case EventType.SendPublicIpRequestStarted:
+                case EventType.RequestPublicIpAddressStarted:
                     Console.WriteLine($"\nSending request for public IP address to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}...");
                     break;
 
-                case EventType.ReadPublicIpRequestComplete:
+                case EventType.ReceivedPublicIpAddressRequest:
                     Console.WriteLine($"\nReceived request for public IP address from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}...");
                     break;
 
-                case EventType.SendTransferFolderResponseStarted:
-                case EventType.SendPublicIpResponseStarted:
+                case EventType.SendTransferFolderPathStarted:
+                case EventType.SendPublicIpAddressStarted:
                     Console.WriteLine("Sent");
                     break;
 
-                case EventType.ReadTransferFolderResponseComplete:
-                case EventType.ReadPublicIpResponseComplete:
+                case EventType.ReceivedTransferFolderPath:
+                case EventType.ReceivedPublicIpAddress:
                     Console.Write("Success");
                     break;
 
-                case EventType.SendTransferFolderRequestStarted:
+                case EventType.RequestTransferFolderPathStarted:
                     Console.WriteLine($"Sending request for transfer folder path to {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}...");
                     break;
 
-                case EventType.ReadTransferFolderRequestComplete:
+                case EventType.ReceivedTransferFolderPathRequest:
                     Console.WriteLine($"\nReceived request for transfer folder path from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}...");
                     break;
 
@@ -238,35 +238,35 @@ namespace ServerConsole.Commands.Menus
         {
             switch (serverEvent.EventType)
             {
-                case EventType.AcceptConnectionAttemptStarted:
+                case EventType.ServerIsListening:
                     _state.WaitingForServerToBeginAcceptingConnections = false;
                     return;
 
-                //case EventType.AcceptConnectionAttemptComplete:
+                //case EventType.ConnectionAccepted:
                 //    await SaveNewClient(serverEvent.RemoteServerIpAddress, serverEvent.RemoteServerPortNumber).ConfigureAwait(false);
                 //    return;
 
-                //case EventType.ReadTransferFolderRequestComplete:
+                //case EventType.ReceivedTransferFolderPathRequest:
                 //    _state.IgnoreIncomingConnections = true;
                 //    break;
 
-                //case EventType.SendPublicIpResponseStarted:
+                //case EventType.SendPublicIpAddressStarted:
                 //    _state.IgnoreIncomingConnections = false;
                 //    await ProcessUnknownHostsAsync();
                 //    break;
 
-                case EventType.SendPublicIpResponseComplete:
+                case EventType.SendPublicIpAddressComplete:
                     await Task.Delay(100);
                     var clientIp = _state.ClientSessionIpAddress;
                     var clientPort = _state.ClientServerPort;
                     SaveNewClient(clientIp, clientPort);
                     break;
 
-                case EventType.ReadTextMessageComplete:
+                case EventType.ReceivedTextMessage:
                     HandleReadTextMessageComplete(serverEvent);
                     break;
 
-                case EventType.ReadInboundFileTransferInfoComplete:
+                case EventType.ReceivedInboundFileTransferRequest:
                     _state.ClientInfo.SessionIpAddress = Network.ParseSingleIPv4Address(serverEvent.RemoteServerIpAddress).Value;
                     _state.ClientInfo.Port = serverEvent.RemoteServerPortNumber;
                     _state.DownloadFileName = serverEvent.FileName;
@@ -285,7 +285,7 @@ namespace ServerConsole.Commands.Menus
                     _state.WaitingForConfirmationMessage = false;
                     break;
 
-                case EventType.ReadFileListResponseComplete:
+                case EventType.ReceivedFileList:
                     _state.WaitingForFileListResponse = false;
                     _state.FileInfoList = serverEvent.FileInfoList;
                     return;
@@ -298,17 +298,17 @@ namespace ServerConsole.Commands.Menus
                     _state.SignalExitRetryDownloadLogic.WaitOne();
                     break;
 
-                case EventType.ReceiveFileTransferRejectedComplete:
+                case EventType.ClientRejectedFileTransfer:
                     _state.WaitingForConfirmationMessage = false;
                     _state.FileTransferRejected = true;
                     break;
 
-                case EventType.ReceiveFileTransferStalledComplete:
+                case EventType.FileTransferStalled:
                     _state.WaitingForConfirmationMessage = false;
                     _state.FileTransferCanceled = true;
                     break;
 
-                case EventType.ReceiveNotificationNoFilesToDownloadComplete:
+                case EventType.ReceivedNotificationNoFilesToDownload:
                     _state.WaitingForFileListResponse = false;
                     _state.NoFilesAvailableForDownload = true;
                     break;

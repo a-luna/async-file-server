@@ -10,7 +10,7 @@ namespace TplSocketServerTest
     using System.Threading;
     using System.Threading.Tasks;
 
-    using TplSocketServer;
+    using TplSockets;
 
     [TestClass]
     public class TplSocketTestFixture

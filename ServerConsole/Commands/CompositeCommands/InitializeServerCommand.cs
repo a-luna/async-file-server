@@ -10,7 +10,7 @@
     using Getters;
     using Setters;
 
-    using TplSocketServer;
+    using TplSockets;
 
     class InitializeServerCommand : ICommand
     {

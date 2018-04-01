@@ -391,6 +391,8 @@ $RECYCLE.BIN/
 *.lnk
 
 # Custom for this project
+*.playlist
 */settings.xml
 */transfer/*
 *.jpg
+*/TplSocketServerTools/*

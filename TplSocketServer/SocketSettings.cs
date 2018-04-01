@@ -1,4 +1,4 @@
-﻿namespace TplSocketServer
+﻿namespace TplSockets
 {
     public class SocketSettings
     {

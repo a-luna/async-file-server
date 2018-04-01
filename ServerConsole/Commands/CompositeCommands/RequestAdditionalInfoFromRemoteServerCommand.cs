@@ -10,7 +10,7 @@
 
     using ServerCommands;
 
-    using TplSocketServer;
+    using TplSockets;
 
     class RequestAdditionalInfoFromRemoteServerCommand : ICommand
     {
