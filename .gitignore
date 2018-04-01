@@ -395,4 +395,4 @@ $RECYCLE.BIN/
 */settings.xml
 */transfer/*
 *.jpg
-*/TplSocketServerTools/*
+TplSocketServerTools/*
