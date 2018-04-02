@@ -1,14 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Text;
-using AaronLuna.Common.Numeric;
-
-namespace TplSockets
+﻿namespace TplSockets
 {
-    internal static class MessageWrapper
+    using System;
+    using System.Collections.Generic;
+    using System.Globalization;
+    using System.IO;
+    using System.Linq;
+    using System.Text;
+
+    using AaronLuna.Common.Numeric;
+
+    static class MessageWrapper
     {
         public const int SizeOfInt32InBytes = 4;
         public const int SizeOfCharInBytes = 2;

@@ -1,13 +1,10 @@
-﻿
-using AaronLuna.Common.Logging;
-
-namespace ServerConsole.Commands.ServerCommands
+﻿namespace ServerConsole.Commands.ServerCommands
 {
     using System;
-    using System.Threading;
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Console.Menu;
+    using AaronLuna.Common.Logging;
     using AaronLuna.Common.Result;
 
     class SendTextMessageCommand : ICommand
@@ -43,7 +40,7 @@ namespace ServerConsole.Commands.ServerCommands
             var sendMessageResult =
                 await _state.Server.SendTextMessageAsync(
                     message,
-                    ipAddress,
+                    ipAddress.ToString(),
                     port).ConfigureAwait(false);
 
             if (sendMessageResult.Failure)

@@ -500,7 +500,7 @@
             Console.WriteLine($"\n\nFile transfer has stalled, {sinceLastActivity.ToFormattedString()} elapsed since last data received");
         }
 
-        void SaveNewClient(string clientIpAddress, int clientPort)
+        void SaveNewClient(IPAddress clientIpAddress, int clientPort)
         {
             var newClient = new RemoteServer(clientIpAddress, clientPort);
 

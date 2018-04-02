@@ -72,7 +72,7 @@ namespace TplSockets
             SocketFlags socketFlags,
             int timeoutMs)
         {
-            var bytesSent = 0;
+            int bytesSent;
             try
             {
                 var asyncResult = socket.BeginSend(buffer, offset, size, socketFlags, null, null);

@@ -1,10 +1,11 @@
-﻿using System.Net;
-using System.Xml.Serialization;
-using AaronLuna.Common.Enums;
-using AaronLuna.Common.Network;
-
-namespace TplSockets
+﻿namespace TplSockets
 {
+    using System.Net;
+    using System.Xml.Serialization;
+
+    using AaronLuna.Common.Enums;
+    using AaronLuna.Common.Network;
+
     public class ConnectionInfo
     {
         IPAddress _localIp;

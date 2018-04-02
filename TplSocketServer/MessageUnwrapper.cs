@@ -1,12 +1,11 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-
-namespace TplSockets
+﻿namespace TplSockets
 {
-    internal static class MessageUnwrapper
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Text;
+
+    static class MessageUnwrapper
     {
         public const int SizeOfInt32InBytes = 4;
         public const int SizeOfCharInBytes = 2;

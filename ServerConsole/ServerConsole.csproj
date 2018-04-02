@@ -10,6 +10,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="transfer\**" />
+    <EmbeddedResource Remove="transfer\**" />
+    <None Remove="transfer\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\aaronluna-common\AaronLuna.Common\AaronLuna.Common.csproj" />
     <ProjectReference Include="..\TplSocketServer\TplSockets.csproj" />
   </ItemGroup>

@@ -1,14 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Net;
-using System.Xml.Serialization;
-using AaronLuna.Common.Network;
-using AaronLuna.Common.Result;
-
-namespace TplSockets
+﻿namespace TplSockets
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Globalization;
+    using System.IO;
+    using System.Net;
+    using System.Xml.Serialization;
+
+    using AaronLuna.Common.Network;
+    using AaronLuna.Common.Result;
+
     public class AppSettings
     {
         float _transferFolderPath;

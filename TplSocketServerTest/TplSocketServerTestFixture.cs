@@ -135,7 +135,7 @@ namespace TplSocketServerTest
 
             _socketSettings = new SocketSettings
             {
-                MaxNumberOfConections = 1,
+                MaxNumberOfConnections = 1,
                 BufferSize = 1024,
                 ConnectTimeoutMs = 5000,
                 ReceiveTimeoutMs = 5000,
@@ -180,7 +180,7 @@ namespace TplSocketServerTest
                 Console.WriteLine("Accept connection task canceled");
             }
 
-            await Task.Delay(500);
+            //await Task.Delay(500);
 
             if (GenerateLogFiles)
             {
@@ -203,8 +203,7 @@ namespace TplSocketServerTest
             _server = new TplSocketServer(_localIp, remoteServerPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _remoteFolder
+                MyTransferFolderPath = _remoteFolder
             };
 
             _server.EventOccurred += HandleServerEvent;
@@ -213,8 +212,7 @@ namespace TplSocketServerTest
             _client = new TplSocketServer(_localIp, localPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _localFolder
+                MyTransferFolderPath = _localFolder
             };
 
             _client.EventOccurred += HandleClientEvent;
@@ -285,8 +283,7 @@ namespace TplSocketServerTest
             _server = new TplSocketServer(_localIp, remoteServerPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _remoteFolder
+                MyTransferFolderPath = _remoteFolder
             };
 
             _server.EventOccurred += HandleServerEvent;
@@ -295,8 +292,7 @@ namespace TplSocketServerTest
             _client = new TplSocketServer(_localIp, localPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _localFolder
+                MyTransferFolderPath = _localFolder
             };
 
             _client.EventOccurred += HandleClientEvent;
@@ -367,8 +363,7 @@ namespace TplSocketServerTest
             _server = new TplSocketServer(_localIp, remoteServerPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _remoteFolder
+                MyTransferFolderPath = _remoteFolder
             };
 
             _server.EventOccurred += HandleServerEvent;
@@ -377,8 +372,7 @@ namespace TplSocketServerTest
             _client = new TplSocketServer(_localIp, localPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _localFolder
+                MyTransferFolderPath = _localFolder
             };
 
             _client.EventOccurred += HandleClientEvent;
@@ -444,8 +438,7 @@ namespace TplSocketServerTest
             _server = new TplSocketServer(_localIp, remoteServerPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _remoteFolder
+                MyTransferFolderPath = _remoteFolder
             };
 
             _server.EventOccurred += HandleServerEvent;
@@ -454,14 +447,13 @@ namespace TplSocketServerTest
             _client = new TplSocketServer(_localIp, localPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _localFolder
+                MyTransferFolderPath = _localFolder
             };
 
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
-            _server.TransferFolderPath = _remoteFolder;
+            _server.MyTransferFolderPath = _remoteFolder;
             var token = _cts.Token;
 
            _runServerTask =
@@ -504,8 +496,7 @@ namespace TplSocketServerTest
             _server = new TplSocketServer(_localIp, remoteServerPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _remoteFolder
+                MyTransferFolderPath = _remoteFolder
             };
 
             _server.EventOccurred += HandleServerEvent;
@@ -514,8 +505,7 @@ namespace TplSocketServerTest
             _client = new TplSocketServer(_localIp, localPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _localFolder
+                MyTransferFolderPath = _localFolder
             };
 
             _client.EventOccurred += HandleClientEvent;
@@ -570,8 +560,7 @@ namespace TplSocketServerTest
             _server = new TplSocketServer(_localIp, remoteServerPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _remoteFolder
+                MyTransferFolderPath = _remoteFolder
             };
 
             _server.EventOccurred += HandleServerEvent;
@@ -580,14 +569,13 @@ namespace TplSocketServerTest
             _client = new TplSocketServer(_localIp, localPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _localFolder
+                MyTransferFolderPath = _localFolder
             };
 
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
-            _server.TransferFolderPath = _testFilesFolder;
+            _server.MyTransferFolderPath = _testFilesFolder;
             var token = _cts.Token;
 
            _runServerTask =
@@ -652,8 +640,7 @@ namespace TplSocketServerTest
             _server = new TplSocketServer(_localIp, remotePort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _remoteFolder
+                MyTransferFolderPath = _remoteFolder
             };
 
             _server.EventOccurred += HandleServerEvent;
@@ -662,8 +649,7 @@ namespace TplSocketServerTest
             _client = new TplSocketServer(_localIp, localPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _localFolder
+                MyTransferFolderPath = _localFolder
             };
 
             _client.EventOccurred += HandleClientEvent;
@@ -747,8 +733,7 @@ namespace TplSocketServerTest
             _server = new TplSocketServer(_localIp, remoteServerPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _remoteFolder
+                MyTransferFolderPath = _remoteFolder
             };
 
             _server.EventOccurred += HandleServerEvent;
@@ -757,8 +742,7 @@ namespace TplSocketServerTest
             _client = new TplSocketServer(_localIp, localPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _localFolder
+                MyTransferFolderPath = _localFolder
             };
 
             _client.EventOccurred += HandleClientEvent;
@@ -840,8 +824,7 @@ namespace TplSocketServerTest
             _server = new TplSocketServer(_localIp, remoteServerPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _remoteFolder
+                MyTransferFolderPath = _remoteFolder
             };
 
             _server.EventOccurred += HandleServerEvent;
@@ -850,8 +833,7 @@ namespace TplSocketServerTest
             _client = new TplSocketServer(_localIp, localPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _localFolder
+                MyTransferFolderPath = _localFolder
             };
 
             _client.EventOccurred += HandleClientEvent;
@@ -925,8 +907,7 @@ namespace TplSocketServerTest
             _server = new TplSocketServer(_localIp, remoteServerPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _remoteFolder
+                MyTransferFolderPath = _remoteFolder
             };
 
             _server.EventOccurred += HandleServerEvent;
@@ -935,8 +916,7 @@ namespace TplSocketServerTest
             _client = new TplSocketServer(_localIp, localPort)
             {
                 SocketSettings = _socketSettings,
-                LoggingEnabled = false,
-                TransferFolderPath = _localFolder
+                MyTransferFolderPath = _localFolder
             };
 
             _client.EventOccurred += HandleClientEvent;

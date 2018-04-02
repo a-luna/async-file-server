@@ -59,36 +59,33 @@
         public List<(string filePath, long fileSize)> FileInfoList { get; set; }
         public ConsoleProgressBar Progress { get; set; }
 
-        public ConnectionInfo MyInfo
-        {
-            get => Server.State.MyInfo;
-            set => Server.State.MyInfo = value;
-        }
+        public ConnectionInfo MyInfo => Server.MyInfo;
         
-        public ConnectionInfo ClientInfo
-        {
-            get => Server.State.ClientInfo;
-            set => Server.State.ClientInfo = value;
-        }
-
         public string MyTransferFolderPath
         {
-            get => Server.TransferFolderPath;
-            set => Server.TransferFolderPath = value;
+            get => Server.MyTransferFolderPath;
+            set => Server.MyTransferFolderPath = value;
         }
 
-        public string MyLocalIpAddress => Server.State.MyLocalIpAddress;
-        public string MyPublicIpAddress => Server.State.MyPublicIpAddress;
-        public int MyServerPort => Server.State.MyServerPort;
+        public IPAddress MyLocalIpAddress => Server.MyLocalIpAddress;
+        public IPAddress MyPublicIpAddress => Server.MyPublicIpAddress;
+        public int MyServerPort => Server.MyServerPort;
+
+        public ConnectionInfo ClientInfo
+        {
+            get => Server.ClientInfo;
+            set => Server.ClientInfo = value;
+        }
 
         public string ClientTransferFolderPath
         {
-            get => Server.State.ClientTransferFolderPath;
-            set => Server.State.ClientTransferFolderPath = value;
+            get => Server.ClientTransferFolderPath;
+            set => Server.ClientTransferFolderPath = value;
         }
-        public string ClientSessionIpAddress => Server.State.ClientSessionIpAddress;
-        public string ClientLocalIpAddress => Server.State.ClientLocalIpAddress;
-        public string ClientPublicIpAddress => Server.State.ClientPublicIpAddress;
-        public int ClientServerPort => Server.State.ClientServerPort;
+
+        public IPAddress ClientSessionIpAddress => Server.ClientSessionIpAddress;
+        public IPAddress ClientLocalIpAddress => Server.ClientLocalIpAddress;
+        public IPAddress ClientPublicIpAddress => Server.ClientPublicIpAddress;
+        public int ClientServerPort => Server.ClientServerPort;
     }
 }

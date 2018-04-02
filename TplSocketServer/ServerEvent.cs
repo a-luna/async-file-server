@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using AaronLuna.Common.Extensions;
-using AaronLuna.Common.IO;
-
-namespace TplSockets
+﻿namespace TplSockets
 {
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using AaronLuna.Common.Extensions;
+    using AaronLuna.Common.IO;
+    using AaronLuna.Common.Numeric;
+
     public class ServerEvent
     {
         public EventType EventType { get; set; }
@@ -13,9 +14,11 @@ namespace TplSockets
         public int ExpectedByteCount { get; set; }
         public int UnreadByteCount { get; set; }
         public int MessageLengthInBytes { get; set; }
+        public byte[] MessageLengthData { get; set; }
         public int CurrentMessageBytesReceived { get; set; }
         public int TotalMessageBytesReceived { get; set; }
         public int MessageBytesRemaining { get; set; }
+        public byte[] MessageData { get; set; }
         public MessageType MessageType { get; set; }
         public string TextMessage { get; set; }
         public string RemoteServerIpAddress { get; set; }
@@ -54,7 +57,7 @@ namespace TplSockets
 
         string Report()
         {
-            const string IndentLevel1 = "\t\t\t\t\t\t\t\t\t\t";
+            const string indentLevel1 = "\t\t\t\t\t\t\t\t\t\t";
             var report = string.Empty;
             switch (EventType)
             {
@@ -96,15 +99,15 @@ namespace TplSockets
                     break;
 
                 case EventType.DetermineMessageLengthComplete:
-                    report += $"Incoming message length: {MessageLengthInBytes:N0} bytes";
+                    report += $"Incoming message length: {MessageLengthInBytes:N0} bytes ({MessageLengthData.ToHexString()})";
                     break;
 
                 case EventType.ReceivedMessageLengthFromSocket:
                     report +=
                         $"Received data from socket:{Environment.NewLine}{Environment.NewLine}" +
-                        $"{IndentLevel1}Bytes Received:\t\t{BytesReceived:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}Expected Bytes:\t\t{MessageLengthInBytes:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}Unread Bytes:\t\t{UnreadByteCount:N0}{Environment.NewLine}";
+                        $"{indentLevel1}Bytes Received:\t\t{BytesReceived:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Expected Bytes:\t\t{MessageLengthInBytes:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Unread Bytes:\t\t{UnreadByteCount:N0}{Environment.NewLine}";
                     break;
 
                 case EventType.SaveUnreadBytesAfterReceiveMessageLength:
@@ -116,21 +119,21 @@ namespace TplSockets
                 case EventType.CopySavedBytesToMessageData:
                     report +=
                         $"Processed unread bytes as message data:{Environment.NewLine}{Environment.NewLine}" +
-                        $"{IndentLevel1}Unread Bytes:\t\t{UnreadByteCount:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}Message Length:\t\t{MessageLengthInBytes:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}Bytes Remaining:\t{MessageBytesRemaining:N0}{Environment.NewLine}";
+                        $"{indentLevel1}Unread Bytes:\t\t{UnreadByteCount:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Message Length:\t\t{MessageLengthInBytes:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Bytes Remaining:\t{MessageBytesRemaining:N0}{Environment.NewLine}";
                     break;
 
                 case EventType.ReceivedMessageBytesFromSocket:
                     report +=
                         $"Received data from socket:{Environment.NewLine}{Environment.NewLine}" +
-                        $"{IndentLevel1}Socket Read Count:\t\t\t{SocketReadCount:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}Bytes Received:\t\t\t\t{BytesReceived:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}Message Bytes (Current):\t{CurrentMessageBytesReceived:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}Message Bytes (Total):\t\t{TotalMessageBytesReceived:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}Message Length:\t\t\t\t{MessageLengthInBytes:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}Bytes Remaining:\t\t\t{MessageBytesRemaining:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}Unread Bytes:\t\t\t\t{UnreadByteCount:N0}{Environment.NewLine}";
+                        $"{indentLevel1}Socket Read Count:\t\t\t{SocketReadCount:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Bytes Received:\t\t\t\t{BytesReceived:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Message Bytes (Current):\t{CurrentMessageBytesReceived:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Message Bytes (Total):\t\t{TotalMessageBytesReceived:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Message Length:\t\t\t\t{MessageLengthInBytes:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Bytes Remaining:\t\t\t{MessageBytesRemaining:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Unread Bytes:\t\t\t\t{UnreadByteCount:N0}{Environment.NewLine}";
                     break;
 
                 case EventType.ReceiveMessageBytesStarted:
@@ -173,7 +176,7 @@ namespace TplSockets
                 case EventType.SendTextMessageStarted:
                     report +=
                         $"Sending text message to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{IndentLevel1}Message:\t\t\t{TextMessage}{Environment.NewLine}";
+                        $"{indentLevel1}Message:\t\t\t{TextMessage}{Environment.NewLine}";
                     break;
 
                 case EventType.SendTextMessageComplete:
@@ -183,8 +186,8 @@ namespace TplSockets
                 case EventType.ReceivedTextMessage:
                     report +=
                         $"Text message received{Environment.NewLine}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{IndentLevel1}Message From:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
-                        $"{IndentLevel1}Message:\t\t{TextMessage}{Environment.NewLine}";
+                        $"{indentLevel1}Message From:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
+                        $"{indentLevel1}Message:\t\t{TextMessage}{Environment.NewLine}";
                     break;
 
                 case EventType.RequestPublicIpAddressStarted:
@@ -229,7 +232,7 @@ namespace TplSockets
                 case EventType.SendTransferFolderPathStarted:
                     report +=
                         $"Sending transfer folder path to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{IndentLevel1}Transfer Folder Path:\t{LocalFolder}{Environment.NewLine}";
+                        $"{indentLevel1}Transfer Folder Path:\t{LocalFolder}{Environment.NewLine}";
                     break;
 
                 case EventType.SendTransferFolderPathComplete:
@@ -239,20 +242,20 @@ namespace TplSockets
                 case EventType.ReceivedTransferFolderPath:
                     report +=
                         $"Transfer folder path received from {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{IndentLevel1}Transfer Folder Path:\t{RemoteFolder}{Environment.NewLine}";
+                        $"{indentLevel1}Transfer Folder Path:\t{RemoteFolder}{Environment.NewLine}";
                     break;
 
                 case EventType.RequestFileListStarted:
                     report +=
                         $"Sending request for available file information to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{IndentLevel1}Requested By:\t\t{LocalIpAddress}:{LocalPortNumber}{Environment.NewLine}" +
-                        $"{IndentLevel1}Target Folder:\t\t{RemoteFolder}{Environment.NewLine}";
+                        $"{indentLevel1}Requested By:\t\t{LocalIpAddress}:{LocalPortNumber}{Environment.NewLine}" +
+                        $"{indentLevel1}Target Folder:\t\t{RemoteFolder}{Environment.NewLine}";
                     break;
                     
                 case EventType.ReceivedFileListRequest:
                     report += $"File list request details{Environment.NewLine}{Environment.NewLine}" +
-                              $"{IndentLevel1}Send Response To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
-                              $"{IndentLevel1}Target Folder:\t\t{RemoteFolder}{Environment.NewLine}";
+                              $"{indentLevel1}Send Response To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
+                              $"{indentLevel1}Target Folder:\t\t{RemoteFolder}{Environment.NewLine}";
                     break;
 
                 case EventType.SendFileListStarted:
@@ -272,28 +275,28 @@ namespace TplSockets
                 case EventType.RequestInboundFileTransferStarted:
                     report +=
                         $"Sending inbound file transfer request to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{IndentLevel1}Requested By:\t\t{LocalIpAddress}:{LocalPortNumber}{Environment.NewLine}" +
-                        $"{IndentLevel1}File Name:\t\t\t{FileName}{Environment.NewLine}" +
-                        $"{IndentLevel1}File Location:\t\t{RemoteFolder}{Environment.NewLine}" +
-                        $"{IndentLevel1}Target Folder:\t\t{LocalFolder}{Environment.NewLine}";
+                        $"{indentLevel1}Requested By:\t\t{LocalIpAddress}:{LocalPortNumber}{Environment.NewLine}" +
+                        $"{indentLevel1}File Name:\t\t\t{FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}File Location:\t\t{RemoteFolder}{Environment.NewLine}" +
+                        $"{indentLevel1}Target Folder:\t\t{LocalFolder}{Environment.NewLine}";
                     break;
                     
                 case EventType.ReceivedInboundFileTransferRequest:
                     report +=
                         $"File transfer request details{Environment.NewLine}{Environment.NewLine}" +
-                        $"{IndentLevel1}File Sender:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
-                        $"{IndentLevel1}File Name:\t\t{FileName}{Environment.NewLine}" +
-                        $"{IndentLevel1}File Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
-                        $"{IndentLevel1}Target Folder:\t{LocalFolder}{Environment.NewLine}";
+                        $"{indentLevel1}File Sender:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
+                        $"{indentLevel1}File Name:\t\t{FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
+                        $"{indentLevel1}Target Folder:\t{LocalFolder}{Environment.NewLine}";
                     break;
 
                 case EventType.RequestOutboundFileTransferStarted:
                     report += 
                         $"Sending outbound file transfer request to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{IndentLevel1}File Name:\t\t{FileName}{Environment.NewLine}" +
-                        $"{IndentLevel1}File Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
-                        $"{IndentLevel1}File Location:\t{LocalFolder}{Environment.NewLine}" +
-                        $"{IndentLevel1}Target Folder:\t{RemoteFolder}{Environment.NewLine}";
+                        $"{indentLevel1}File Name:\t\t{FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
+                        $"{indentLevel1}File Location:\t{LocalFolder}{Environment.NewLine}" +
+                        $"{indentLevel1}Target Folder:\t{RemoteFolder}{Environment.NewLine}";
                     break;
                     
                 //case EventType.ReceivedOutboundFileTransferRequest:
@@ -333,42 +336,42 @@ namespace TplSockets
                     break;
 
                 case EventType.SendFileBytesStarted:
-                    report += $"SENDING FILE TO {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+                    report += $"Sending file to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 
                 case EventType.SentFileChunkToClient:
                     report +=
                         $"Sent file chunk #{FileChunkSentCount:N0} ({SocketSendCount:N0} total Socket.Send calls):{Environment.NewLine}{Environment.NewLine}" +
-                        $"{IndentLevel1}Current Bytes Sent:\t\t{CurrentFileBytesSent:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}Bytes Remaining:\t\t{FileBytesRemaining:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}File Size In Bytes:\t\t{FileSizeInBytes:N0}{Environment.NewLine}";
+                        $"{indentLevel1}Current Bytes Sent:\t\t{CurrentFileBytesSent:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Bytes Remaining:\t\t{FileBytesRemaining:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size In Bytes:\t\t{FileSizeInBytes:N0}{Environment.NewLine}";
                     break;
 
                 case EventType.SendFileBytesComplete:
-                    report += $"SUCCESSFULLY SENT FILE TO {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+                    report += $"Successfully sent file to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 
                 case EventType.CopySavedBytesToIncomingFile:
                     report +=
                         $"Processed unread bytes as file data{Environment.NewLine}{Environment.NewLine}" +
-                        $"{IndentLevel1}Saved Bytes:\t\t{CurrentFileBytesReceived:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}File Size:\t\t\t{FileSizeInBytes:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}Bytes Remaining:\t{FileBytesRemaining:N0}{Environment.NewLine}";
+                        $"{indentLevel1}Saved Bytes:\t\t{CurrentFileBytesReceived:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size:\t\t\t{FileSizeInBytes:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Bytes Remaining:\t{FileBytesRemaining:N0}{Environment.NewLine}";
                     break;
 
                 case EventType.ReceiveFileBytesStarted:
-                    report += $"RECEIVING FILE FROM {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+                    report += $"Receiving file from {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 
                 case EventType.ReceivedFileBytesFromSocket:
                     report += 
                         $"Received Data From Socket:{Environment.NewLine}{Environment.NewLine}" +
-                        $"{IndentLevel1}Socket Read Count:\t\t{SocketReadCount:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}Bytes Received:\t\t\t{BytesReceived:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}File Bytes (Current):\t{CurrentFileBytesReceived:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}File Bytes (Total):\t\t{TotalFileBytesReceived:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}File Size:\t\t\t\t{FileSizeInBytes:N0}{Environment.NewLine}" +
-                        $"{IndentLevel1}Bytes Remaining:\t\t{FileBytesRemaining:N0}{Environment.NewLine}";
+                        $"{indentLevel1}Socket Read Count:\t\t{SocketReadCount:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Bytes Received:\t\t\t{BytesReceived:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}File Bytes (Current):\t{CurrentFileBytesReceived:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}File Bytes (Total):\t\t{TotalFileBytesReceived:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size:\t\t\t\t{FileSizeInBytes:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Bytes Remaining:\t\t{FileBytesRemaining:N0}{Environment.NewLine}";
                     break;
 
                 case EventType.UpdateFileTransferProgress:
@@ -377,11 +380,11 @@ namespace TplSockets
 
                 case EventType.ReceiveFileBytesComplete:
                     report +=
-                        $"SUCCESSFULLY RECEIVED FILE{Environment.NewLine}{Environment.NewLine}" +
-                        $"{IndentLevel1}Download Started:\t{FileTransferStartTime:MM/dd/yyyy HH:mm:ss.fff}{Environment.NewLine}" +
-                        $"{IndentLevel1}Download Finished:\t{FileTransferCompleteTime:MM/dd/yyyy HH:mm:ss.fff}{Environment.NewLine}" +
-                        $"{IndentLevel1}Elapsed Time:\t\t{FileTransferElapsedTimeString}{Environment.NewLine}" +
-                        $"{IndentLevel1}Transfer Rate:\t\t{FileTransferRate}{Environment.NewLine}";
+                        $"Successfully received file from {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Started:\t{FileTransferStartTime:MM/dd/yyyy HH:mm:ss.fff}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Finished:\t{FileTransferCompleteTime:MM/dd/yyyy HH:mm:ss.fff}{Environment.NewLine}" +
+                        $"{indentLevel1}Elapsed Time:\t\t{FileTransferElapsedTimeString}{Environment.NewLine}" +
+                        $"{indentLevel1}Transfer Rate:\t\t{FileTransferRate}{Environment.NewLine}";
                     break;
 
                 case EventType.SendConfirmationMessageStarted:

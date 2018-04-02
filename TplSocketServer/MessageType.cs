@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace TplSockets
+﻿namespace TplSockets
 {
     public enum MessageType
     {
@@ -34,7 +32,7 @@ namespace TplSockets
                     return "RECEIVE TEXT MESSAGE";
 
                 case MessageType.InboundFileTransfer:
-                    return "FILE TRANSFER";
+                    return "GET FILE";
 
                 case MessageType.OutboundFileTransfer:
                     return "FILE TRANSFER REQUEST";
@@ -61,7 +59,7 @@ namespace TplSockets
                     return "REQUESTED FOLDER IS EMPTY";
 
                 case MessageType.FileTransferAccepted:
-                    return "FILE TRANSFER";
+                    return "SEND FILE";
 
                 case MessageType.FileTransferRejected:
                     return "FILE TRANSFER REJECTED";

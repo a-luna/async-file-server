@@ -59,16 +59,15 @@
                 return Result.Fail("There was an error initializing the server");
             }
 
-            var localIp = _state.MyInfo.LocalIpAddress;
-            var port = _state.MyInfo.Port;
+            var localIp = _state.MyLocalIpAddress;
+            var port = _state.MyServerPort;
 
             _state.Server =
                 new TplSocketServer(localIp, port)
                 {
                     SocketSettings = _state.Settings.SocketSettings,
-                    TransferFolderPath = _state.Settings.TransferFolderPath,
-                    TransferUpdateInterval = _state.Settings.TransferUpdateInterval,
-                    LoggingEnabled = true
+                    MyTransferFolderPath = _state.Settings.TransferFolderPath,
+                    TransferUpdateInterval = _state.Settings.TransferUpdateInterval
                 };
 
             _log.Info("Complete: InitializeServerCommand.ExecuteAsync");
