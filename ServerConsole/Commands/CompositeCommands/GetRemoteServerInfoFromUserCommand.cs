@@ -7,24 +7,17 @@
     using AaronLuna.Common.Logging;
     using AaronLuna.Common.Result;
 
-    using TplSockets;
-
     class GetRemoteServerInfoFromUserCommand : ICommand
     {
-        AppState _state;
-        RemoteServer _newClient;
+        readonly AppState _state;
         readonly Logger _log = new Logger(typeof(GetRemoteServerInfoFromUserCommand));
 
         public GetRemoteServerInfoFromUserCommand(AppState state)
         {
-            _log.Info("Begin: Instantiate GetRemoteServerInfoFromUserCommand");
-
             ReturnToParent = false;
             ItemText = "Add new client";
 
             _state = state;
-
-            _log.Info("Complete: Instantiate GetRemoteServerInfoFromUserCommand");
         }
 
         public string ItemText { get; set; }
@@ -32,10 +25,6 @@
 
         public async Task<Result> ExecuteAsync()
         {
-            _log.Info("Begin: GetRemoteServerInfoFromUserCommand.ExecuteAsync");
-            //_state.IgnoreIncomingConnections = true;
-
-            _newClient = new RemoteServer();
             var clientInfoIsValid = false;
 
             while (!clientInfoIsValid)
@@ -48,31 +37,24 @@
                     return Result.Fail(addClientResult.Error);
                 }
 
-                _newClient = addClientResult.Value;
+                _state.ClientInfo = addClientResult.Value.ConnectionInfo;
                 clientInfoIsValid = true;
             }
 
-            lock (_state)
+            var requestServerInfo = new RequestAdditionalInfoFromRemoteServerCommand(_state);
+            var requestServerInfoResult = await requestServerInfo.ExecuteAsync();
+
+            if (requestServerInfoResult.Success)
             {
-                var requestServerInfo = new RequestAdditionalInfoFromRemoteServerCommand(_state, _newClient);
-                var requestServerInfoResult = requestServerInfo.ExecuteAsync().GetAwaiter().GetResult();
+                _state.ClientSelected = true;
 
-                if (requestServerInfoResult.Success)
-                {
-                    _state.ClientInfo = _newClient.ConnectionInfo;
-                    _state.ClientTransferFolderPath = _newClient.TransferFolder;
-                    _state.ClientSelected = true;
-                    //_state.IgnoreIncomingConnections = false;
-
-                    _log.Info("Complete: GetRemoteServerInfoFromUserCommand.ExecuteAsync");
-                    return Result.Ok();
-                }
-
-                _log.Error($"Error: {requestServerInfoResult.Error} (GetRemoteServerInfoFromUserCommand.ExecuteAsync)");
                 _log.Info("Complete: GetRemoteServerInfoFromUserCommand.ExecuteAsync");
-                Console.WriteLine(requestServerInfoResult.Error);
-                return Result.Fail(requestServerInfoResult.Error);
+                return Result.Ok();
             }
+
+            _log.Error($"Error: {requestServerInfoResult.Error} (GetRemoteServerInfoFromUserCommand.ExecuteAsync)");
+            Console.WriteLine(requestServerInfoResult.Error);
+            return Result.Fail(requestServerInfoResult.Error);
         }
     }
 }

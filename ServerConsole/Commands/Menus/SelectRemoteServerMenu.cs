@@ -15,8 +15,6 @@
 
         public SelectRemoteServerMenu(AppState state)
         {
-            _log.Info("Begin: Instantiate SelectRemoteServerMenu");
-
             ReturnToParent = false;
             ItemText = "Select remote server";
             MenuText = "\nChoose a remote server for this request:";
@@ -38,8 +36,6 @@
             
             Options.Add(addNewClientCommand);
             Options.Add(returnToParentCommand);
-
-            _log.Info("Complete: Instantiate SelectRemoteServerMenu");
         }
     }
 }

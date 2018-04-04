@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,7 +10,7 @@ namespace TplSockets
 {
     public static class TplSocketExtensions
     {
-        public static async Task<Result> ConnectWithTimeoutAsync(this Socket socket, string remoteIpAddress, int port, int timeoutMs)
+        public static async Task<Result> ConnectWithTimeoutAsync(this Socket socket, IPAddress remoteIpAddress, int port, int timeoutMs)
         {
             try
             {

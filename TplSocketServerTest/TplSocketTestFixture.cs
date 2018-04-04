@@ -62,7 +62,7 @@ namespace TplSocketServerTest
 
             var acceptTask = Task.Run(AcceptConnectionTask);
 
-            var connectResult = await _clientSocket.ConnectWithTimeoutAsync(_serverIpAddress.ToString(), serverPort, ConnectTimeoutMs).ConfigureAwait(false);
+            var connectResult = await _clientSocket.ConnectWithTimeoutAsync(_serverIpAddress, serverPort, ConnectTimeoutMs).ConfigureAwait(false);
             if (connectResult.Failure)
             {
                 Assert.Fail("There was an error connecting to the server." + connectResult.Error);
@@ -102,7 +102,12 @@ namespace TplSocketServerTest
 
             var acceptTask = Task.Run(AcceptConnectionTask);
 
-            var connectResult = await _clientSocket.ConnectWithTimeoutAsync(_serverIpAddress.ToString(), serverPort, ConnectTimeoutMs).ConfigureAwait(false);
+            var connectResult = 
+                await _clientSocket.ConnectWithTimeoutAsync(
+                    _serverIpAddress,
+                    serverPort,
+                    ConnectTimeoutMs).ConfigureAwait(false);
+
             if (connectResult.Failure)
             {
                 Assert.Fail("There was an error connecting to the server." + connectResult.Error);

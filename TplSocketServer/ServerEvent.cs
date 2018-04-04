@@ -1,4 +1,6 @@
-﻿namespace TplSockets
+﻿using System.Net;
+
+namespace TplSockets
 {
     using System;
     using System.Collections.Generic;
@@ -21,11 +23,11 @@
         public byte[] MessageData { get; set; }
         public MessageType MessageType { get; set; }
         public string TextMessage { get; set; }
-        public string RemoteServerIpAddress { get; set; }
+        public IPAddress RemoteServerIpAddress { get; set; }
         public int RemoteServerPortNumber { get; set; }
-        public string LocalIpAddress { get; set; }
+        public IPAddress LocalIpAddress { get; set; }
         public int LocalPortNumber { get; set; }
-        public string PublicIpAddress { get; set; }
+        public IPAddress PublicIpAddress { get; set; }
         public string LocalFolder { get; set; }
         public string RemoteFolder { get; set; }
         public int TotalUnknownHosts { get; set; }

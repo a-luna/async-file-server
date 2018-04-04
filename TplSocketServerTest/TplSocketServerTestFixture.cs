@@ -320,7 +320,7 @@ namespace TplSocketServerTest
             var sendFileTask =
                 Task.Run(
                     () => _client.SendFileAsync(
-                                    _localIp.ToString(),
+                                    _localIp,
                                     remoteServerPort,
                                     sendFilePath,
                                     receiveFolderPath),
@@ -674,7 +674,7 @@ namespace TplSocketServerTest
 
             var sendFileResult1 =
                 await _client.SendFileAsync(
-                    _localIp.ToString(),
+                    _localIp,
                     remotePort,
                     sendFilePath,
                     receiveFolderPath);
@@ -692,7 +692,7 @@ namespace TplSocketServerTest
 
             var sendFileResult =
                 await _client.SendFileAsync(
-                    _localIp.ToString(),
+                    _localIp,
                     remotePort,
                     sendFilePath,
                     receiveFolderPath);
@@ -1016,7 +1016,7 @@ namespace TplSocketServerTest
                     break;
 
                 case EventType.ReceivedPublicIpAddress:
-                    _publicIp = serverEvent.PublicIpAddress;
+                    _publicIp = serverEvent.PublicIpAddress.ToString();
                     _clientReceivedPublicIp = true;
                     break;
 

@@ -20,12 +20,9 @@
             WaitingForDownloadToComplete = true;
             WaitingForConfirmationMessage = true;
             
-            UnknownHosts = new List<RemoteServer>();
             FileInfoList = new List<(string filePath, long fileSize)>();
-            SignalDispayMenu = new AutoResetEvent(false);
         }
-
-        public AutoResetEvent SignalDispayMenu { get; set; }
+        
         public AutoResetEvent SignalExitRetryDownloadLogic { get; set; }
         public FileInfo SettingsFile { get; set; }
         public string SettingsFilePath => SettingsFile.ToString();
@@ -37,7 +34,6 @@
         public bool WaitingForDownloadToComplete { get; set; }
         public bool WaitingForConfirmationMessage { get; set; }
         public bool WaitingForUserInput { get; set; }
-        //public bool IgnoreIncomingConnections { get; set; }
         public bool ClientSelected { get; set; }
         public bool ActiveTextSession { get; set; }
         public bool ErrorOccurred { get; set; }
@@ -48,24 +44,19 @@
         public bool FileTransferStalled { get; set; }
         public bool FileTransferCanceled { get; set; }
 
+        public AppSettings Settings { get; set; }
         public TplSocketServer Server { get; set; }
-        public AppSettings Settings { get; set; }        
-        public List<RemoteServer> UnknownHosts { get; set; }
-        public IPEndPoint TextMessageEndPoint { get; set; }
+        public RemoteServer Client => new RemoteServer(ClientInfo);
 
-        public string DownloadFileName { get; set; }
+        public string IncomingFileName => Path.GetFileName(Server.IncomingFilePath);
         public int RetryCounter { get; set; }
         public ProgressEventArgs FileStalledInfo { get; set; }
         public List<(string filePath, long fileSize)> FileInfoList { get; set; }
-        public ConsoleProgressBar Progress { get; set; }
+        public FileTransferProgressBar Progress { get; set; }
 
         public ConnectionInfo MyInfo => Server.MyInfo;
         
-        public string MyTransferFolderPath
-        {
-            get => Server.MyTransferFolderPath;
-            set => Server.MyTransferFolderPath = value;
-        }
+        public string MyTransferFolderPath => Server.MyTransferFolderPath;
 
         public IPAddress MyLocalIpAddress => Server.MyLocalIpAddress;
         public IPAddress MyPublicIpAddress => Server.MyPublicIpAddress;

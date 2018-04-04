@@ -23,7 +23,7 @@
             {
                 Console.WriteLine(result.Error);
             }
-            
+
             Console.WriteLine("Press enter to exit.");
             Console.ReadLine();
 

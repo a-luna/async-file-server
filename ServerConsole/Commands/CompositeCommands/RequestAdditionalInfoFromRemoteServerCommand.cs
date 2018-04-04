@@ -15,19 +15,13 @@
     class RequestAdditionalInfoFromRemoteServerCommand : ICommand
     {
         readonly AppState _state;
-        RemoteServer _newClient;
         readonly Logger _log = new Logger(typeof(RequestAdditionalInfoFromRemoteServerCommand));
 
-        public RequestAdditionalInfoFromRemoteServerCommand(AppState state, RemoteServer newClient)
-        {
-            _log.Info("Begin: Instantiate RequestAdditionalInfoFromRemoteServerCommand");
+        public RequestAdditionalInfoFromRemoteServerCommand(AppState state)
+        {   ReturnToParent = false;
 
-            ReturnToParent = false;
             ItemText = "Request transfer folder and public IP dddress from remote server";
             _state = state;
-            _newClient = newClient;
-
-            _log.Info("Complete: Instantiate RequestAdditionalInfoFromRemoteServerCommand");
         }
 
         public string ItemText { get; set; }
@@ -35,31 +29,27 @@
 
         public async Task<Result> ExecuteAsync()
         {
-            _log.Info("Begin: RequestAdditionalInfoFromRemoteServerCommand.ExecuteAsync");
+            var publicIp = _state.ClientPublicIpAddress;
+            var clientIp = _state.ClientSessionIpAddress;
+            var clientPort = _state.ClientServerPort;
 
-            var publicIp = _newClient.ConnectionInfo.PublicIpAddress;
-            var clientIp = _newClient.ConnectionInfo.SessionIpAddress;
-            var clientPort = _newClient.ConnectionInfo.Port;
-
-            if (_newClient.ConnectionInfo.IsEqualTo(_state.MyInfo))
+            if (_state.ClientInfo.IsEqualTo(_state.MyInfo))
             {
-                _log.Error($"Error: User tried to add this server's endpoint as a new client (RequestAdditionalInfoFromRemoteServerCommand.ExecuteAsync)");
+                _log.Error("Error: User tried to add this server\'s endpoint as a new client (RequestAdditionalInfoFromRemoteServerCommand.ExecuteAsync)");
                 var error = $"{clientIp}:{clientPort} is the same IP address and port number used by this server.";
                 return Result.Fail(error);
             }
 
-            if (ConsoleStatic.ClientAlreadyAdded(_newClient, _state.Settings.RemoteServers))
+            if (ConsoleStatic.ClientAlreadyAdded(_state.Client, _state.Settings.RemoteServers))
             {
-                _newClient = ConsoleStatic.GetRemoteServer(_newClient, _state.Settings.RemoteServers);
-
-                _state.ClientInfo = _newClient.ConnectionInfo;
-                _state.ClientTransferFolderPath = _newClient.TransferFolder;
-
+                var client = ConsoleStatic.GetRemoteServer(_state.Client, _state.Settings.RemoteServers);
+                _state.ClientInfo = client.ConnectionInfo;
+                _state.ClientTransferFolderPath = client.TransferFolder;
                 return Result.Ok();
             }
 
             var requestFolderPathCommand =
-                new RequestTransferFolderCommand(_state, clientIp, clientPort);
+                new RequestTransferFolderCommand(_state);
 
             var requestFolderPathResult = await requestFolderPathCommand.ExecuteAsync();
             if (requestFolderPathResult.Failure)
@@ -72,7 +62,7 @@
             if (!Equals(clientIp, publicIp) || Equals(publicIp, IPAddress.None))
             {
                 var requestPublicIpCommand =
-                    new RequestPublicIpAddressCommand(_state, clientIp, clientPort);
+                    new RequestPublicIpAddressCommand(_state);
 
                 var requestPublicIpResult = await requestPublicIpCommand.ExecuteAsync();
                 if (requestPublicIpResult.Failure)
@@ -84,10 +74,8 @@
 
             Console.WriteLine($"{Environment.NewLine}Thank you! Connection info for new client has been successfully configured.\n");
 
-            _state.Settings.RemoteServers.Add(_newClient);
+            _state.Settings.RemoteServers.Add(_state.Client);
             AppSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
-
-            _log.Info("Complete: RequestAdditionalInfoFromRemoteServerCommand.ExecuteAsync");
             return Result.Ok();
         }
     }

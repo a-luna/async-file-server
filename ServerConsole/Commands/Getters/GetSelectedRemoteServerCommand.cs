@@ -17,8 +17,6 @@ namespace ServerConsole.Commands.Getters
 
         public GetSelectedRemoteServerCommand(AppState state, RemoteServer server)
         {
-            _log.Info("Begin: Instantiate GetSelectedRemoteServerCommand");
-
             _state = state;
             _server = server;
 
@@ -28,8 +26,6 @@ namespace ServerConsole.Commands.Getters
                 $" Local IP: {_server.ConnectionInfo.LocalIpString}{Environment.NewLine}" +
                 $"   Public IP: {_server.ConnectionInfo.PublicIpString}{Environment.NewLine}" +
                 $"        Port: {_server.ConnectionInfo.Port}{Environment.NewLine}";
-
-            _log.Info("Complete: Instantiate GetSelectedRemoteServerCommand");
         }
 
         public string ItemText { get; set; }

@@ -3,6 +3,7 @@
     using System;
     using System.IO;
     using System.Linq;
+    using System.Net;
     using System.Net.Sockets;
     using System.Threading;
     using System.Threading.Tasks;
@@ -129,7 +130,7 @@
             }
         }
 
-        async Task<Result> SendFileToClientAsync(string ipAddress, int port, string transferFolderPath, CancellationToken token)
+        async Task<Result> SendFileToClientAsync(IPAddress ipAddress, int port, string transferFolderPath, CancellationToken token)
         {
             var selectFileResult = OldStatic.ChooseFileToSend(_state.Settings.TransferFolderPath);
             if (selectFileResult.Failure)

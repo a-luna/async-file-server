@@ -10,6 +10,12 @@
             ConnectionInfo = new ConnectionInfo();
         }
 
+        public RemoteServer(ConnectionInfo info)
+        {
+            TransferFolder = string.Empty;
+            ConnectionInfo = info;
+        }
+
         public RemoteServer(IPAddress ipAddress, int port)
         {
             TransferFolder = string.Empty;
