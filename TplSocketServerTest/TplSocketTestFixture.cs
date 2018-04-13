@@ -34,7 +34,7 @@ namespace TplSocketServerTest
             _serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-            _serverIpAddress = Network.GetLocalIPv4AddressFromInternet().Value;
+            _serverIpAddress = NetworkUtilities.GetLocalIpAddress("192.168.2.0/24").Value;
 
             _messageReceived = string.Empty;
         }

@@ -1,4 +1,6 @@
-﻿namespace TplSockets
+﻿using AaronLuna.Common.Extensions;
+
+namespace TplSockets
 {
     using System.Net;
     using System.Xml.Serialization;
@@ -19,7 +21,7 @@
 
         public ConnectionInfo(string ipAddress, int port)
         {
-            var sessionIp = Network.ParseSingleIPv4Address(ipAddress).Value;
+            var sessionIp = NetworkUtilities.ParseSingleIPv4Address(ipAddress).Value;
             InitializeConnection(sessionIp, port);
         }
 
@@ -72,13 +74,13 @@
         public string PublicIpString { get; set; }
         public int Port { get; set; }
 
-        void InitializeConnection(IPAddress ipAddress, int port)
+        void InitializeConnection(IPAddress localIpAddress, int port)
         {
-            var sessionIp = ipAddress;
+            var sessionIp = localIpAddress;
             var localIp = IPAddress.None;
             var publicIp = IPAddress.None;
 
-            if (Network.IpAddressIsInPrivateAddressSpace(ipAddress))
+            if (localIpAddress.IsPrivateAddress())
             {
                 localIp = sessionIp;
             }
@@ -101,8 +103,8 @@
             //// Transfer Folder not used to determine equality, ip address
             //// and port number combination must be unique 
 
-            var localIpSimilarity = Network.CompareTwoIpAddresses(myInfo.LocalIpAddress, otherInfo.LocalIpAddress);
-            var publicIpSimilarity = Network.CompareTwoIpAddresses(myInfo.PublicIpAddress, otherInfo.PublicIpAddress);
+            var localIpSimilarity = NetworkUtilities.CompareTwoIpAddresses(myInfo.LocalIpAddress, otherInfo.LocalIpAddress);
+            var publicIpSimilarity = NetworkUtilities.CompareTwoIpAddresses(myInfo.PublicIpAddress, otherInfo.PublicIpAddress);
             var bothPortsMatch = myInfo.Port == otherInfo.Port;
 
             if (publicIpSimilarity == IpAddressSimilarity.AllBytesMatch && bothPortsMatch)

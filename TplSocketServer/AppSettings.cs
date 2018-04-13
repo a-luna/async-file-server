@@ -67,7 +67,7 @@
                 }
                 else
                 {
-                    var parseLocalIpResult = Network.ParseSingleIPv4Address(thisLocalIp);
+                    var parseLocalIpResult = NetworkUtilities.ParseSingleIPv4Address(thisLocalIp);
                     if (parseLocalIpResult.Success)
                     {
                         server.ConnectionInfo.LocalIpAddress = parseLocalIpResult.Value;
@@ -82,7 +82,7 @@
                 }
                 else
                 {
-                    var parsePublicIpResult = Network.ParseSingleIPv4Address(thisPublicIp);
+                    var parsePublicIpResult = NetworkUtilities.ParseSingleIPv4Address(thisPublicIp);
                     if (parsePublicIpResult.Success)
                     {
                         server.ConnectionInfo.PublicIpAddress = parsePublicIpResult.Value;
@@ -97,7 +97,7 @@
                 }
                 else
                 {
-                    var parseSessionIpResult = Network.ParseSingleIPv4Address(thisSessionIp);
+                    var parseSessionIpResult = NetworkUtilities.ParseSingleIPv4Address(thisSessionIp);
                     if (parseSessionIpResult.Success)
                     {
                         server.ConnectionInfo.SessionIpAddress = parseSessionIpResult.Value;

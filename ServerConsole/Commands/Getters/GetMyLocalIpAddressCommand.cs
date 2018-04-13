@@ -1,4 +1,6 @@
-﻿namespace ServerConsole.Commands.Getters
+﻿using AaronLuna.Common.Network;
+
+namespace ServerConsole.Commands.Getters
 {
     using System;
     using System.Net;
@@ -25,7 +27,13 @@
         public async Task<Result> ExecuteAsync()
         {
             Console.Clear();
-            _state.MyInfo.LocalIpAddress = ConsoleStatic.GetLocalIpAddress();
+            var getLocalIpResult = NetworkUtilities.GetLocalIpAddress("192.168.2.1/24");
+            if (getLocalIpResult.Failure)
+            {
+                return Result.Fail(getLocalIpResult.Error);
+            }
+
+            _state.MyInfo.LocalIpAddress = getLocalIpResult.Value;
 
             await Task.Delay(1);
             return Result.Ok();

@@ -1,4 +1,7 @@
-﻿namespace ServerConsole
+﻿using System.Text;
+using AaronLuna.Common.Console;
+
+namespace ServerConsole
 {
     using System;
     using System.Threading.Tasks;
@@ -9,6 +12,8 @@
     {
         static async Task Main()
         {
+            ConsoleUtilities.WriteCharSetToConsole(Encoding.Unicode, 11005);
+
             Logger.LogToConsole = false;
             Logger.Start("server.log");
 

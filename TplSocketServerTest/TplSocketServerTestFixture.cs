@@ -130,7 +130,7 @@ namespace TplSocketServerTest
                 File.Copy(_restoreFilePath, _remoteFilePath);
             }
 
-            _localIp = Network.GetLocalIpAddress("192.168.2.0/24").Value;
+            _localIp = NetworkUtilities.GetLocalIpAddress("192.168.2.0/24").Value;
             _cts = new CancellationTokenSource();
 
             _socketSettings = new SocketSettings
@@ -511,7 +511,7 @@ namespace TplSocketServerTest
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
-            var publicIpTask = await Network.GetPublicIPv4AddressAsync();
+            var publicIpTask = await NetworkUtilities.GetPublicIPv4AddressAsync();
             if (publicIpTask.Failure)
             {
                 Assert.Fail("Unable to determine public IP address, verify internet connection on this machine");

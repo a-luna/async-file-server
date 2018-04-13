@@ -97,55 +97,55 @@
             return portNumber;
         }
 
-        public static IPAddress GetLocalIpAddress()
-        {
-            var ipRequest = Network.GetLocalIPv4AddressFromInternet();
-            if (ipRequest.Success)
-            {
-                return ipRequest.Value;
-            }
+        //public static IPAddress GetLocalIpAddress()
+        //{
+        //    var ipRequest = NetworkUtilities.GetLocalIPv4AddressFromInternet();
+        //    if (ipRequest.Success)
+        //    {
+        //        return ipRequest.Value;
+        //    }
 
-            var localIps = Network.GetLocalIPv4AddressList();
-            if (localIps.Count == 0)
-            {
-                return IPAddress.Any;
-            }
+        //    var localIps = NetworkUtilities.GetLocalipV4AddressList();
+        //    if (localIps.Count == 0)
+        //    {
+        //        return IPAddress.Any;
+        //    }
 
-            if (localIps.Count == 1)
-            {
-                return localIps.Find(ip => ip.AddressFamily == AddressFamily.InterNetwork);
-            }
+        //    if (localIps.Count == 1)
+        //    {
+        //        return localIps.Find(ip => ip.AddressFamily == AddressFamily.InterNetwork);
+        //    }
 
-            var ipChoice = 0;
-            var totalMenuChoices = localIps.Count;
-            while (ipChoice == 0)
-            {
-                Console.Clear();
-                Console.WriteLine(PropmptMultipleLocalIPv4Addresses);
+        //    var ipChoice = 0;
+        //    var totalMenuChoices = localIps.Count;
+        //    while (ipChoice == 0)
+        //    {
+        //        Console.Clear();
+        //        Console.WriteLine(PropmptMultipleLocalIPv4Addresses);
 
-                foreach (var i in Enumerable.Range(0, localIps.Count))
-                {
-                    Console.WriteLine($"{i + 1}. {localIps[i]}");
-                }
+        //        foreach (var i in Enumerable.Range(0, localIps.Count))
+        //        {
+        //            Console.WriteLine($"{i + 1}. {localIps[i]}");
+        //        }
 
-                var input = Console.ReadLine();
-                var validationResult = ValidateNumberIsWithinRange(input, 1, totalMenuChoices);
-                if (validationResult.Failure)
-                {
-                    Console.WriteLine(validationResult.Error);
-                    continue;
-                }
+        //        var input = Console.ReadLine();
+        //        var validationResult = ValidateNumberIsWithinRange(input, 1, totalMenuChoices);
+        //        if (validationResult.Failure)
+        //        {
+        //            Console.WriteLine(validationResult.Error);
+        //            continue;
+        //        }
 
-                ipChoice = validationResult.Value;
-            }
+        //        ipChoice = validationResult.Value;
+        //    }
 
-            return localIps[ipChoice - 1];
-        }
+        //    return localIps[ipChoice - 1];
+        //}
 
         public static async Task<IPAddress> GetPublicIpAddressForLocalMachineAsync()
         {
             var retrievePublicIp =
-                await Network.GetPublicIPv4AddressAsync().ConfigureAwait(false);
+                await NetworkUtilities.GetPublicIPv4AddressAsync().ConfigureAwait(false);
 
             var publicIp = IPAddress.None;
             if (retrievePublicIp.Failure)
@@ -202,7 +202,7 @@
                     continue;
                 }
 
-                var parseIp = Network.ParseSingleIPv4Address(ipValidationResult.Value);
+                var parseIp = NetworkUtilities.ParseSingleIPv4Address(ipValidationResult.Value);
                 clientIp = parseIp.Value;
 
                 remoteServerInfo.ConnectionInfo.SessionIpAddress = clientIp;
@@ -244,7 +244,7 @@
 
         public static Result<string> ValidateIpV4Address(string input)
         {
-            var parseIpResult = Network.ParseSingleIPv4Address(input);
+            var parseIpResult = NetworkUtilities.ParseSingleIPv4Address(input);
             if (parseIpResult.Failure)
             {
                 return Result.Fail<string>($"Unable tp parse IPv4 address from input string: {parseIpResult.Error}");

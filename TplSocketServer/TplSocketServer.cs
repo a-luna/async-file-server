@@ -144,7 +144,7 @@
             }
             else
             {
-                var parsedIp = Network.ParseSingleIPv4Address(localIpAdress);
+                var parsedIp = NetworkUtilities.ParseSingleIPv4Address(localIpAdress);
                 if (parsedIp.Failure)
                 {
                     return parsedIp;
@@ -1870,7 +1870,7 @@
                     RemoteServerPortNumber = ClientServerPort
                 });
 
-            var publicIpResult = await Network.GetPublicIPv4AddressAsync().ConfigureAwait(false);
+            var publicIpResult = await NetworkUtilities.GetPublicIPv4AddressAsync().ConfigureAwait(false);
             if (publicIpResult.Failure)
             {
                 return Result.Fail(publicIpResult.Error);
@@ -1926,7 +1926,7 @@
 
             var newClient = new RemoteServer(remoteServerIp, remoteServerPort);
             _state.ClientInfo = newClient.ConnectionInfo;
-            ClientInfo.PublicIpAddress = Network.ParseSingleIPv4Address(publicIpAddress).Value;
+            ClientInfo.PublicIpAddress = NetworkUtilities.ParseSingleIPv4Address(publicIpAddress).Value;
 
             EventOccurred?.Invoke(this,
                 new ServerEvent
@@ -1967,7 +1967,7 @@
             _state.ClientInfo = newClient.ConnectionInfo;
 
             var ipComparison =
-                Network.CompareTwoIpAddresses(_state.LastAcceptedConnectionIp, MyLocalIpAddress);
+                NetworkUtilities.CompareTwoIpAddresses(_state.LastAcceptedConnectionIp, MyLocalIpAddress);
 
             var ipsMatch = ipComparison == IpAddressSimilarity.AllBytesMatch;
             var portsMatch = ClientServerPort == MyServerPort;

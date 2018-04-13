@@ -14,6 +14,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AaronLuna.CommonTest", "aar
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TplSocketServerTools", "TplSocketServerTools\TplSocketServerTools.csproj", "{4C17800F-9F25-42A6-9D86-F8CA16F25D9F}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AaronLuna.ConsoleProgressBar", "..\console-progress-bar\ConsoleProgressBar\AaronLuna.ConsoleProgressBar.csproj", "{299BA88A-C09A-47D7-BE55-A3EB6D1A7A91}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,6 +46,10 @@ Global
 		{4C17800F-9F25-42A6-9D86-F8CA16F25D9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4C17800F-9F25-42A6-9D86-F8CA16F25D9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4C17800F-9F25-42A6-9D86-F8CA16F25D9F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{299BA88A-C09A-47D7-BE55-A3EB6D1A7A91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{299BA88A-C09A-47D7-BE55-A3EB6D1A7A91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{299BA88A-C09A-47D7-BE55-A3EB6D1A7A91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{299BA88A-C09A-47D7-BE55-A3EB6D1A7A91}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

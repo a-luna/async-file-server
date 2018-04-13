@@ -1,4 +1,6 @@
-﻿namespace TplSockets
+﻿using AaronLuna.Common.Extensions;
+
+namespace TplSockets
 {
     using System;
     using System.Collections.Generic;
