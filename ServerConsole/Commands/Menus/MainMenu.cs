@@ -1,4 +1,6 @@
-﻿namespace ServerConsole.Commands.Menus
+﻿using AaronLuna.ConsoleProgressBar;
+
+namespace ServerConsole.Commands.Menus
 {
     using System;
     using System.IO;

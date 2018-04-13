@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\console-progress-bar\ConsoleProgressBar\AaronLuna.ConsoleProgressBar.csproj" />
     <ProjectReference Include="..\aaronluna-common\AaronLuna.Common\AaronLuna.Common.csproj" />
     <ProjectReference Include="..\TplSocketServer\TplSockets.csproj" />
   </ItemGroup>

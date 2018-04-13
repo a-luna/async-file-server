@@ -12,8 +12,6 @@ namespace ServerConsole
     {
         static async Task Main()
         {
-            ConsoleUtilities.WriteCharSetToConsole(Encoding.Unicode, 11005);
-
             Logger.LogToConsole = false;
             Logger.Start("server.log");
 

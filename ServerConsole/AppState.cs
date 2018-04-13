@@ -1,4 +1,6 @@
-﻿namespace ServerConsole
+﻿using AaronLuna.ConsoleProgressBar;
+
+namespace ServerConsole
 {
     using System.Collections.Generic;
     using System.IO;
