@@ -8,13 +8,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TplSocketServerTest", "TplS
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerConsole", "ServerConsole\ServerConsole.csproj", "{60EFC6B8-5E4D-420E-BE87-D6AB9FA5F7CE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AaronLuna.Common", "aaronluna-common\AaronLuna.Common\AaronLuna.Common.csproj", "{D1939085-6902-463D-822D-9D154B3EFC81}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AaronLuna.CommonTest", "aaronluna-common\AaronLuna.CommonTest\AaronLuna.CommonTest.csproj", "{08A28AEC-98CB-49F9-8326-5102CC002449}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TplSocketServerTools", "TplSocketServerTools\TplSocketServerTools.csproj", "{4C17800F-9F25-42A6-9D86-F8CA16F25D9F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AaronLuna.ConsoleProgressBar", "..\console-progress-bar\ConsoleProgressBar\AaronLuna.ConsoleProgressBar.csproj", "{299BA88A-C09A-47D7-BE55-A3EB6D1A7A91}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AaronLuna.Common", "aaronluna-common\AaronLuna.Common\AaronLuna.Common.csproj", "{F7B7591A-2B52-460E-B9DD-D261A6DBD997}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AaronLuna.ConsoleProgressBar", "console-progress-bar\ConsoleProgressBar\AaronLuna.ConsoleProgressBar.csproj", "{30F997A9-5FFA-45A0-8197-3BC28C3680F1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,22 +32,18 @@ Global
 		{60EFC6B8-5E4D-420E-BE87-D6AB9FA5F7CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{60EFC6B8-5E4D-420E-BE87-D6AB9FA5F7CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{60EFC6B8-5E4D-420E-BE87-D6AB9FA5F7CE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D1939085-6902-463D-822D-9D154B3EFC81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D1939085-6902-463D-822D-9D154B3EFC81}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D1939085-6902-463D-822D-9D154B3EFC81}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D1939085-6902-463D-822D-9D154B3EFC81}.Release|Any CPU.Build.0 = Release|Any CPU
-		{08A28AEC-98CB-49F9-8326-5102CC002449}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{08A28AEC-98CB-49F9-8326-5102CC002449}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{08A28AEC-98CB-49F9-8326-5102CC002449}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{08A28AEC-98CB-49F9-8326-5102CC002449}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4C17800F-9F25-42A6-9D86-F8CA16F25D9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4C17800F-9F25-42A6-9D86-F8CA16F25D9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4C17800F-9F25-42A6-9D86-F8CA16F25D9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4C17800F-9F25-42A6-9D86-F8CA16F25D9F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{299BA88A-C09A-47D7-BE55-A3EB6D1A7A91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{299BA88A-C09A-47D7-BE55-A3EB6D1A7A91}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{299BA88A-C09A-47D7-BE55-A3EB6D1A7A91}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{299BA88A-C09A-47D7-BE55-A3EB6D1A7A91}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7B7591A-2B52-460E-B9DD-D261A6DBD997}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7B7591A-2B52-460E-B9DD-D261A6DBD997}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7B7591A-2B52-460E-B9DD-D261A6DBD997}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7B7591A-2B52-460E-B9DD-D261A6DBD997}.Release|Any CPU.Build.0 = Release|Any CPU
+		{30F997A9-5FFA-45A0-8197-3BC28C3680F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30F997A9-5FFA-45A0-8197-3BC28C3680F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30F997A9-5FFA-45A0-8197-3BC28C3680F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30F997A9-5FFA-45A0-8197-3BC28C3680F1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
