@@ -29,7 +29,7 @@
 
             while (!clientInfoIsValid)
             {
-                var addClientResult = ConsoleStatic.GetRemoteServerConnectionInfoFromUser();
+                var addClientResult = SharedFunctions.GetRemoteServerConnectionInfoFromUser();
                 if (addClientResult.Failure)
                 {
                     _log.Error($"Error: {addClientResult.Error} (GetRemoteServerInfoFromUserCommand.ExecuteAsync)");
@@ -37,7 +37,7 @@
                     return Result.Fail(addClientResult.Error);
                 }
 
-                _state.ClientInfo = addClientResult.Value.ConnectionInfo;
+                _state.RemoteServerInfo = addClientResult.Value.ConnectionInfo;
                 clientInfoIsValid = true;
             }
 

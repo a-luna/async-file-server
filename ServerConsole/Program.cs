@@ -1,7 +1,4 @@
-﻿using System.Text;
-using AaronLuna.Common.Console;
-
-namespace ServerConsole
+﻿namespace ServerConsole
 {
     using System;
     using System.Threading.Tasks;

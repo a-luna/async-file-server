@@ -4,9 +4,8 @@
     {
         None,
 
-        ServerIsListening,
-        EnterMainLoop,
-        ExitMainLoop,
+        ServerStartedListening,
+        ServerStoppedListening,
 
         ConnectionAccepted,
 
@@ -32,9 +31,6 @@
 
         ProcessRequestStarted,
         ProcessRequestComplete,
-
-        ProcessUnknownHostStarted,
-        ProcessUnkownHostComplete,
 
         SendTextMessageStarted,
         SendTextMessageComplete,
@@ -70,11 +66,6 @@
         SendFileTransferStalledStarted,
         SendFileTransferStalledComplete,
         FileTransferStalled,
-
-        //SendFileTransferCanceledStarted,
-        //SendFileTransferCanceledComplete,
-        //ReceiveFileTransferCanceledStarted,
-        //ReceiveFileTransferCanceledComplete,
 
         RetryOutboundFileTransferStarted,
         RetryOutboundFileTransferComplete,

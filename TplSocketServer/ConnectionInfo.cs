@@ -74,25 +74,23 @@ namespace TplSockets
         public string PublicIpString { get; set; }
         public int Port { get; set; }
 
-        void InitializeConnection(IPAddress localIpAddress, int port)
+        void InitializeConnection(IPAddress ipAddress, int port)
         {
-            var sessionIp = localIpAddress;
-            var localIp = IPAddress.None;
-            var publicIp = IPAddress.None;
-
-            if (localIpAddress.IsPrivateAddress())
-            {
-                localIp = sessionIp;
-            }
-            else
-            {
-                publicIp = sessionIp;
-            }
-
+            SessionIpAddress = ipAddress;
+            LocalIpAddress = IPAddress.Loopback;
+            PublicIpAddress = IPAddress.Loopback;
             Port = port;
-            SessionIpAddress = sessionIp;
-            LocalIpAddress = localIp;
-            PublicIpAddress = publicIp;
+
+            switch (NetworkUtilities.GetAddressType(SessionIpAddress))
+            {
+                case NetworkUtilities.AddressType.Public:
+                    LocalIpAddress = ipAddress;
+                    break;
+
+                case NetworkUtilities.AddressType.Private:
+                    PublicIpAddress = ipAddress;
+                    break;
+            }
         }
     }
 

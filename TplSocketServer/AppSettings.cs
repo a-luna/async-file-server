@@ -12,31 +12,34 @@
 
     public class AppSettings
     {
-        float _transferFolderPath;
+        float _fileTransferFolderPath;
 
         public AppSettings()
         {
-            TransferFolderPath = string.Empty;
+            LocalServerFolderPath = string.Empty;
+            LocalNetworkCidrIp = string.Empty;
             SocketSettings = new SocketSettings();
             RemoteServers = new List<RemoteServer>();
         }
 
         [XmlIgnore]
-        public float TransferUpdateInterval
+        public float FileTransferUpdateInterval
         {
-            get => _transferFolderPath;
-            set => _transferFolderPath = value;
+            get => _fileTransferFolderPath;
+            set => _fileTransferFolderPath = value;
         }
 
-        [XmlElement("TransferUpdateInterval")]
-        public string CustomTransferUpdateInterval
+        [XmlElement("FileTransferUpdateInterval")]
+        public string CustomFileTransferUpdateInterval
         {
-            get => TransferUpdateInterval.ToString("#0.0000", CultureInfo.InvariantCulture);
-            set => float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _transferFolderPath);
+            get => FileTransferUpdateInterval.ToString("#0.0000", CultureInfo.InvariantCulture);
+            set => float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _fileTransferFolderPath);
         }
 
         public int MaxDownloadAttempts { get; set; }
-        public string TransferFolderPath { get; set; }
+        public string LocalServerFolderPath { get; set; }
+        public int LocalPort { get; set; }
+        public string LocalNetworkCidrIp { get; set; }
 
         public SocketSettings SocketSettings { get; set; }
         public List<RemoteServer> RemoteServers { get; set; }
@@ -59,45 +62,45 @@
         {
             foreach (var server in RemoteServers)
             {
-                var thisLocalIp = server.ConnectionInfo.LocalIpString;
+                var localIp = server.ConnectionInfo.LocalIpString;
 
-                if (string.IsNullOrEmpty(thisLocalIp))
+                if (string.IsNullOrEmpty(localIp))
                 {
                     server.ConnectionInfo.LocalIpAddress = IPAddress.None;
                 }
                 else
                 {
-                    var parseLocalIpResult = NetworkUtilities.ParseSingleIPv4Address(thisLocalIp);
+                    var parseLocalIpResult = NetworkUtilities.ParseSingleIPv4Address(localIp);
                     if (parseLocalIpResult.Success)
                     {
                         server.ConnectionInfo.LocalIpAddress = parseLocalIpResult.Value;
                     }
                 }
 
-                var thisPublicIp = server.ConnectionInfo.PublicIpString;
+                var pubicIp = server.ConnectionInfo.PublicIpString;
 
-                if (string.IsNullOrEmpty(thisPublicIp))
+                if (string.IsNullOrEmpty(pubicIp))
                 {
                     server.ConnectionInfo.PublicIpAddress = IPAddress.None;
                 }
                 else
                 {
-                    var parsePublicIpResult = NetworkUtilities.ParseSingleIPv4Address(thisPublicIp);
+                    var parsePublicIpResult = NetworkUtilities.ParseSingleIPv4Address(pubicIp);
                     if (parsePublicIpResult.Success)
                     {
                         server.ConnectionInfo.PublicIpAddress = parsePublicIpResult.Value;
                     }
                 }
 
-                var thisSessionIp = server.ConnectionInfo.SessionIpString;
+                var sessionIp = server.ConnectionInfo.SessionIpString;
 
-                if (string.IsNullOrEmpty(thisSessionIp))
+                if (string.IsNullOrEmpty(sessionIp))
                 {
                     server.ConnectionInfo.SessionIpAddress = IPAddress.None;
                 }
                 else
                 {
-                    var parseSessionIpResult = NetworkUtilities.ParseSingleIPv4Address(thisSessionIp);
+                    var parseSessionIpResult = NetworkUtilities.ParseSingleIPv4Address(sessionIp);
                     if (parseSessionIpResult.Success)
                     {
                         server.ConnectionInfo.SessionIpAddress = parseSessionIpResult.Value;

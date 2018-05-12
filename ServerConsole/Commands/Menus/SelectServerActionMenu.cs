@@ -54,7 +54,7 @@
                 ReturnToParent = false;
                 _log.Error($"Error: User tried to perform a server action before selecting a remote server/" +
                            $" (SelectServerActionMenu.ExecuteAsync)");
-                return Result.Fail(ConsoleStatic.NoClientSelectedError);
+                return Result.Fail(SharedFunctions.NoClientSelectedError);
             }
 
             var exit = false;

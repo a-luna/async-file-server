@@ -1,5 +1,6 @@
 ﻿namespace ServerConsole.Commands.CompositeCommands
 {
+    using System;
     using System.IO;
     using System.Threading.Tasks;
 
@@ -20,15 +21,11 @@
 
         public InitializeServerCommand(AppState state, string settingsFilePath)
         {
-            _log.Info("Begin: Instantiate InitializeServerCommand");
-
             ReturnToParent = false;
             ItemText = "Initialize Local Server";
 
             _state = state;
             _settingsFilePath = settingsFilePath;
-
-            _log.Info("Complete: Instantiate InitializeServerCommand");
         }
 
         public string ItemText { get; set; }
@@ -36,15 +33,16 @@
 
         public async Task<Result> ExecuteAsync()
         {
-            _log.Info("Begin: InitializeServerCommand.ExecuteAsync");
-
             _state.SettingsFile = new FileInfo(_settingsFilePath);
+            _state.Settings = InitializeAppSettings(_state.SettingsFilePath);
 
-            var getSettingsCommand = new GetAppSettingsFromFileCommand(_state, _settingsFilePath);
-            var getSettingsResult = await getSettingsCommand.ExecuteAsync();
-            
-            var setPortCommand = new SetPortNumberForLocalServerCommand(_state);
-            var setPortResult = await setPortCommand.ExecuteAsync();
+            var setPortCommand = new SetMyPortNumberCommand(_state);
+            Result setPortResult = Result.Ok();
+
+            if (_state.Settings.LocalPort == 0)
+            {
+                setPortResult = await setPortCommand.ExecuteAsync();
+            }
 
             var getLocalIpCommand = new GetMyLocalIpAddressCommand(_state);
             var getLocalIpResult = await getLocalIpCommand.ExecuteAsync();
@@ -52,7 +50,7 @@
             var getPublicIpCommand = new GetMyPublicIpAddressCommand(_state);
             var getPublicIpResult = await getPublicIpCommand.ExecuteAsync();
 
-            var result = Result.Combine(getSettingsResult, setPortResult, getLocalIpResult, getPublicIpResult);
+            var result = Result.Combine(setPortResult, getLocalIpResult, getPublicIpResult);
             if (result.Failure)
             {
                 _log.Error($"Error: {result.Error} (InitializeServerCommand.ExecuteAsync)");
@@ -62,16 +60,40 @@
             var localIp = _state.MyLocalIpAddress;
             var port = _state.MyServerPort;
 
-            _state.Server =
-                new TplSocketServer(localIp, port)
-                {
-                    SocketSettings = _state.Settings.SocketSettings,
-                    MyTransferFolderPath = _state.Settings.TransferFolderPath,
-                    TransferUpdateInterval = _state.Settings.TransferUpdateInterval
-                };
+            _state.LocalServer.InitializeServer(localIp, port);
+            _state.LocalServer.SocketSettings = _state.Settings.SocketSettings;
+            _state.LocalServer.MyTransferFolderPath = _state.Settings.LocalServerFolderPath;
+            _state.LocalServer.TransferUpdateInterval = _state.Settings.FileTransferUpdateInterval;
 
             _log.Info("Complete: InitializeServerCommand.ExecuteAsync");
             return Result.Ok();
+        }
+
+        public static AppSettings InitializeAppSettings(string settingsFilePath)
+        {
+            var defaultTransferFolderPath
+                = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}transfer";
+
+            var settings = new AppSettings
+            {
+                MaxDownloadAttempts = 3,
+                LocalServerFolderPath = defaultTransferFolderPath,
+                FileTransferUpdateInterval = 0.0025f
+            };
+
+            if (!File.Exists(settingsFilePath)) return settings;
+
+            var deserialized = AppSettings.Deserialize(settingsFilePath);
+            if (deserialized.Success)
+            {
+                settings = deserialized.Value;
+            }
+            else
+            {
+                Console.WriteLine(deserialized.Error);
+            }
+
+            return settings;
         }
     }
 }

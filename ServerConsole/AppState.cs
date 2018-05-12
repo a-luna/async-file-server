@@ -1,13 +1,11 @@
-﻿using AaronLuna.ConsoleProgressBar;
-
-namespace ServerConsole
+﻿namespace ServerConsole
 {
     using System.Collections.Generic;
     using System.IO;
     using System.Net;
     using System.Threading;
 
-    using AaronLuna.Common.Console;
+    using AaronLuna.ConsoleProgressBar;
 
     using TplSockets;
 
@@ -35,11 +33,8 @@ namespace ServerConsole
         public bool WaitingForFileListResponse { get; set; }
         public bool WaitingForDownloadToComplete { get; set; }
         public bool WaitingForConfirmationMessage { get; set; }
-        public bool WaitingForUserInput { get; set; }
         public bool ClientSelected { get; set; }
-        public bool ActiveTextSession { get; set; }
         public bool ErrorOccurred { get; set; }
-        public bool ClientResponseIsStalled { get; set; }
         public bool ProgressBarInstantiated { get; set; }
         public bool FileTransferRejected { get; set; }
         public bool NoFilesAvailableForDownload { get; set; }
@@ -47,38 +42,37 @@ namespace ServerConsole
         public bool FileTransferCanceled { get; set; }
 
         public AppSettings Settings { get; set; }
-        public TplSocketServer Server { get; set; }
-        public RemoteServer Client => new RemoteServer(ClientInfo);
+        public TplSocketServer LocalServer { get; set; }
 
-        public string IncomingFileName => Path.GetFileName(Server.IncomingFilePath);
+        public string IncomingFileName => Path.GetFileName(LocalServer.IncomingFilePath);
         public int RetryCounter { get; set; }
         public ProgressEventArgs FileStalledInfo { get; set; }
         public List<(string filePath, long fileSize)> FileInfoList { get; set; }
-        public FileTransferProgressBar Progress { get; set; }
+        public FileTransferProgressBar ProgressBar { get; set; }
 
-        public ConnectionInfo MyInfo => Server.MyInfo;
-        
-        public string MyTransferFolderPath => Server.MyTransferFolderPath;
+        public ConnectionInfo LocalServerInfo => LocalServer.MyInfo;
+        public string MyTransferFolderPath => LocalServer.MyTransferFolderPath;
+        public IPAddress MyLocalIpAddress => LocalServer.MyLocalIpAddress;
+        public IPAddress MyPublicIpAddress => LocalServer.MyPublicIpAddress;
+        public int MyServerPort => LocalServer.MyServerPort;
 
-        public IPAddress MyLocalIpAddress => Server.MyLocalIpAddress;
-        public IPAddress MyPublicIpAddress => Server.MyPublicIpAddress;
-        public int MyServerPort => Server.MyServerPort;
+        public RemoteServer RemoteServer => LocalServer.RemoteServer;
 
-        public ConnectionInfo ClientInfo
+        public ConnectionInfo RemoteServerInfo
         {
-            get => Server.ClientInfo;
-            set => Server.ClientInfo = value;
+            get => LocalServer.RemoteServerInfo;
+            set => LocalServer.RemoteServerInfo = value;
         }
 
         public string ClientTransferFolderPath
         {
-            get => Server.ClientTransferFolderPath;
-            set => Server.ClientTransferFolderPath = value;
+            get => LocalServer.RemoteServerTransferFolderPath;
+            set => LocalServer.RemoteServerTransferFolderPath = value;
         }
 
-        public IPAddress ClientSessionIpAddress => Server.ClientSessionIpAddress;
-        public IPAddress ClientLocalIpAddress => Server.ClientLocalIpAddress;
-        public IPAddress ClientPublicIpAddress => Server.ClientPublicIpAddress;
-        public int ClientServerPort => Server.ClientServerPort;
+        public IPAddress ClientSessionIpAddress => LocalServer.RemoteServerSessionIpAddress;
+        public IPAddress ClientLocalIpAddress => LocalServer.RemoteServerLocalIpAddress;
+        public IPAddress ClientPublicIpAddress => LocalServer.RemoteServerPublicIpAddress;
+        public int ClientServerPort => LocalServer.RemoteServerPort;
     }
 }

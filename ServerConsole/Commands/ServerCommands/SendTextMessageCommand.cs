@@ -38,7 +38,7 @@
             var message = Console.ReadLine();
 
             var sendMessageResult =
-                await _state.Server.SendTextMessageAsync(
+                await _state.LocalServer.SendTextMessageAsync(
                     message,
                     ipAddress.ToString(),
                     port).ConfigureAwait(false);

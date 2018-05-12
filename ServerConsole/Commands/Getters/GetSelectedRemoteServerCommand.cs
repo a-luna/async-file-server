@@ -35,7 +35,7 @@ namespace ServerConsole.Commands.Getters
         {
             _log.Info("Begin: GetSelectedRemoteServerCommand.ExecuteAsync");
 
-            _state.ClientInfo = _server.ConnectionInfo;
+            _state.RemoteServerInfo = _server.ConnectionInfo;
             _state.ClientTransferFolderPath = _server.TransferFolder;
             _state.ClientSelected = true;
 

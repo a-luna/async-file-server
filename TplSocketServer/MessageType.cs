@@ -16,10 +16,9 @@
         FileTransferAccepted                  = 11,
         FileTransferRejected                  = 12,
         FileTransferStalled                   = 13,
-        //FileTransferCanceled                  = 14,
-        RetryOutboundFileTransfer             = 15,
-        RequestedFolderDoesNotExist           = 16,
-        ShutdownServerCommand                 = 17
+        RetryOutboundFileTransfer             = 14,
+        RequestedFolderDoesNotExist           = 15,
+        ShutdownServerCommand                 = 16
     }
 
     public static class MessageTypeExtensions
@@ -32,7 +31,7 @@
                     return "RECEIVE TEXT MESSAGE";
 
                 case MessageType.InboundFileTransfer:
-                    return "GET FILE";
+                    return "RECEIVE FILE";
 
                 case MessageType.OutboundFileTransfer:
                     return "FILE TRANSFER REQUEST";

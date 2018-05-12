@@ -48,7 +48,7 @@
 
                 var input = Console.ReadLine();
 
-                var validationResult = ConsoleStatic.ValidateNumberIsWithinRange(input, 1, totalMenuChoices);
+                var validationResult = SharedFunctions.ValidateNumberIsWithinRange(input, 1, totalMenuChoices);
                 if (validationResult.Failure)
                 {
                     Console.WriteLine(validationResult.Error);

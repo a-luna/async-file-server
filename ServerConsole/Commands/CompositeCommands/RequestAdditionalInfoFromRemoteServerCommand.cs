@@ -33,17 +33,17 @@
             var clientIp = _state.ClientSessionIpAddress;
             var clientPort = _state.ClientServerPort;
 
-            if (_state.ClientInfo.IsEqualTo(_state.MyInfo))
+            if (_state.RemoteServerInfo.IsEqualTo(_state.LocalServerInfo))
             {
                 _log.Error("Error: User tried to add this server\'s endpoint as a new client (RequestAdditionalInfoFromRemoteServerCommand.ExecuteAsync)");
                 var error = $"{clientIp}:{clientPort} is the same IP address and port number used by this server.";
                 return Result.Fail(error);
             }
 
-            if (ConsoleStatic.ClientAlreadyAdded(_state.Client, _state.Settings.RemoteServers))
+            if (SharedFunctions.ClientAlreadyAdded(_state.RemoteServer, _state.Settings.RemoteServers))
             {
-                var client = ConsoleStatic.GetRemoteServer(_state.Client, _state.Settings.RemoteServers);
-                _state.ClientInfo = client.ConnectionInfo;
+                var client = SharedFunctions.GetRemoteServer(_state.RemoteServer, _state.Settings.RemoteServers);
+                _state.RemoteServerInfo = client.ConnectionInfo;
                 _state.ClientTransferFolderPath = client.TransferFolder;
                 return Result.Ok();
             }
@@ -74,7 +74,7 @@
 
             Console.WriteLine($"{Environment.NewLine}Thank you! Connection info for new client has been successfully configured.\n");
 
-            _state.Settings.RemoteServers.Add(_state.Client);
+            _state.Settings.RemoteServers.Add(_state.RemoteServer);
             AppSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
             return Result.Ok();
         }

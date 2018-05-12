@@ -1,10 +1,10 @@
-﻿using System.Net;
-
-namespace TplSockets
+﻿namespace TplSockets
 {
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Net;
+
     using AaronLuna.Common.Extensions;
     using AaronLuna.Common.IO;
     using AaronLuna.Common.Numeric;
@@ -30,12 +30,10 @@ namespace TplSockets
         public IPAddress PublicIpAddress { get; set; }
         public string LocalFolder { get; set; }
         public string RemoteFolder { get; set; }
-        public int TotalUnknownHosts { get; set; }
-        public int UnknownHostsProcessed { get; set; }
         public string FileName { get; set; }
         public long FileSizeInBytes { get; set; }
         public string FileSizeString => FileHelper.FileSizeToString(FileSizeInBytes);
-        public List<(string, long)> FileInfoList { get; set; }
+        public List<(string, long)> RemoteServerFileList { get; set; }
         public DateTime FileTransferStartTime { get; set; }
         public DateTime FileTransferCompleteTime { get; set; }
         public TimeSpan FileTransferTimeSpan => FileTransferCompleteTime - FileTransferStartTime;
@@ -63,15 +61,11 @@ namespace TplSockets
             var report = string.Empty;
             switch (EventType)
             {
-                case EventType.ServerIsListening:
-                    report += $"Server is listening on port {LocalPortNumber}";
+                case EventType.ServerStartedListening:
+                    report += $"SERVER IS ACCEPTING INCOMING CONNECTIONS ON PORT {LocalPortNumber}";
                     break;
 
-                case EventType.EnterMainLoop:
-                    report += "SERVER IS ACCEPTING INCOMING CONNECTIONS";
-                    break;
-
-                case EventType.ExitMainLoop:
+                case EventType.ServerStoppedListening:
                     report += "SERVER SHUTDOWN COMPLETE, NO LONGER ACCEPTING CONNECTIONS";
                     break;
 
@@ -145,21 +139,13 @@ namespace TplSockets
                 case EventType.ReceiveMessageBytesComplete:
                     report += "Successfully received all message bytes";
                     break;
-                    
+
                 case EventType.ProcessRequestStarted:
                     report += $"START PROCESS: {MessageType.Name()}";
                     break;
 
                 case EventType.ProcessRequestComplete:
                     report += $"COMPLETED PROCESS: {MessageType.Name()}";
-                    break;
-
-                case EventType.ProcessUnknownHostStarted:
-                    report += $"Start Process:\t\tProcess unknown host {UnknownHostsProcessed}/{TotalUnknownHosts}";
-                    break;
-
-                case EventType.ProcessUnkownHostComplete:
-                    report += $"Completed Process:\tProcess unknown host {UnknownHostsProcessed}/{TotalUnknownHosts}";
                     break;
 
                 case EventType.ShutdownListenSocketStarted:
@@ -253,7 +239,7 @@ namespace TplSockets
                         $"{indentLevel1}Requested By:\t\t{LocalIpAddress}:{LocalPortNumber}{Environment.NewLine}" +
                         $"{indentLevel1}Target Folder:\t\t{RemoteFolder}{Environment.NewLine}";
                     break;
-                    
+
                 case EventType.ReceivedFileListRequest:
                     report += $"File list request details{Environment.NewLine}{Environment.NewLine}" +
                               $"{indentLevel1}Send Response To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
@@ -271,7 +257,7 @@ namespace TplSockets
 
                 case EventType.ReceivedFileList:
                     report +=
-                        $"File list received from {RemoteServerIpAddress}:{RemoteServerPortNumber}, {FileInfoList.Count} files available";
+                        $"File list received from {RemoteServerIpAddress}:{RemoteServerPortNumber}, {RemoteServerFileList.Count} files available";
                     break;
 
                 case EventType.RequestInboundFileTransferStarted:
@@ -282,7 +268,7 @@ namespace TplSockets
                         $"{indentLevel1}File Location:\t\t{RemoteFolder}{Environment.NewLine}" +
                         $"{indentLevel1}Target Folder:\t\t{LocalFolder}{Environment.NewLine}";
                     break;
-                    
+
                 case EventType.ReceivedInboundFileTransferRequest:
                     report +=
                         $"File transfer request details{Environment.NewLine}{Environment.NewLine}" +
@@ -293,23 +279,13 @@ namespace TplSockets
                     break;
 
                 case EventType.RequestOutboundFileTransferStarted:
-                    report += 
+                    report +=
                         $"Sending outbound file transfer request to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}File Name:\t\t{FileName}{Environment.NewLine}" +
                         $"{indentLevel1}File Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
                         $"{indentLevel1}File Location:\t{LocalFolder}{Environment.NewLine}" +
                         $"{indentLevel1}Target Folder:\t{RemoteFolder}{Environment.NewLine}";
                     break;
-                    
-                //case EventType.ReceivedOutboundFileTransferRequest:
-                //    report += 
-                //        $"File transfer request details{Environment.NewLine}{Environment.NewLine}" +
-                //        $"{IndentLevel1}Send File To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
-                //        $"{IndentLevel1}File Name:\t\t{FileName}{Environment.NewLine}" +
-                //        $"{IndentLevel1}File Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
-                //        $"{IndentLevel1}File Location:\t{LocalFolder}{Environment.NewLine}" +
-                //        $"{IndentLevel1}Target Folder:\t{RemoteFolder}{Environment.NewLine}";
-                //    break;
 
                 case EventType.SendFileTransferAcceptedStarted:
                     report += $"Notifying {RemoteServerIpAddress}:{RemoteServerPortNumber} that file transfer has been accepted";
@@ -366,7 +342,7 @@ namespace TplSockets
                     break;
 
                 case EventType.ReceivedFileBytesFromSocket:
-                    report += 
+                    report +=
                         $"Received Data From Socket:{Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}Socket Read Count:\t\t{SocketReadCount:N0}{Environment.NewLine}" +
                         $"{indentLevel1}Bytes Received:\t\t\t{BytesReceived:N0}{Environment.NewLine}" +
@@ -413,30 +389,14 @@ namespace TplSockets
                     report += $"Received notification from {RemoteServerIpAddress}:{RemoteServerPortNumber} that file transfer is incomplete and data has stopped being received";
                     break;
 
-                //case EventType.SendFileTransferCanceledStarted:
-                //    report += $"Start Process:\tNotify client that the file transfer has been canceled ({RemoteServerIpAddress}:{RemoteServerPortNumber})";
-                //    break;
-
-                //case EventType.SendFileTransferCanceledComplete:
-                //    report += "Completed Process:\tNotify client that the file transfer has been canceled";
-                //    break;
-
-                //case EventType.ReceiveFileTransferCanceledStarted:
-                //    report += "Start Process:\t\tReceive notification that the file transfer was canceled by the remote host";
-                //    break;
-
-                //case EventType.ReceiveFileTransferCanceledComplete:
-                //    report += $"Completed Process:\tReceive notification that the file transfer was canceled by the remote host ({RemoteServerIpAddress}:{RemoteServerPortNumber})";
-                //    break;
-
                 case EventType.RetryOutboundFileTransferStarted:
                     report += $"Sending request to retry unsuccessful file transfer to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
-                
+
                 case EventType.SendNotificationNoFilesToDownloadStarted:
                     report += $"Notifying {RemoteServerIpAddress}:{RemoteServerPortNumber} that no files are available to download from the requested folder";
                     break;
-                    
+
                 case EventType.ReceivedNotificationNoFilesToDownload:
                     report += $"Received notification from {RemoteServerIpAddress}:{RemoteServerPortNumber} that no files are available to download from the requested folder";
                     break;
@@ -444,7 +404,7 @@ namespace TplSockets
                 case EventType.SendNotificationFolderDoesNotExistStarted:
                     report += $"Notifying {RemoteServerIpAddress}:{RemoteServerPortNumber} that the requested folder does not exist";
                     break;
-                    
+
                 case EventType.ReceivedNotificationFolderDoesNotExist:
                     report += $"Received notification from {RemoteServerIpAddress}:{RemoteServerPortNumber} that the requested folder does not exist";
                     break;

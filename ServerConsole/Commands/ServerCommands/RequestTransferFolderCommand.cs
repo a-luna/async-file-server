@@ -19,7 +19,7 @@
         public RequestTransferFolderCommand(AppState state)
         {
             _state = state;
-            _state.Server.EventOccurred += HandleServerEvent;
+            _state.LocalServer.EventOccurred += HandleServerEvent;
 
             ReturnToParent = false;
             ItemText = "Request transfer folder path";
@@ -31,11 +31,10 @@
         public async Task<Result> ExecuteAsync()
         {
             _state.WaitingForTransferFolderResponse = true;
-            _state.ClientResponseIsStalled = false;
             _state.ClientTransferFolderPath = string.Empty;
 
             var sendFolderRequestResult =
-                await _state.Server.RequestTransferFolderPathAsync(
+                await _state.LocalServer.RequestTransferFolderPathAsync(
                         _state.ClientSessionIpAddress.ToString(),
                         _state.ClientServerPort)
                     .ConfigureAwait(false);
@@ -53,7 +52,7 @@
             }
 
             while (_state.WaitingForTransferFolderResponse) { }
-            _state.Server.EventOccurred -= HandleServerEvent;
+            _state.LocalServer.EventOccurred -= HandleServerEvent;
 
             return Result.Ok();
         }

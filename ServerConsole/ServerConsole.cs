@@ -22,14 +22,6 @@
         const string FileAlreadyExists = "\nThe client rejected the file transfer since a file by the same name already exists";
         const string FileTransferCancelled = "\nCancelled file transfer, client stopped receiving data and file transfer is incomplete.";
 
-        const int SendMessage = 1;
-        const int SendFile = 2;
-        const int GetFile = 3;
-        const int ShutDown = 4;
-        
-        const int ReplyToTextMessage = 1;
-        const int EndTextSession = 2;
-        
         readonly Logger _log = new Logger(typeof(ServerConsole));
 
         string _settingsFilePath;
@@ -38,61 +30,53 @@
 
         public ServerConsole()
         {
-            _log.Info("Begin: Instantiate ServerConsole");
-
             _settingsFilePath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}";
-
             _cts = new CancellationTokenSource();
-
             _state = new AppState();
-
-            _log.Info("Complete: Instantiate ServerConsole");
         }
 
         public event EventHandler<ServerEvent> EventOccurred;
 
         public async Task<Result> RunServerAsync()
         {
-            _log.Info("Begin: ServerConsole.RunServerAsync");
-
             var initializeServerCommand = new InitializeServerCommand(_state, _settingsFilePath);
             var initializeServerResult = await initializeServerCommand.ExecuteAsync();
 
             if (initializeServerResult.Failure)
             {
-                return Result.Fail(initializeServerResult.Error);
+                return initializeServerResult;
             }
 
-            _state.Server.EventOccurred += HandleServerEvent;
-            var token = _cts.Token;
+            _state.LocalServer.EventOccurred += HandleServerEvent;
 
+            var token = _cts.Token;
             var result = Result.Fail(string.Empty);
-            
+
             try
             {
                 var listenTask =
                     Task.Run(() =>
-                        _state.Server.HandleIncomingConnectionsAsync(),
+                        _state.LocalServer.RunServerAsync(),
                         token);
 
                 while (_state.WaitingForServerToBeginAcceptingConnections) { }
-                _state.Server.EventOccurred -= HandleServerEvent;
+                _state.LocalServer.EventOccurred -= HandleServerEvent;
 
                 var mainMenu = new MainMenu(_state);
                 result = await mainMenu.ExecuteAsync();
 
                 if (_state.ProgressBarInstantiated)
                 {
-                    _state.Progress.Dispose();
+                    _state.ProgressBar.Dispose();
                     _state.ProgressBarInstantiated = false;
                 }
-                
-                await _state.Server.ShutdownServerAsync();
+
+                await _state.LocalServer.ShutdownServerAsync();
                 var shutdownServerResult = await listenTask;
                 if (shutdownServerResult.Failure)
                 {
                     Console.WriteLine(shutdownServerResult.Error);
-                }                
+                }
             }
             catch (AggregateException ex)
             {
@@ -107,16 +91,14 @@
             catch (SocketException ex)
             {
                 _log.Error("Error raised in method RunServerAsync", ex);
-                Console.WriteLine($"{ex.Message} ({ex.GetType()}) raised in method ServerConsole.RunServerAsync");                
+                Console.WriteLine($"{ex.Message} ({ex.GetType()}) raised in method ServerConsole.RunServerAsync");
             }
             catch (Exception ex)
             {
                 _log.Error("Error raised in method RunServerAsync", ex);
-
                 Console.WriteLine($"{ex.Message} ({ex.GetType()}) raised in method ServerConsole.RunServerAsync");
             }
 
-            _log.Info("Complete: ServerConsole.RunServerAsync");
             return result;
         }
 
@@ -124,7 +106,7 @@
         {
             switch (serverEvent.EventType)
             {
-                case EventType.ServerIsListening:
+                case EventType.ServerStartedListening:
                     _state.WaitingForServerToBeginAcceptingConnections = false;
                     return;
             }
@@ -132,7 +114,7 @@
 
         async Task<Result> SendFileToClientAsync(IPAddress ipAddress, int port, string transferFolderPath, CancellationToken token)
         {
-            var selectFileResult = OldStatic.ChooseFileToSend(_state.Settings.TransferFolderPath);
+            var selectFileResult = OldStatic.ChooseFileToSend(_state.Settings.LocalServerFolderPath);
             if (selectFileResult.Failure)
             {
                 Console.WriteLine(selectFileResult.Error);
@@ -140,13 +122,13 @@
             }
 
             var fileToSend = selectFileResult.Value;
-            
+
             _state.WaitingForConfirmationMessage = true;
             _state.FileTransferRejected = false;
             _state.FileTransferCanceled = false;
 
             var sendFileResult =
-                await _state.Server.SendFileAsync(
+                await _state.LocalServer.SendFileAsync(
                     ipAddress,
                     port,
                     fileToSend,
@@ -167,7 +149,7 @@
             {
                 return Result.Fail(FileTransferCancelled);
             }
-            
+
             return Result.Ok();
         }
 
@@ -177,7 +159,7 @@
             _state.NoFilesAvailableForDownload = false;
 
             var requestFileListResult =
-                await _state.Server.RequestFileListAsync(
+                await _state.LocalServer.RequestFileListAsync(
                         ipAddress,
                         port,
                         remoteFolder)
@@ -211,7 +193,7 @@
                 ? Result.Fail("Notified client that file transfer has stalled")
                 : Result.Ok();
         }
-        
+
         async Task<Result> DownloadFileFromClient(string remoteIp, int remotePort)
         {
             var selectFileResult = ChooseFileToGet();
@@ -222,15 +204,15 @@
                 _state.WaitingForDownloadToComplete = false;
                 return Result.Ok();
             }
-            
+
             var fileToGet = selectFileResult.Value;
 
             var getFileResult =
-                await _state.Server.GetFileAsync(
+                await _state.LocalServer.GetFileAsync(
                     remoteIp,
                     remotePort,
                     fileToGet,
-                    _state.Settings.TransferFolderPath).ConfigureAwait(false);
+                    _state.Settings.LocalServerFolderPath).ConfigureAwait(false);
 
             return getFileResult.Success
                 ? Result.Ok()
@@ -258,7 +240,7 @@
 
                 var input = Console.ReadLine();
 
-                var validationResult = ConsoleStatic.ValidateNumberIsWithinRange(input, 1, totalMenuChoices);
+                var validationResult = SharedFunctions.ValidateNumberIsWithinRange(input, 1, totalMenuChoices);
                 if (validationResult.Failure)
                 {
                     Console.WriteLine(validationResult.Error);
