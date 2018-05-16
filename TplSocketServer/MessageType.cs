@@ -29,12 +29,24 @@
             {
                 case MessageType.TextMessage:
                     return "RECEIVE TEXT MESSAGE";
+                    
+                case MessageType.OutboundFileTransfer:
+                    return "FILE TRANSFER REQUEST";
+
+                case MessageType.FileTransferAccepted:
+                    return "SEND FILE";
 
                 case MessageType.InboundFileTransfer:
                     return "RECEIVE FILE";
 
-                case MessageType.OutboundFileTransfer:
-                    return "FILE TRANSFER REQUEST";
+                case MessageType.FileTransferRejected:
+                    return "SERVER RESPONSE: FILE TRANSFER REJECTED";
+
+                case MessageType.FileTransferStalled:
+                    return "SERVER RESPONSE: FILE TRANSFER STALLED";
+
+                case MessageType.RetryOutboundFileTransfer:
+                    return "RETRY STALLED FILE TRANSFER";
 
                 case MessageType.FileListRequest:
                     return "FILE LIST REQUEST";
@@ -48,29 +60,17 @@
                 case MessageType.TransferFolderPath:
                     return "RECEIVE TRANSFER FOLDER PATH";
 
+                case MessageType.NoFilesAvailableForDownload:
+                    return "SERVER RESPONSE: REQUESTED FOLDER IS EMPTY";
+
+                case MessageType.RequestedFolderDoesNotExist:
+                    return "SERVER RESPONSE: REQUESTED FOLDER DOES NOT EXIST";
+
                 case MessageType.PublicIpAddressRequest:
                     return "PUBLIC IP ADDRESS REQUEST";
 
                 case MessageType.PublicIpAddress:
                     return "RECEIVE PUBLIC IP ADDRESS";
-
-                case MessageType.NoFilesAvailableForDownload:
-                    return "REQUESTED FOLDER IS EMPTY";
-
-                case MessageType.FileTransferAccepted:
-                    return "SEND FILE";
-
-                case MessageType.FileTransferRejected:
-                    return "FILE TRANSFER REJECTED";
-
-                case MessageType.FileTransferStalled:
-                    return "FILE TRANSFER STALLED";
-
-                case MessageType.RetryOutboundFileTransfer:
-                    return "RETRY STALLED FILE TRANSFER";
-
-                case MessageType.RequestedFolderDoesNotExist:
-                    return "REQUESTED FOLDER DOES NOT EXIST";
 
                 case MessageType.ShutdownServerCommand:
                     return "SHUTDOWN SERVER";

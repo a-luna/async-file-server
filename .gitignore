@@ -33,6 +33,8 @@ Temporary Items
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+.vs/
+.vscode/
 CodeGraphData/
 DevTracker*
 *.dt

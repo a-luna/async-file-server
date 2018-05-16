@@ -4,6 +4,7 @@
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Logging;
+    using AaronLuna.Common.Crypto;
 
     static class Program
     {

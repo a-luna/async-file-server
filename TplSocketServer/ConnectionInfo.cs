@@ -1,6 +1,4 @@
-﻿using AaronLuna.Common.Extensions;
-
-namespace TplSockets
+﻿namespace TplSockets
 {
     using System.Net;
     using System.Xml.Serialization;

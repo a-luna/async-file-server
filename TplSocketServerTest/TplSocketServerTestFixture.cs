@@ -131,7 +131,7 @@ namespace TplSocketServerTest
             }
 
             _localIp = IPAddress.Loopback;
-            var getLocalIpResult = NetworkUtilities.GetLocalIPv4Address("192.168.2.0/24");
+            var getLocalIpResult = NetworkUtilities.GetLocalIPv4Address("172.20.10.1/30");
             if (getLocalIpResult.Success)
             {
                 _localIp = getLocalIpResult.Value;

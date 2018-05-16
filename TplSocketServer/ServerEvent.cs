@@ -62,7 +62,7 @@
             switch (EventType)
             {
                 case EventType.ServerStartedListening:
-                    report += $"SERVER IS ACCEPTING INCOMING CONNECTIONS ON PORT {LocalPortNumber}";
+                    report += $"NOW ACCEPTING CONNECTIONS ON PORT {LocalPortNumber}";
                     break;
 
                 case EventType.ServerStoppedListening:
@@ -83,11 +83,11 @@
                     break;
 
                 case EventType.ReceiveMessageFromClientStarted:
-                    report += $"RECEIVING MESSAGE FROM CLIENT: {RemoteServerIpAddress}";
+                    report += $"BEGIN PROCESS: RECEIVE MESSAGE FROM CLIENT: {RemoteServerIpAddress}";
                     break;
 
                 case EventType.ReceiveMessageFromClientComplete:
-                    report += "SUCCESSFULLY RECEIVED ENTIRE MESSAGE";
+                    report += $"PROCESS COMPLETE: RECEIVE MESSAGE FROM CLIENT: {RemoteServerIpAddress}";
                     break;
 
                 case EventType.DetermineMessageLengthStarted:
@@ -145,7 +145,7 @@
                     break;
 
                 case EventType.ProcessRequestComplete:
-                    report += $"COMPLETED PROCESS: {MessageType.Name()}";
+                    report += $"PROCESS COMPLETE: {MessageType.Name()}";
                     break;
 
                 case EventType.ShutdownListenSocketStarted:
@@ -164,7 +164,7 @@
                 case EventType.SendTextMessageStarted:
                     report +=
                         $"Sending text message to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}Message:\t\t\t{TextMessage}{Environment.NewLine}";
+                        $"{indentLevel1}Message:\t{TextMessage}{Environment.NewLine}";
                     break;
 
                 case EventType.SendTextMessageComplete:
@@ -173,7 +173,7 @@
 
                 case EventType.ReceivedTextMessage:
                     report +=
-                        $"Text message received{Environment.NewLine}{Environment.NewLine}{Environment.NewLine}" +
+                        $"Text message received{Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}Message From:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
                         $"{indentLevel1}Message:\t\t{TextMessage}{Environment.NewLine}";
                     break;
@@ -281,6 +281,16 @@
                 case EventType.RequestOutboundFileTransferStarted:
                     report +=
                         $"Sending outbound file transfer request to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
+                        $"{indentLevel1}File Name:\t\t{FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
+                        $"{indentLevel1}File Location:\t{LocalFolder}{Environment.NewLine}" +
+                        $"{indentLevel1}Target Folder:\t{RemoteFolder}{Environment.NewLine}";
+                    break;
+
+                case EventType.ReceivedOutboundFileTransferRequest:
+                    report +=
+                        $"File transfer request details{Environment.NewLine}{Environment.NewLine}" +
+                        $"{indentLevel1}Send File To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
                         $"{indentLevel1}File Name:\t\t{FileName}{Environment.NewLine}" +
                         $"{indentLevel1}File Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
                         $"{indentLevel1}File Location:\t{LocalFolder}{Environment.NewLine}" +
@@ -410,11 +420,11 @@
                     break;
 
                 case EventType.SendShutdownServerCommandStarted:
-                    report += "INITIATE SERVER SHUTDOWN PROCESS";
+                    report += "BEGIN PROCESS: INITIATE SERVER SHUTDOWN";
                     break;
 
                 case EventType.SendShutdownServerCommandComplete:
-                    report += "SERVER SHUTDOWN HAS BEEN INITIATED";
+                    report += "PROCESS COMPLETE: INITIATE SERVER SHUTDOWN";
                     break;
 
                 case EventType.ReceivedShutdownServerCommand:

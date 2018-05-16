@@ -23,6 +23,7 @@
             "Server is unitialized and cannot handle incoming connections";
 
         bool _serverInitialized;
+        bool _transferInitiatedByThisServer;
         int _receivedShutdownCommand;
         int _shutdownComplete;
 
@@ -80,6 +81,7 @@
             _serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _serverInitialized = false;
+            _transferInitiatedByThisServer = true;
         }
 
         public float TransferUpdateInterval { get; set; }
@@ -230,27 +232,21 @@
             // or an error is encountered
             while (true)
             {
-                var acceptResult = await _listenSocket.AcceptTaskAsync(token).ConfigureAwait(false);
+                _transferInitiatedByThisServer = true;
 
+                var acceptResult = await _listenSocket.AcceptTaskAsync(token).ConfigureAwait(false);
                 if (acceptResult.Failure)
                 {
                     return acceptResult;
                 }
 
-                if (token.IsCancellationRequested)
-                {
-                    return Result.Ok();
-                }
-
                 _clientSocket = acceptResult.Value;
-
                 if (!(_clientSocket.RemoteEndPoint is IPEndPoint clientEndPoint))
                 {
                     return Result.Fail("Error occurred casting _state._clientSocket.RemoteEndPoint as IPEndPoint");
                 }
 
                 _ipAddressLastConnection = clientEndPoint.Address;
-
                 EventOccurred?.Invoke(this,
                     new ServerEvent
                     {
@@ -259,7 +255,6 @@
                     });
 
                 var clientRequest = await HandleClientRequestAsync(token).ConfigureAwait(false);
-
                 if (token.IsCancellationRequested || ReceivedShutdownCommand)
                 {
                     return Result.Ok();
@@ -338,7 +333,10 @@
 
             EventOccurred?.Invoke(this,
                 new ServerEvent
-                    {EventType = EventType.ReceiveMessageFromClientComplete});
+                {
+                    EventType = EventType.ReceiveMessageFromClientComplete,
+                    RemoteServerIpAddress = _ipAddressLastConnection
+                });
 
             return Result.Ok(message);
         }
@@ -554,6 +552,7 @@
                     break;
 
                 case MessageType.OutboundFileTransfer:
+                    _transferInitiatedByThisServer = false;
                     await OutboundFileTransferAsync(message.Data).ConfigureAwait(false);
                     break;
 
@@ -758,19 +757,22 @@
             OutgoingFilePath = localFilePath;
             RemoteServerTransferFolderPath = remoteFolderPath;
 
-            EventOccurred?.Invoke(this,
-                new ServerEvent
-                {
-                    EventType = EventType.RequestOutboundFileTransferStarted,
-                    LocalIpAddress = MyLocalIpAddress,
-                    LocalPortNumber = MyServerPort,
-                    LocalFolder = Path.GetDirectoryName(OutgoingFilePath),
-                    FileName = Path.GetFileName(OutgoingFilePath),
-                    FileSizeInBytes = _state.OutgoingFileSize,
-                    RemoteServerIpAddress = RemoteServerSessionIpAddress,
-                    RemoteServerPortNumber = RemoteServerPort,
-                    RemoteFolder = RemoteServerTransferFolderPath
-                });
+            if (_transferInitiatedByThisServer)
+            {
+                EventOccurred?.Invoke(this,
+                    new ServerEvent
+                    {
+                        EventType = EventType.RequestOutboundFileTransferStarted,
+                        LocalIpAddress = MyLocalIpAddress,
+                        LocalPortNumber = MyServerPort,
+                        LocalFolder = Path.GetDirectoryName(OutgoingFilePath),
+                        FileName = Path.GetFileName(OutgoingFilePath),
+                        FileSizeInBytes = _state.OutgoingFileSize,
+                        RemoteServerIpAddress = RemoteServerSessionIpAddress,
+                        RemoteServerPortNumber = RemoteServerPort,
+                        RemoteFolder = RemoteServerTransferFolderPath
+                    });
+            }
 
             var connectResult = await ConnectToServerAsync().ConfigureAwait(false);
             if (connectResult.Failure)
