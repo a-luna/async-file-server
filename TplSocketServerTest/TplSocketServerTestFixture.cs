@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace TplSocketServerTest
 {
     using System;
@@ -40,6 +42,7 @@ namespace TplSocketServerTest
         string _remoteFolder;
         string _testFilesFolder;
         string _emptyFolder;
+        string _tempFolder;
         string _localFilePath;
         string _remoteFilePath;
         string _restoreFilePath;
@@ -48,8 +51,7 @@ namespace TplSocketServerTest
         string _transferFolderPath;
         string _publicIp;
         List<(string, long)> _fileInfoList;
-
-        bool _serverIsListening;
+        
         bool _serverReceivedTextMessage;
         bool _serverReceivedAllFileBytes;
         bool _serverReceivedConfirmationMessage;
@@ -57,8 +59,7 @@ namespace TplSocketServerTest
         bool _serverHasNoFilesAvailableToDownload;
         bool _serverTransferFolderDoesNotExist;
         bool _serverErrorOccurred;
-
-        bool _clientIsListening;
+        
         bool _clientReceivedTextMessage;
         bool _clientReceivedAllFileBytes;
         bool _clientRejectedFileTransfer;
@@ -81,8 +82,7 @@ namespace TplSocketServerTest
             _serverLogMessages = new List<string>();
             _clientLogFilePath = string.Empty;
             _serverLogFilePath = string.Empty;
-
-            _serverIsListening = false;
+            
             _serverReceivedTextMessage = false;
             _serverReceivedAllFileBytes = false;
             _serverReceivedConfirmationMessage = false;
@@ -90,8 +90,7 @@ namespace TplSocketServerTest
             _serverHasNoFilesAvailableToDownload = false;
             _serverTransferFolderDoesNotExist = false;
             _serverErrorOccurred = false;
-
-            _clientIsListening = false;
+            
             _clientReceivedTextMessage = false;
             _clientReceivedAllFileBytes = false;
             _clientReceivedConfirmationMessage = false;
@@ -109,6 +108,7 @@ namespace TplSocketServerTest
             _localFolder = _testFilesFolder + $"Client{Path.DirectorySeparatorChar}";
             _remoteFolder = _testFilesFolder + $"Server{Path.DirectorySeparatorChar}";
             _emptyFolder = _testFilesFolder + $"EmptyFolder{Path.DirectorySeparatorChar}";
+            _tempFolder = _testFilesFolder + $"temp{Path.DirectorySeparatorChar}";
 
             Directory.CreateDirectory(_localFolder);
             Directory.CreateDirectory(_remoteFolder);
@@ -226,9 +226,6 @@ namespace TplSocketServerTest
             while (!_server.ServerIsRunning) { }
             while (!_client.ServerIsRunning) { }
 
-            //while (!_serverIsListening) { }
-            //while (!_clientIsListening) { }
-
             Assert.AreEqual(string.Empty, _messageFromClient);
             Assert.AreEqual(string.Empty, _messageFromServer);
 
@@ -298,8 +295,8 @@ namespace TplSocketServerTest
                 Task.Run(() =>
                         _client.RunServerAsync(), token);
 
-            while (!_serverIsListening) { }
-            while (!_clientIsListening) { }
+            while (!_server.ServerIsRunning) { }
+            while (!_client.ServerIsRunning) { }
 
             var sizeOfFileToSend = new FileInfo(sendFilePath).Length;
             FileHelper.DeleteFileIfAlreadyExists(receiveFilePath);
@@ -372,8 +369,8 @@ namespace TplSocketServerTest
                     _client.RunServerAsync(),
                     token);
 
-            while (!_serverIsListening) { }
-            while (!_clientIsListening) { }
+            while (!_server.ServerIsRunning) { }
+            while (!_client.ServerIsRunning) { }
 
             FileHelper.DeleteFileIfAlreadyExists(receivedFilePath);
             Assert.IsFalse(File.Exists(receivedFilePath));
@@ -442,8 +439,9 @@ namespace TplSocketServerTest
                         _client.RunServerAsync(),
                         token);
 
-            while (!_serverIsListening) { }
-            while (!_clientIsListening) { }
+            while (!_server.ServerIsRunning) { }
+            while (!_client.ServerIsRunning) { }
+
             Assert.AreEqual(string.Empty, _transferFolderPath);
 
             var transferFolderRequest =
@@ -500,8 +498,9 @@ namespace TplSocketServerTest
                         _client.RunServerAsync(),
                     token);
 
-            while (!_serverIsListening) { }
-            while (!_clientIsListening) { }
+            while (!_server.ServerIsRunning) { }
+            while (!_client.ServerIsRunning) { }
+
             Assert.AreEqual(string.Empty, _publicIp);
 
             var publicIpRequest =
@@ -529,7 +528,7 @@ namespace TplSocketServerTest
 
             _server.InitializeServer(_localIp, remoteServerPort);
             _server.SocketSettings = _socketSettings;
-            _server.MyTransferFolderPath = _remoteFolder;
+            _server.MyTransferFolderPath = _testFilesFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
@@ -538,8 +537,7 @@ namespace TplSocketServerTest
             _client.MyTransferFolderPath = _localFolder;
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
-
-            _server.MyTransferFolderPath = _testFilesFolder;
+            
             var token = _cts.Token;
 
            _runServerTask =
@@ -552,9 +550,8 @@ namespace TplSocketServerTest
                         _client.RunServerAsync(),
                     token);
 
-            while (!_serverIsListening) { }
-            while (!_clientIsListening) { }
-            Assert.AreEqual(0, _fileInfoList.Count);
+            while (!_server.ServerIsRunning) { }
+            while (!_client.ServerIsRunning) { }
 
             var fileListRequest =
                 await _client.RequestFileListAsync(
@@ -570,26 +567,32 @@ namespace TplSocketServerTest
             while (!_clientReceivedFileInfoList) { }
 
             Assert.AreEqual(4, _fileInfoList.Count);
+            
+            var fiDictionaryActual = new Dictionary<string, long>();
+            foreach (var fi in _fileInfoList)
+            {
+                fiDictionaryActual.Add(fi.Item1, fi.Item2);
+            }
 
-            var fileName1 = Path.GetFileName(_fileInfoList[0].Item1);
-            var fileName2 = Path.GetFileName(_fileInfoList[1].Item1);
-            var fileName3 = Path.GetFileName(_fileInfoList[2].Item1);
-            var fileName4 = Path.GetFileName(_fileInfoList[3].Item1);
+            var expectedFileNames = new List<string>();
+            expectedFileNames.Add(Path.Combine(_testFilesFolder, "fake.exe"));
+            expectedFileNames.Add(Path.Combine(_testFilesFolder, "loremipsum1.txt"));
+            expectedFileNames.Add(Path.Combine(_testFilesFolder, "loremipsum2.txt"));
+            expectedFileNames.Add(Path.Combine(_testFilesFolder, "smallFile.jpg"));
 
-            var fileSize1 = new FileInfo(_fileInfoList[0].Item1).Length;
-            var fileSize2 = new FileInfo(_fileInfoList[1].Item1).Length;
-            var fileSize3 = new FileInfo(_fileInfoList[2].Item1).Length;
-            var fileSize4 = new FileInfo(_fileInfoList[3].Item1).Length;
-
-            Assert.AreEqual("fake.exe", fileName1);
-            Assert.AreEqual("loremipsum1.txt", fileName2);
-            Assert.AreEqual("loremipsum2.txt", fileName3);
-            Assert.AreEqual("smallFile.jpg", fileName4);
-
-            Assert.AreEqual(fileSize1, _fileInfoList[0].Item2);
-            Assert.AreEqual(fileSize2, _fileInfoList[1].Item2);
-            Assert.AreEqual(fileSize3, _fileInfoList[2].Item2);
-            Assert.AreEqual(fileSize4, _fileInfoList[3].Item2);
+            foreach (var fileName in expectedFileNames)
+            {
+                if (fiDictionaryActual.ContainsKey(fileName))
+                {
+                    var fileSizeExpected = fiDictionaryActual[fileName];
+                    var fileSizeActual = new FileInfo(fileName).Length;
+                    Assert.AreEqual(fileSizeExpected, fileSizeActual);
+                }
+                else
+                {
+                    Assert.Fail($"{fileName} was not found in the list of files.");
+                }
+            }
         }
 
         [TestMethod]
@@ -625,9 +628,9 @@ namespace TplSocketServerTest
                 Task.Run(() =>
                     _client.RunServerAsync());
 
-            while (!_serverIsListening) { }
-            while (!_clientIsListening) { }
-            
+            while (!_server.ServerIsRunning) { }
+            while (!_client.ServerIsRunning) { }
+
             Assert.IsTrue(File.Exists(receiveFilePath));
 
             var sendFileResult1 =
@@ -712,9 +715,9 @@ namespace TplSocketServerTest
                         _client.RunServerAsync(),
                     token);
 
-            while (!_serverIsListening) { }
-            while (!_clientIsListening) { }
-            
+            while (!_server.ServerIsRunning) { }
+            while (!_client.ServerIsRunning) { }
+
             Assert.IsTrue(File.Exists(receivedFilePath));
 
             var getFileResult1 =
@@ -797,8 +800,8 @@ namespace TplSocketServerTest
                         _client.RunServerAsync(),
                     token);
 
-            while (!_serverIsListening) { }
-            while (!_clientIsListening) { }
+            while (!_server.ServerIsRunning) { }
+            while (!_client.ServerIsRunning) { }
 
             var fileListRequest1 =
                 await _client.RequestFileListAsync(
@@ -830,15 +833,31 @@ namespace TplSocketServerTest
 
             Assert.AreEqual(4, _fileInfoList.Count);
 
-            var fileName1 = Path.GetFileName(_fileInfoList[0].Item1);
-            var fileName2 = Path.GetFileName(_fileInfoList[1].Item1);
-            var fileName3 = Path.GetFileName(_fileInfoList[2].Item1);
-            var fileName4 = Path.GetFileName(_fileInfoList[3].Item1);
+            var fiDictionaryActual = new Dictionary<string, long>();
+            foreach (var fi in _fileInfoList)
+            {
+                fiDictionaryActual.Add(fi.Item1, fi.Item2);
+            }
 
-            Assert.AreEqual("fake.exe", fileName1);
-            Assert.AreEqual("loremipsum1.txt", fileName2);
-            Assert.AreEqual("loremipsum2.txt", fileName3);
-            Assert.AreEqual("smallFile.jpg", fileName4);
+            var expectedFileNames = new List<string>();
+            expectedFileNames.Add(Path.Combine(_testFilesFolder, "fake.exe"));
+            expectedFileNames.Add(Path.Combine(_testFilesFolder, "loremipsum1.txt"));
+            expectedFileNames.Add(Path.Combine(_testFilesFolder, "loremipsum2.txt"));
+            expectedFileNames.Add(Path.Combine(_testFilesFolder, "smallFile.jpg"));
+
+            foreach (var fileName in expectedFileNames)
+            {
+                if (fiDictionaryActual.ContainsKey(fileName))
+                {
+                    var fileSizeExpected = fiDictionaryActual[fileName];
+                    var fileSizeActual = new FileInfo(fileName).Length;
+                    Assert.AreEqual(fileSizeExpected, fileSizeActual);
+                }
+                else
+                {
+                    Assert.Fail($"{fileName} was not found in the list of files.");
+                }
+            }
         }
 
         [TestMethod]
@@ -874,17 +893,16 @@ namespace TplSocketServerTest
                         _client.RunServerAsync(),
                     token);
 
-            while (!_serverIsListening) { }
-            while (!_clientIsListening) { }
-
-            Directory.Delete(_emptyFolder);
-            Assert.IsFalse(Directory.Exists(_emptyFolder));
+            while (!_server.ServerIsRunning) { }
+            while (!_client.ServerIsRunning) { }
+            
+            Assert.IsFalse(Directory.Exists(_tempFolder));
 
             var fileListRequest1 =
                 await _client.RequestFileListAsync(
                     _localIp.ToString(),
                     remoteServerPort,
-                    _emptyFolder).ConfigureAwait(false);
+                    _tempFolder).ConfigureAwait(false);
 
             if (fileListRequest1.Failure)
             {
@@ -910,25 +928,31 @@ namespace TplSocketServerTest
 
             Assert.AreEqual(4, _fileInfoList.Count);
 
-            var fileName1 = Path.GetFileName(_fileInfoList[0].Item1);
-            var fileName2 = Path.GetFileName(_fileInfoList[1].Item1);
-            var fileName3 = Path.GetFileName(_fileInfoList[2].Item1);
-            var fileName4 = Path.GetFileName(_fileInfoList[3].Item1);
+            var fiDictionaryActual = new Dictionary<string, long>();
+            foreach (var fi in _fileInfoList)
+            {
+                fiDictionaryActual.Add(fi.Item1, fi.Item2);
+            }
 
-            var fileSize1 = new FileInfo(_fileInfoList[0].Item1).Length;
-            var fileSize2 = new FileInfo(_fileInfoList[1].Item1).Length;
-            var fileSize3 = new FileInfo(_fileInfoList[2].Item1).Length;
-            var fileSize4 = new FileInfo(_fileInfoList[3].Item1).Length;
+            var expectedFileNames = new List<string>();
+            expectedFileNames.Add(Path.Combine(_testFilesFolder, "fake.exe"));
+            expectedFileNames.Add(Path.Combine(_testFilesFolder, "loremipsum1.txt"));
+            expectedFileNames.Add(Path.Combine(_testFilesFolder, "loremipsum2.txt"));
+            expectedFileNames.Add(Path.Combine(_testFilesFolder, "smallFile.jpg"));
 
-            Assert.AreEqual("fake.exe", fileName1);
-            Assert.AreEqual("loremipsum1.txt", fileName2);
-            Assert.AreEqual("loremipsum2.txt", fileName3);
-            Assert.AreEqual("smallFile.jpg", fileName4);
-
-            Assert.AreEqual(fileSize1, _fileInfoList[0].Item2);
-            Assert.AreEqual(fileSize2, _fileInfoList[1].Item2);
-            Assert.AreEqual(fileSize3, _fileInfoList[2].Item2);
-            Assert.AreEqual(fileSize4, _fileInfoList[3].Item2);
+            foreach (var fileName in expectedFileNames)
+            {
+                if (fiDictionaryActual.ContainsKey(fileName))
+                {
+                    var fileSizeExpected = fiDictionaryActual[fileName];
+                    var fileSizeActual = new FileInfo(fileName).Length;
+                    Assert.AreEqual(fileSizeExpected, fileSizeActual);
+                }
+                else
+                {
+                    Assert.Fail($"{fileName} was not found in the list of files.");
+                }
+            }
         }
 
         void HandleClientEvent(object sender, ServerEvent serverEvent)
@@ -941,10 +965,6 @@ namespace TplSocketServerTest
 
             switch (serverEvent.EventType)
             {
-                case EventType.ServerStartedListening:
-                    _clientIsListening = true;
-                    break;
-
                 case EventType.ReceivedTextMessage:
                     _clientReceivedTextMessage = true;
                     _messageFromServer = serverEvent.TextMessage;
@@ -985,10 +1005,6 @@ namespace TplSocketServerTest
                     _clientReceivedConfirmationMessage = true;
                     break;
 
-                case EventType.ServerStoppedListening:
-                    _clientIsListening = false;
-                    break;
-
                 case EventType.ErrorOccurred:
                     _clientErrorOccurred = true;
                     break;
@@ -1005,10 +1021,6 @@ namespace TplSocketServerTest
 
             switch (serverEvent.EventType)
             {
-                case EventType.ServerStartedListening:
-                    _serverIsListening = true;
-                    break;
-
                 case EventType.ReceivedTextMessage:
                     _serverReceivedTextMessage = true;
                     _messageFromClient = serverEvent.TextMessage;
@@ -1024,10 +1036,6 @@ namespace TplSocketServerTest
 
                 case EventType.ReceiveConfirmationMessageComplete:
                     _serverReceivedConfirmationMessage = true;
-                    break;
-
-                case EventType.ServerStoppedListening:
-                    _serverIsListening = false;
                     break;
 
                 case EventType.ErrorOccurred:
