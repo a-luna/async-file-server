@@ -1,29 +1,19 @@
-﻿namespace TplSockets
+﻿using AaronLuna.Common.Enums;
+
+namespace TplSockets
 {
     using System.Net;
     using System.Xml.Serialization;
 
-    using AaronLuna.Common.Enums;
     using AaronLuna.Common.Network;
 
-    public class ConnectionInfo
+    public class ServerInfo
     {
         IPAddress _localIp;
         IPAddress _pubilcIp;
         IPAddress _sessionIp;
 
-        public ConnectionInfo(IPAddress ipAddress, int port)
-        {
-            InitializeConnection(ipAddress, port);
-        }
-
-        public ConnectionInfo(string ipAddress, int port)
-        {
-            var sessionIp = NetworkUtilities.ParseSingleIPv4Address(ipAddress).Value;
-            InitializeConnection(sessionIp, port);
-        }
-
-        public ConnectionInfo()
+        public ServerInfo()
         {
             LocalIpAddress = IPAddress.None;
             PublicIpAddress = IPAddress.None;
@@ -32,7 +22,23 @@
             LocalIpString = string.Empty;
             PublicIpString = string.Empty;
             SessionIpString = string.Empty;
+            TransferFolder = string.Empty;
         }
+        
+        public ServerInfo(IPAddress ipAddress, int port)
+        {
+            TransferFolder = string.Empty;
+            InitializeConnection(ipAddress, port);
+        }
+
+        public ServerInfo(string ipAddress, int port)
+        {
+            TransferFolder = string.Empty;
+            var sessionIp = NetworkUtilities.ParseSingleIPv4Address(ipAddress).Value;
+            InitializeConnection(sessionIp, port);
+        }
+
+        public string TransferFolder { get; set; }
 
         [XmlIgnore]
         public IPAddress SessionIpAddress
@@ -92,9 +98,9 @@
         }
     }
 
-    public static class ConnectionInfoExtensions
+    public static class RemoteServerExtensions
     {
-        public static bool IsEqualTo(this ConnectionInfo myInfo, ConnectionInfo otherInfo)
+        public static bool IsEqualTo(this ServerInfo myInfo, ServerInfo otherInfo)
         {
             //// Transfer Folder not used to determine equality, ip address
             //// and port number combination must be unique 

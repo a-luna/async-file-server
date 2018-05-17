@@ -20,9 +20,9 @@
 
             ReturnToParent = false;
             ItemText = "All server actions";
-            MenuText = $"\nServer is listening for incoming requests on port {state.MyServerPort}" +
-                       $"\nLocal IP:\t{state.MyLocalIpAddress}" +
-                       $"\nPublic IP:\t{state.MyPublicIpAddress}" +
+            MenuText = $"\nServer is listening for incoming requests on port {state.LocalServer.Info.Port}" +
+                       $"\nLocal IP:\t{state.LocalServer.Info.LocalIpAddress}" +
+                       $"\nPublic IP:\t{state.LocalServer.Info.PublicIpAddress}" +
                        "\nPlease make a choice from the menu below:";
 
             var sendTextMessageCommand = new SendTextMessageCommand(state);

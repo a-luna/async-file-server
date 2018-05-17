@@ -4,14 +4,14 @@
     {
         None                                  = 0,
         TextMessage                           = 1,
-        InboundFileTransfer                   = 2,
-        OutboundFileTransfer                  = 3,
+        InboundFileTransferRequest            = 2,
+        OutboundFileTransferRequest           = 3,
         FileListRequest                       = 4,
-        FileList                              = 5,
+        FileListResponse                      = 5,
         TransferFolderPathRequest             = 6,
-        TransferFolderPath                    = 7,
+        TransferFolderPathResponse            = 7,
         PublicIpAddressRequest                = 8,
-        PublicIpAddress                       = 9,
+        PublicIpAddressResponse               = 9,
         NoFilesAvailableForDownload           = 10,
         FileTransferAccepted                  = 11,
         FileTransferRejected                  = 12,
@@ -30,13 +30,13 @@
                 case MessageType.TextMessage:
                     return "RECEIVE TEXT MESSAGE";
                     
-                case MessageType.OutboundFileTransfer:
+                case MessageType.OutboundFileTransferRequest:
                     return "FILE TRANSFER REQUEST";
 
                 case MessageType.FileTransferAccepted:
                     return "SEND FILE";
 
-                case MessageType.InboundFileTransfer:
+                case MessageType.InboundFileTransferRequest:
                     return "RECEIVE FILE";
 
                 case MessageType.FileTransferRejected:
@@ -51,13 +51,13 @@
                 case MessageType.FileListRequest:
                     return "FILE LIST REQUEST";
 
-                case MessageType.FileList:
+                case MessageType.FileListResponse:
                     return "RECEIVE FILE LIST";
 
                 case MessageType.TransferFolderPathRequest:
                     return "TRANSFER FOLDER PATH REQUEST";
 
-                case MessageType.TransferFolderPath:
+                case MessageType.TransferFolderPathResponse:
                     return "RECEIVE TRANSFER FOLDER PATH";
 
                 case MessageType.NoFilesAvailableForDownload:
@@ -69,7 +69,7 @@
                 case MessageType.PublicIpAddressRequest:
                     return "PUBLIC IP ADDRESS REQUEST";
 
-                case MessageType.PublicIpAddress:
+                case MessageType.PublicIpAddressResponse:
                     return "RECEIVE PUBLIC IP ADDRESS";
 
                 case MessageType.ShutdownServerCommand:

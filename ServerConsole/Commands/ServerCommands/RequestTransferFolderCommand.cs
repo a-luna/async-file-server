@@ -31,12 +31,12 @@
         public async Task<Result> ExecuteAsync()
         {
             _state.WaitingForTransferFolderResponse = true;
-            _state.ClientTransferFolderPath = string.Empty;
+            _state.RemoteServerInfo.TransferFolder = string.Empty;
 
             var sendFolderRequestResult =
                 await _state.LocalServer.RequestTransferFolderPathAsync(
-                        _state.ClientSessionIpAddress.ToString(),
-                        _state.ClientServerPort)
+                        _state.RemoteServerInfo.SessionIpAddress.ToString(),
+                        _state.RemoteServerInfo.Port)
                     .ConfigureAwait(false);
 
             if (sendFolderRequestResult.Failure)
@@ -63,7 +63,7 @@
             {
                 case EventType.ReceivedTransferFolderPath:
                     _state.WaitingForTransferFolderResponse = false;
-                    _state.ClientTransferFolderPath = serverEvent.RemoteFolder;
+                    _state.RemoteServerInfo.TransferFolder = serverEvent.RemoteFolder;
                     break;
             }
         }

@@ -19,7 +19,7 @@ namespace TplSocketServerTest
     [TestClass]
     public class TplSocketServerTestFixture
     {
-        const bool GenerateLogFiles = true;
+        const bool GenerateLogFiles = false;
 
         const string FileName = "smallFile.jpg";
 
@@ -223,8 +223,11 @@ namespace TplSocketServerTest
                     _client.RunServerAsync(),
                     token);
 
-            while (!_serverIsListening) { }
-            while (!_clientIsListening) { }
+            while (!_server.ServerIsRunning) { }
+            while (!_client.ServerIsRunning) { }
+
+            //while (!_serverIsListening) { }
+            //while (!_clientIsListening) { }
 
             Assert.AreEqual(string.Empty, _messageFromClient);
             Assert.AreEqual(string.Empty, _messageFromServer);

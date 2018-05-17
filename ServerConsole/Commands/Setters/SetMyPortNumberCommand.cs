@@ -25,8 +25,7 @@
         public async Task<Result> ExecuteAsync()
         {
             const string prompt = "Enter the port number where this server will listen for incoming connections";
-            _state.Settings.LocalPort = SharedFunctions.GetPortNumberFromUser(prompt, true);
-            _state.LocalServerInfo.Port = _state.Settings.LocalPort;
+            _state.UserEntryLocalServerPort = SharedFunctions.GetPortNumberFromUser(prompt, true);
 
             AppSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
             await Task.Delay(1);

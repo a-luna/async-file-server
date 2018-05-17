@@ -43,7 +43,7 @@
                 publicIp = retrievePublicIp.Value;
             }
 
-            _state.LocalServerInfo.PublicIpAddress = publicIp;
+            _state.UserEntryPublicIpAddress = publicIp;
 
             await Task.Delay(1);
             return Result.Ok();

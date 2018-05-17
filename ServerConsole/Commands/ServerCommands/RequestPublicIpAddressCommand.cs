@@ -33,8 +33,8 @@
 
             var sendIpRequestResult =
                 await _state.LocalServer.RequestPublicIpAsync(
-                        _state.ClientSessionIpAddress.ToString(),
-                        _state.ClientServerPort)
+                        _state.RemoteServerInfo.SessionIpAddress.ToString(),
+                        _state.RemoteServerInfo.Port)
                     .ConfigureAwait(false);
 
             if (sendIpRequestResult.Failure)

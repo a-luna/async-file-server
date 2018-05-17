@@ -45,10 +45,10 @@ namespace ServerConsole.Commands.Getters
                     return Result.Fail(getLocalIpResult.Error);
                 }
 
-                _state.LocalServerInfo.LocalIpAddress = IPAddress.Loopback;
+                _state.UserEntryLocalIpAddress = IPAddress.Loopback;
             }
 
-            _state.LocalServerInfo.LocalIpAddress = getLocalIpResult.Value;
+            _state.UserEntryLocalIpAddress = getLocalIpResult.Value;
 
             await Task.Delay(1);
             return Result.Ok();

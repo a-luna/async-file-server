@@ -37,11 +37,21 @@
             _state.Settings = InitializeAppSettings(_state.SettingsFilePath);
 
             var setPortCommand = new SetMyPortNumberCommand(_state);
-            Result setPortResult = Result.Ok();
+            var setPortResult = Result.Ok();
 
             if (_state.Settings.LocalPort == 0)
             {
                 setPortResult = await setPortCommand.ExecuteAsync();
+                _state.Settings.LocalPort = _state.UserEntryLocalServerPort;
+            }
+
+            var setCidrIpCommand = new SetMyCidrIpCommand(_state);
+            var setCidrIpResult = Result.Ok();
+
+            if (string.IsNullOrEmpty(_state.Settings.LocalNetworkCidrIp))
+            {
+                setCidrIpResult = await setCidrIpCommand.ExecuteAsync();
+                _state.Settings.LocalNetworkCidrIp = _state.UserEntryLocalNetworkCidrIp;
             }
 
             var getLocalIpCommand = new GetMyLocalIpAddressCommand(_state);
@@ -50,26 +60,27 @@
             var getPublicIpCommand = new GetMyPublicIpAddressCommand(_state);
             var getPublicIpResult = await getPublicIpCommand.ExecuteAsync();
 
-            var result = Result.Combine(setPortResult, getLocalIpResult, getPublicIpResult);
+            var result = Result.Combine(setPortResult, setCidrIpResult, getLocalIpResult, getPublicIpResult);
             if (result.Failure)
             {
                 _log.Error($"Error: {result.Error} (InitializeServerCommand.ExecuteAsync)");
                 return Result.Fail("There was an error initializing the server");
             }
 
-            var localIp = _state.MyLocalIpAddress;
-            var port = _state.MyServerPort;
+            var port = _state.Settings.LocalPort;
+            var localIp = _state.UserEntryLocalIpAddress;
+            var publicIp = _state.UserEntryPublicIpAddress;
 
             _state.LocalServer.InitializeServer(localIp, port);
             _state.LocalServer.SocketSettings = _state.Settings.SocketSettings;
-            _state.LocalServer.MyTransferFolderPath = _state.Settings.LocalServerFolderPath;
             _state.LocalServer.TransferUpdateInterval = _state.Settings.FileTransferUpdateInterval;
+            _state.LocalServer.Info.PublicIpAddress = publicIp;
+            _state.LocalServer.Info.TransferFolder = _state.Settings.LocalServerFolderPath;
 
-            _log.Info("Complete: InitializeServerCommand.ExecuteAsync");
             return Result.Ok();
         }
 
-        public static AppSettings InitializeAppSettings(string settingsFilePath)
+        public AppSettings InitializeAppSettings(string settingsFilePath)
         {
             var defaultTransferFolderPath
                 = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}transfer";
@@ -83,14 +94,16 @@
 
             if (!File.Exists(settingsFilePath)) return settings;
 
-            var deserialized = AppSettings.Deserialize(settingsFilePath);
-            if (deserialized.Success)
+            var readFromFileResult = AppSettings.ReadFromFile(settingsFilePath);
+            if (readFromFileResult.Success)
             {
-                settings = deserialized.Value;
+                settings = readFromFileResult.Value;
+                _state.UserEntryLocalServerPort = settings.LocalPort;
+                _state.UserEntryLocalNetworkCidrIp = settings.LocalNetworkCidrIp;
             }
             else
             {
-                Console.WriteLine(deserialized.Error);
+                Console.WriteLine(readFromFileResult.Error);
             }
 
             return settings;

@@ -41,6 +41,11 @@
         public bool FileTransferStalled { get; set; }
         public bool FileTransferCanceled { get; set; }
 
+        public string UserEntryLocalNetworkCidrIp { get; set; }
+        public IPAddress UserEntryLocalIpAddress { get; set; }
+        public IPAddress UserEntryPublicIpAddress { get; set; }
+        public int UserEntryLocalServerPort { get; set; }
+
         public AppSettings Settings { get; set; }
         public TplSocketServer LocalServer { get; set; }
 
@@ -50,29 +55,10 @@
         public List<(string filePath, long fileSize)> FileInfoList { get; set; }
         public FileTransferProgressBar ProgressBar { get; set; }
 
-        public ConnectionInfo LocalServerInfo => LocalServer.MyInfo;
-        public string MyTransferFolderPath => LocalServer.MyTransferFolderPath;
-        public IPAddress MyLocalIpAddress => LocalServer.MyLocalIpAddress;
-        public IPAddress MyPublicIpAddress => LocalServer.MyPublicIpAddress;
-        public int MyServerPort => LocalServer.MyServerPort;
-
-        public RemoteServer RemoteServer => LocalServer.RemoteServer;
-
-        public ConnectionInfo RemoteServerInfo
+        public ServerInfo RemoteServerInfo
         {
             get => LocalServer.RemoteServerInfo;
             set => LocalServer.RemoteServerInfo = value;
         }
-
-        public string ClientTransferFolderPath
-        {
-            get => LocalServer.RemoteServerTransferFolderPath;
-            set => LocalServer.RemoteServerTransferFolderPath = value;
-        }
-
-        public IPAddress ClientSessionIpAddress => LocalServer.RemoteServerSessionIpAddress;
-        public IPAddress ClientLocalIpAddress => LocalServer.RemoteServerLocalIpAddress;
-        public IPAddress ClientPublicIpAddress => LocalServer.RemoteServerPublicIpAddress;
-        public int ClientServerPort => LocalServer.RemoteServerPort;
     }
 }

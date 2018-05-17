@@ -14,6 +14,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AaronLuna.Common", "aaronlu
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AaronLuna.ConsoleProgressBar", "console-progress-bar\ConsoleProgressBar\AaronLuna.ConsoleProgressBar.csproj", "{30F997A9-5FFA-45A0-8197-3BC28C3680F1}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AaronLuna.Crypto", "dotnetcore-crypto\AaronLuna.Crypto\AaronLuna.Crypto.csproj", "{14904674-1645-45BF-9C02-3AC712E7AE10}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AaronLuna.Crypto.SHA3", "dotnetcore-crypto\AaronLuna.Crypto.SHA3\AaronLuna.Crypto.SHA3.csproj", "{1C6634F2-EC18-4F43-B5DC-F5F7CF640253}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AaronLuna.Crypto.Test", "dotnetcore-crypto\AaronLuna.Crypto.Test\AaronLuna.Crypto.Test.csproj", "{A7412707-3229-40E7-A18D-205B2E3CC2E4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,6 +50,18 @@ Global
 		{30F997A9-5FFA-45A0-8197-3BC28C3680F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{30F997A9-5FFA-45A0-8197-3BC28C3680F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{30F997A9-5FFA-45A0-8197-3BC28C3680F1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{14904674-1645-45BF-9C02-3AC712E7AE10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14904674-1645-45BF-9C02-3AC712E7AE10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{14904674-1645-45BF-9C02-3AC712E7AE10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14904674-1645-45BF-9C02-3AC712E7AE10}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1C6634F2-EC18-4F43-B5DC-F5F7CF640253}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C6634F2-EC18-4F43-B5DC-F5F7CF640253}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C6634F2-EC18-4F43-B5DC-F5F7CF640253}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C6634F2-EC18-4F43-B5DC-F5F7CF640253}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7412707-3229-40E7-A18D-205B2E3CC2E4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7412707-3229-40E7-A18D-205B2E3CC2E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7412707-3229-40E7-A18D-205B2E3CC2E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7412707-3229-40E7-A18D-205B2E3CC2E4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

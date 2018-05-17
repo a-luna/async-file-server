@@ -107,11 +107,11 @@
             return Result.Ok(parsedNum);
         }
 
-        public static Result<RemoteServer> GetRemoteServerConnectionInfoFromUser()
+        public static Result<ServerInfo> GetRemoteServerConnectionInfoFromUser()
         {
             var remoteServerIp = GetIpAddressFromUser("Enter the client's IPv4 address:");
             var remoteServerPort = GetPortNumberFromUser("\nEnter the client's port number:", false);
-            var remoteServer = new RemoteServer(remoteServerIp, remoteServerPort);            
+            var remoteServer = new ServerInfo(remoteServerIp, remoteServerPort);            
 
             return Result.Ok(remoteServer);
         }
@@ -140,12 +140,12 @@
             return ipAddress;
         }
 
-        public static bool ClientAlreadyAdded(RemoteServer newClient, List<RemoteServer> clients)
+        public static bool ClientAlreadyAdded(ServerInfo newClient, List<ServerInfo> clients)
         {
             var exists = false;
             foreach (var remoteServer in clients)
             {
-                if (remoteServer.ConnectionInfo.IsEqualTo(newClient.ConnectionInfo))
+                if (remoteServer.IsEqualTo(newClient))
                 {
                     exists = true;
                     break;
@@ -154,12 +154,12 @@
             return exists;
         }
 
-        public static RemoteServer GetRemoteServer(RemoteServer client, List<RemoteServer> clientList)
+        public static ServerInfo GetRemoteServer(ServerInfo client, List<ServerInfo> clientList)
         {
-            var match = new RemoteServer();
+            var match = new ServerInfo();
             foreach (var server in clientList)
             {
-                if (server.ConnectionInfo.IsEqualTo(client.ConnectionInfo))
+                if (server.IsEqualTo(client))
                 {
                     match = server;
                     break;

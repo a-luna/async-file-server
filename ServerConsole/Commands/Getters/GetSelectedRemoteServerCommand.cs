@@ -12,10 +12,10 @@ namespace ServerConsole.Commands.Getters
     class GetSelectedRemoteServerCommand : ICommand
     {
         readonly AppState _state;
-        readonly RemoteServer _server;
+        readonly ServerInfo _server;
         readonly Logger _log = new Logger(typeof(GetSelectedRemoteServerCommand));
 
-        public GetSelectedRemoteServerCommand(AppState state, RemoteServer server)
+        public GetSelectedRemoteServerCommand(AppState state, ServerInfo server)
         {
             _state = state;
             _server = server;
@@ -23,9 +23,9 @@ namespace ServerConsole.Commands.Getters
             ReturnToParent = false;
 
             ItemText =
-                $" Local IP: {_server.ConnectionInfo.LocalIpString}{Environment.NewLine}" +
-                $"   Public IP: {_server.ConnectionInfo.PublicIpString}{Environment.NewLine}" +
-                $"        Port: {_server.ConnectionInfo.Port}{Environment.NewLine}";
+                $" Local IP: {_server.LocalIpString}{Environment.NewLine}" +
+                $"   Public IP: {_server.PublicIpString}{Environment.NewLine}" +
+                $"        Port: {_server.Port}{Environment.NewLine}";
         }
 
         public string ItemText { get; set; }
@@ -33,13 +33,9 @@ namespace ServerConsole.Commands.Getters
 
         public async Task<Result> ExecuteAsync()
         {
-            _log.Info("Begin: GetSelectedRemoteServerCommand.ExecuteAsync");
-
-            _state.RemoteServerInfo = _server.ConnectionInfo;
-            _state.ClientTransferFolderPath = _server.TransferFolder;
+            _state.RemoteServerInfo = _server;
             _state.ClientSelected = true;
-
-            _log.Info("Complete: GetSelectedRemoteServerCommand.ExecuteAsync");
+            
             await Task.Delay(1);
             return Result.Ok();
         }

@@ -30,8 +30,8 @@
         {
             _log.Info("Begin: SendTextMessageCommand.ExecuteAsync");
 
-            var ipAddress = _state.ClientSessionIpAddress;
-            var port = _state.ClientServerPort;
+            var ipAddress = _state.RemoteServerInfo.SessionIpAddress;
+            var port = _state.RemoteServerInfo.Port;
 
             Console.Clear();
             Console.WriteLine($"Please enter a text message to send to {ipAddress}:{port}");

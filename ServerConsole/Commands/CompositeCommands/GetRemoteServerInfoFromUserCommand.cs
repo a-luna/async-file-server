@@ -37,7 +37,7 @@
                     return Result.Fail(addClientResult.Error);
                 }
 
-                _state.RemoteServerInfo = addClientResult.Value.ConnectionInfo;
+                _state.RemoteServerInfo = addClientResult.Value;
                 clientInfoIsValid = true;
             }
 

@@ -37,17 +37,7 @@
         Socket _clientSocket;
         CancellationTokenSource _cts;
 
-        bool ReceivedShutdownCommand
-        {
-            get => Interlocked.CompareExchange(ref _receivedShutdownCommand, 1, 1) == 1;
-            set
-            {
-                if (value) Interlocked.CompareExchange(ref _receivedShutdownCommand, 1, 0);
-                else Interlocked.CompareExchange(ref _receivedShutdownCommand, 0, 1);
-            }
-        }
-
-        bool ServerIsRunning
+        public bool ServerIsRunning
         {
             get => (Interlocked.CompareExchange(ref _shutdownComplete, 1, 1) == 1);
             set
@@ -57,6 +47,16 @@
             }
         }
 
+        bool ReceivedShutdownCommand
+        {
+            get => Interlocked.CompareExchange(ref _receivedShutdownCommand, 1, 1) == 1;
+            set
+            {
+                if (value) Interlocked.CompareExchange(ref _receivedShutdownCommand, 1, 0);
+                else Interlocked.CompareExchange(ref _receivedShutdownCommand, 0, 1);
+            }
+        }
+        
         public TplSocketServer()
         {
             ServerIsRunning = false;
@@ -69,12 +69,12 @@
                 SendTimeoutMs = 5000
             };
 
-            LocalServer = new RemoteServer()
+            Info = new ServerInfo()
             {
                 TransferFolder = GetDefaultTransferFolder()
             };
 
-            RemoteServer = new RemoteServer();
+            RemoteServerInfo = new ServerInfo();
 
             _state = new ServerState();
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -92,42 +92,30 @@
         public int ReceiveTimeoutMs => SocketSettings.ReceiveTimeoutMs;
         public int SendTimeoutMs => SocketSettings.SendTimeoutMs;
 
-        public RemoteServer LocalServer { get; set; }
-
-        public ConnectionInfo MyInfo
-        {
-            get => LocalServer.ConnectionInfo;
-            set => LocalServer.ConnectionInfo = value;
-        }
+        public ServerInfo Info { get; set; }
 
         public string MyTransferFolderPath
         {
-            get => LocalServer.TransferFolder;
-            set => LocalServer.TransferFolder = value;
+            get => Info.TransferFolder;
+            set => Info.TransferFolder = value;
         }
 
-        public IPAddress MyLocalIpAddress => LocalServer.ConnectionInfo.LocalIpAddress;
-        public IPAddress MyPublicIpAddress => LocalServer.ConnectionInfo.PublicIpAddress;
-        public int MyServerPort => LocalServer.ConnectionInfo.Port;
+        public IPAddress MyLocalIpAddress => Info.LocalIpAddress;
+        public IPAddress MyPublicIpAddress => Info.PublicIpAddress;
+        public int MyServerPort => Info.Port;
 
-        public RemoteServer RemoteServer { get; set; }
-
-        public ConnectionInfo RemoteServerInfo
-        {
-            get => RemoteServer.ConnectionInfo;
-            set => RemoteServer.ConnectionInfo = value;
-        }
+        public ServerInfo RemoteServerInfo { get; set; }
         
         public string RemoteServerTransferFolderPath
         {
-            get => RemoteServer.TransferFolder;
-            set => RemoteServer.TransferFolder = value;
+            get => RemoteServerInfo.TransferFolder;
+            set => RemoteServerInfo.TransferFolder = value;
         }
 
-        public IPAddress RemoteServerSessionIpAddress => RemoteServer.ConnectionInfo.SessionIpAddress;
-        public IPAddress RemoteServerLocalIpAddress => RemoteServer.ConnectionInfo.LocalIpAddress;
-        public IPAddress RemoteServerPublicIpAddress => RemoteServer.ConnectionInfo.PublicIpAddress;
-        public int RemoteServerPort => RemoteServer.ConnectionInfo.Port;
+        public IPAddress RemoteServerSessionIpAddress => RemoteServerInfo.SessionIpAddress;
+        public IPAddress RemoteServerLocalIpAddress => RemoteServerInfo.LocalIpAddress;
+        public IPAddress RemoteServerPublicIpAddress => RemoteServerInfo.PublicIpAddress;
+        public int RemoteServerPort => RemoteServerInfo.Port;
 
         public List<(string filePath, long fileSize)> RemoteServerFileList { get; set; }
 
@@ -167,7 +155,7 @@
 
         public void InitializeServer(IPAddress localIpAddress, int port)
         {
-            MyInfo = new ConnectionInfo(localIpAddress, port);
+            Info = new ServerInfo(localIpAddress, port);
             _serverInitialized = true;
         }
 
@@ -547,11 +535,11 @@
                     ReceiveTextMessage(message.Data);
                     break;
 
-                case MessageType.InboundFileTransfer:
+                case MessageType.InboundFileTransferRequest:
                    await InboundFileTransferAsync(message.Data, token).ConfigureAwait(false);
                     break;
 
-                case MessageType.OutboundFileTransfer:
+                case MessageType.OutboundFileTransferRequest:
                     _transferInitiatedByThisServer = false;
                     await OutboundFileTransferAsync(message.Data).ConfigureAwait(false);
                     break;
@@ -572,7 +560,7 @@
                     await SendFileListAsync(message.Data).ConfigureAwait(false);
                     break;
 
-                case MessageType.FileList:
+                case MessageType.FileListResponse:
                     ReceiveFileList(message.Data);
                     break;
 
@@ -580,7 +568,7 @@
                     await SendTransferFolderPathAsync(message.Data).ConfigureAwait(false);
                     break;
 
-                case MessageType.TransferFolderPath:
+                case MessageType.TransferFolderPathResponse:
                     ReceiveTransferFolderPath(message.Data);
                     break;
 
@@ -588,7 +576,7 @@
                     await SendPublicIpAsync(message.Data).ConfigureAwait(false);
                     break;
 
-                case MessageType.PublicIpAddress:
+                case MessageType.PublicIpAddressResponse:
                     ReceivePublicIpAddress(message.Data);
                     break;
 
@@ -636,7 +624,7 @@
                 return Result.Fail("Message is null or empty string.");
             }
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
             EventOccurred?.Invoke(this,
                 new ServerEvent
@@ -677,7 +665,7 @@
                 remoteServerIpAddress,
                 remoteServerPort) = MessageUnwrapper.ReadTextMessage(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
             EventOccurred?.Invoke(this,
                 new ServerEvent
@@ -696,7 +684,7 @@
                 remoteServerPort,
                 remoteFolderPath) = MessageUnwrapper.ReadOutboundFileTransferRequest(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
             OutgoingFilePath = requestedFilePath;
             RemoteServerTransferFolderPath = remoteFolderPath;
 
@@ -732,7 +720,7 @@
             string localFilePath,
             string remoteFolderPath)
         {
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
             OutgoingFilePath = localFilePath;
             RemoteServerTransferFolderPath = remoteFolderPath;
 
@@ -753,7 +741,7 @@
             {
                 return Result.Fail("File does not exist: " + localFilePath);
             }
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
             OutgoingFilePath = localFilePath;
             RemoteServerTransferFolderPath = remoteFolderPath;
 
@@ -806,7 +794,7 @@
             (string remoteServerIpAddress,
                 int remoteServerPort) = MessageUnwrapper.ReadServerConnectionInfo(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
             //TODO: Investigate why this causes a bug that fails my unit tests
             //OutgoingFilePath = string.Empty;
@@ -826,7 +814,7 @@
             (string remoteServerIpAddress,
                 int remoteServerPort) = MessageUnwrapper.ReadServerConnectionInfo(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
             EventOccurred?.Invoke(this,
                 new ServerEvent
@@ -1006,7 +994,7 @@
             string remoteFilePath,
             string localFolderPath)
         {
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
             RemoteFilePath = remoteFilePath;
             RemoteServerTransferFolderPath = Path.GetDirectoryName(remoteFilePath);
             MyTransferFolderPath = localFolderPath;
@@ -1059,7 +1047,7 @@
                 remoteServerIpAddress,
                 remoteServerPort) = MessageUnwrapper.ReadInboundFileTransferRequest(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
             IncomingFilePath = localFilePath;
             _state.IncomingFileSize = fileSizeBytes;
 
@@ -1268,7 +1256,7 @@
             (string remoteServerIpAddress,
                 int remoteServerPort) = MessageUnwrapper.ReadServerConnectionInfo(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
             EventOccurred?.Invoke(this,
             new ServerEvent
@@ -1286,7 +1274,7 @@
             IPAddress remoteServerIpAddress,
             int remoteServerPort)
         {
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
             return await SendSimpleMessageToClientAsync(
                 MessageType.RetryOutboundFileTransfer,
@@ -1299,7 +1287,7 @@
             (string remoteServerIpAddress,
                 int remoteServerPort) = MessageUnwrapper.ReadServerConnectionInfo(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
             EventOccurred?.Invoke(this,
             new ServerEvent
@@ -1470,7 +1458,7 @@
             int remoteServerPort,
             string targetFolder)
         {
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
             RemoteServerTransferFolderPath = targetFolder;
 
             EventOccurred?.Invoke(this,
@@ -1516,7 +1504,7 @@
                 int remoteServerPort,
                 string targetFolderPath) = MessageUnwrapper.ReadFileListRequest(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
             MyTransferFolderPath = targetFolderPath;
 
             EventOccurred?.Invoke(this,
@@ -1613,7 +1601,7 @@
             (string remoteServerIpAddress,
                 int remoteServerPort) = MessageUnwrapper.ReadServerConnectionInfo(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
             EventOccurred?.Invoke(this,
                 new ServerEvent
@@ -1629,7 +1617,7 @@
             (string remoteServerIpAddress,
                 int remoteServerPort) = MessageUnwrapper.ReadServerConnectionInfo(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
             EventOccurred?.Invoke(this,
                 new ServerEvent
@@ -1647,7 +1635,7 @@
                 transferFolder,
                 fileList) = MessageUnwrapper.ReadFileListResponse(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
             RemoteServerTransferFolderPath = transferFolder;
 
             RemoteServerFileList = fileList;
@@ -1669,7 +1657,7 @@
             string remoteServerIpAddress,
             int remoteServerPort)
         {
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
             return
                 await SendSimpleMessageToClientAsync(
@@ -1683,7 +1671,7 @@
             (string remoteServerIpAddress,
                 int remoteServerPort) = MessageUnwrapper.ReadServerConnectionInfo(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
             EventOccurred?.Invoke(this,
                 new ServerEvent
@@ -1735,7 +1723,7 @@
                 remoteServerPort,
                 transferFolder) = MessageUnwrapper.ReadTransferFolderResponse(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
             RemoteServerTransferFolderPath = transferFolder;
 
             EventOccurred?.Invoke(this,
@@ -1752,7 +1740,7 @@
             string remoteServerIpAddress,
             int remoteServerPort)
         {
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
             return
                 await SendSimpleMessageToClientAsync(
@@ -1766,7 +1754,7 @@
             (string remoteServerIpAddress,
                 int remoteServerPort) = MessageUnwrapper.ReadServerConnectionInfo(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
             EventOccurred?.Invoke(this,
                 new ServerEvent
@@ -1782,7 +1770,7 @@
                 return Result.Fail(publicIpResult.Error);
             }
 
-            MyInfo.PublicIpAddress = publicIpResult.Value;
+            Info.PublicIpAddress = publicIpResult.Value;
 
             EventOccurred?.Invoke(this,
                 new ServerEvent
@@ -1828,8 +1816,10 @@
                 remoteServerPort,
                 publicIpAddress) = MessageUnwrapper.ReadPublicIpAddressResponse(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
-            RemoteServer.ConnectionInfo.PublicIpAddress = NetworkUtilities.ParseSingleIPv4Address(publicIpAddress).Value;
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort)
+            {
+                PublicIpAddress = NetworkUtilities.ParseSingleIPv4Address(publicIpAddress).Value
+            };
 
             EventOccurred?.Invoke(this,
                 new ServerEvent
@@ -1849,7 +1839,7 @@
             }
 
             //TODO: This looks awkward, change how shutdown command is sent to local server
-            RemoteServerInfo = MyInfo;
+            RemoteServerInfo= Info;
 
             var shutdownResult =
                 await SendSimpleMessageToClientAsync(
@@ -1867,9 +1857,9 @@
             (string remoteServerIpAddress,
                 int remoteServerPort) = MessageUnwrapper.ReadServerConnectionInfo(messageData);
 
-            RemoteServer = new RemoteServer(remoteServerIpAddress, remoteServerPort);
+            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
-            if (MyInfo.IsEqualTo(RemoteServerInfo))
+            if (Info.IsEqualTo(RemoteServerInfo))
             {
                 ReceivedShutdownCommand = true;
             }
@@ -1883,7 +1873,7 @@
                 });
         }
 
-        Result ShutdownListenSocket()
+        void ShutdownListenSocket()
         {
             EventOccurred?.Invoke(this,
                 new ServerEvent
@@ -1905,15 +1895,11 @@
                         EventType = EventType.ShutdownListenSocketCompletedWithError,
                         ErrorMessage = errorMessage
                     });
-
-                return Result.Fail(errorMessage);
             }
 
             EventOccurred?.Invoke(this,
                 new ServerEvent
                     {EventType = EventType.ShutdownListenSocketCompletedWithoutError});
-
-            return Result.Ok();
         }
     }
 }

@@ -106,8 +106,6 @@
 
         void DisplayServerEvent(ServerEvent serverEvent)
         {
-            string fileCount;
-
             switch (serverEvent.EventType)
             {
                 case EventType.ReceivedOutboundFileTransferRequest:
@@ -135,11 +133,6 @@
                 case EventType.SendFileBytesStarted:
                     Console.WriteLine("\nSending file to client...");
                     break;
-
-                //case EventType.SendFileTransferCanceledStarted:
-                //case EventType.ReceiveFileTransferCanceledComplete:
-                //    Console.WriteLine("File transfer successfully canceled");
-                //    break;
 
                 case EventType.ReceiveConfirmationMessageComplete:
                     Console.WriteLine("Client confirmed file transfer completed successfully");
@@ -372,8 +365,8 @@
             {
                 _state.RetryCounter++;
                 await _state.LocalServer.RetryLastFileTransferAsync(
-                    _state.ClientSessionIpAddress,
-                    _state.ClientServerPort);
+                    _state.RemoteServerInfo.SessionIpAddress,
+                    _state.RemoteServerInfo.Port);
             }
         }
 

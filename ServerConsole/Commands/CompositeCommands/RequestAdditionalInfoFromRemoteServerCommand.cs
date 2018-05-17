@@ -29,22 +29,19 @@
 
         public async Task<Result> ExecuteAsync()
         {
-            var publicIp = _state.ClientPublicIpAddress;
-            var clientIp = _state.ClientSessionIpAddress;
-            var clientPort = _state.ClientServerPort;
+            var publicIp = _state.RemoteServerInfo.PublicIpAddress;
+            var clientIp = _state.RemoteServerInfo.SessionIpAddress;
+            var clientPort = _state.RemoteServerInfo.Port;
 
-            if (_state.RemoteServerInfo.IsEqualTo(_state.LocalServerInfo))
+            if (_state.RemoteServerInfo.IsEqualTo(_state.LocalServer.Info))
             {
                 _log.Error("Error: User tried to add this server\'s endpoint as a new client (RequestAdditionalInfoFromRemoteServerCommand.ExecuteAsync)");
                 var error = $"{clientIp}:{clientPort} is the same IP address and port number used by this server.";
                 return Result.Fail(error);
             }
 
-            if (SharedFunctions.ClientAlreadyAdded(_state.RemoteServer, _state.Settings.RemoteServers))
+            if (SharedFunctions.ClientAlreadyAdded(_state.RemoteServerInfo, _state.Settings.RemoteServers))
             {
-                var client = SharedFunctions.GetRemoteServer(_state.RemoteServer, _state.Settings.RemoteServers);
-                _state.RemoteServerInfo = client.ConnectionInfo;
-                _state.ClientTransferFolderPath = client.TransferFolder;
                 return Result.Ok();
             }
 
@@ -68,13 +65,13 @@
                 if (requestPublicIpResult.Failure)
                 {
                     _log.Error($"Error: {requestPublicIpResult.Error} (RequestAdditionalInfoFromRemoteServerCommand.ExecuteAsync)");
-                    return Result.Fail<RemoteServer>(requestPublicIpResult.Error);
+                    return Result.Fail<ServerInfo>(requestPublicIpResult.Error);
                 }                
             }
 
             Console.WriteLine($"{Environment.NewLine}Thank you! Connection info for new client has been successfully configured.\n");
 
-            _state.Settings.RemoteServers.Add(_state.RemoteServer);
+            _state.Settings.RemoteServers.Add(_state.RemoteServerInfo);
             AppSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
             return Result.Ok();
         }
