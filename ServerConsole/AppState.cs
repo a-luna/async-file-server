@@ -13,17 +13,19 @@
     {
         public AppState()
         {
+            LocalServer = new TplSocketServer();
+
             WaitingForServerToBeginAcceptingConnections = true;
             WaitingForTransferFolderResponse = true;
             WaitingForPublicIpResponse = true;
             WaitingForFileListResponse = true;
             WaitingForDownloadToComplete = true;
             WaitingForConfirmationMessage = true;
-            
-            FileInfoList = new List<(string filePath, long fileSize)>();
+
+            SignalRetryLimitExceeded = new AutoResetEvent(true);
+            SignalReturnToMainMenu = new AutoResetEvent(true);
         }
         
-        public AutoResetEvent SignalExitRetryDownloadLogic { get; set; }
         public FileInfo SettingsFile { get; set; }
         public string SettingsFilePath => SettingsFile.ToString();
 
@@ -46,14 +48,16 @@
         public IPAddress UserEntryPublicIpAddress { get; set; }
         public int UserEntryLocalServerPort { get; set; }
 
-        public AppSettings Settings { get; set; }
+        public ServerSettings Settings { get; set; }
         public TplSocketServer LocalServer { get; set; }
-
         public string IncomingFileName => Path.GetFileName(LocalServer.IncomingFilePath);
+        public List<(string filePath, long fileSize)> FileInfoList => LocalServer.RemoteServerFileList;
+
+        public FileTransferProgressBar ProgressBar { get; set; }
         public int RetryCounter { get; set; }
         public ProgressEventArgs FileStalledInfo { get; set; }
-        public List<(string filePath, long fileSize)> FileInfoList { get; set; }
-        public FileTransferProgressBar ProgressBar { get; set; }
+        public AutoResetEvent SignalRetryLimitExceeded { get; set; }
+        public AutoResetEvent SignalReturnToMainMenu { get; set; }
 
         public ServerInfo RemoteServerInfo
         {

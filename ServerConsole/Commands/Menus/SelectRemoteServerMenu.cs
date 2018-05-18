@@ -9,7 +9,7 @@
 
     using Getters;
 
-    class SelectRemoteServerMenu : SelectionMenuSingleChoice
+    class SelectRemoteServerMenu : MenuSingleChoice
     {
         readonly Logger _log = new Logger(typeof(SelectRemoteServerMenu));
 
@@ -18,7 +18,7 @@
             ReturnToParent = false;
             ItemText = "Select remote server";
             MenuText = "\nChoose a remote server for this request:";
-            Options = new List<ICommand>();
+            MenuOptions = new List<ICommand>();
 
             var savedClients = new List<ICommand>();
             foreach (var server in state.Settings.RemoteServers)
@@ -28,14 +28,14 @@
 
             if (savedClients.Count > 0)
             {
-                Options.AddRange(savedClients);
+                MenuOptions.AddRange(savedClients);
             }
 
             var addNewClientCommand = new GetRemoteServerInfoFromUserCommand(state);
             var returnToParentCommand = new ReturnToParentCommand("Return to main menu", false);
             
-            Options.Add(addNewClientCommand);
-            Options.Add(returnToParentCommand);
+            MenuOptions.Add(addNewClientCommand);
+            MenuOptions.Add(returnToParentCommand);
         }
     }
 }

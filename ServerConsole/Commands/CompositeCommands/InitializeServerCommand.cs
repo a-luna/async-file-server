@@ -71,7 +71,7 @@
             var localIp = _state.UserEntryLocalIpAddress;
             var publicIp = _state.UserEntryPublicIpAddress;
 
-            _state.LocalServer.InitializeServer(localIp, port);
+            _state.LocalServer.Initialize(localIp, port);
             _state.LocalServer.SocketSettings = _state.Settings.SocketSettings;
             _state.LocalServer.TransferUpdateInterval = _state.Settings.FileTransferUpdateInterval;
             _state.LocalServer.Info.PublicIpAddress = publicIp;
@@ -80,12 +80,12 @@
             return Result.Ok();
         }
 
-        public AppSettings InitializeAppSettings(string settingsFilePath)
+        public ServerSettings InitializeAppSettings(string settingsFilePath)
         {
             var defaultTransferFolderPath
                 = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}transfer";
 
-            var settings = new AppSettings
+            var settings = new ServerSettings
             {
                 MaxDownloadAttempts = 3,
                 LocalServerFolderPath = defaultTransferFolderPath,
@@ -94,7 +94,7 @@
 
             if (!File.Exists(settingsFilePath)) return settings;
 
-            var readFromFileResult = AppSettings.ReadFromFile(settingsFilePath);
+            var readFromFileResult = ServerSettings.ReadFromFile(settingsFilePath);
             if (readFromFileResult.Success)
             {
                 settings = readFromFileResult.Value;

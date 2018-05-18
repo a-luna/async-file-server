@@ -19,7 +19,6 @@
         public RequestTransferFolderCommand(AppState state)
         {
             _state = state;
-            _state.LocalServer.EventOccurred += HandleServerEvent;
 
             ReturnToParent = false;
             ItemText = "Request transfer folder path";
@@ -52,20 +51,8 @@
             }
 
             while (_state.WaitingForTransferFolderResponse) { }
-            _state.LocalServer.EventOccurred -= HandleServerEvent;
 
             return Result.Ok();
-        }
-
-        void HandleServerEvent(object sender, ServerEvent serverEvent)
-        {
-            switch (serverEvent.EventType)
-            {
-                case EventType.ReceivedTransferFolderPath:
-                    _state.WaitingForTransferFolderResponse = false;
-                    _state.RemoteServerInfo.TransferFolder = serverEvent.RemoteFolder;
-                    break;
-            }
         }
     }
 }

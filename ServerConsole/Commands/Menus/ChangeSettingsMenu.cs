@@ -2,7 +2,7 @@
 
 namespace ServerConsole.Commands.Menus
 {
-    class ChangeSettingsMenu : SelectionMenuLoop
+    class ChangeSettingsMenu : MenuLoop
     {
         public ChangeSettingsMenu(AppState state)
         {

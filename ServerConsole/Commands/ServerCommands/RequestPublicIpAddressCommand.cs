@@ -17,7 +17,6 @@
         public RequestPublicIpAddressCommand(AppState state)
         {
             _state = state;
-            _state.LocalServer.EventOccurred += HandleServerEvent;
 
             ReturnToParent = false;
             ItemText = "Request public IP address";
@@ -44,7 +43,6 @@
             }
 
             while (_state.WaitingForPublicIpResponse) { }            
-            _state.LocalServer.EventOccurred -= HandleServerEvent;
 
             return Result.Ok();
         }
@@ -53,10 +51,7 @@
         {
             switch (serverEvent.EventType)
             {
-                case EventType.ReceivedPublicIpAddress:
-                    _state.WaitingForPublicIpResponse = false;
-                    _state.RemoteServerInfo.PublicIpAddress = serverEvent.PublicIpAddress;
-                    break;
+                
             }
         }
     }

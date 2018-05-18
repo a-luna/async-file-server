@@ -10,11 +10,11 @@
     using AaronLuna.Common.Network;
     using AaronLuna.Common.Result;
 
-    public class AppSettings
+    public class ServerSettings
     {
         float _fileTransferFolderPath;
 
-        public AppSettings()
+        public ServerSettings()
         {
             LocalServerFolderPath = string.Empty;
             LocalNetworkCidrIp = string.Empty;
@@ -44,20 +44,20 @@
         public SocketSettings SocketSettings { get; set; }
         public List<ServerInfo> RemoteServers { get; set; }
 
-        public static Result<AppSettings> ReadFromFile(string filePath)
+        public static Result<ServerSettings> ReadFromFile(string filePath)
         {
-            AppSettings settings;
+            ServerSettings settings;
             try
             {
-                var deserializer = new XmlSerializer(typeof(AppSettings));
+                var deserializer = new XmlSerializer(typeof(ServerSettings));
                 using (var reader = new StreamReader(filePath))
                 {
-                    settings = (AppSettings)deserializer.Deserialize(reader);
+                    settings = (ServerSettings)deserializer.Deserialize(reader);
                 }
             }
             catch (Exception ex)
             {
-                return Result.Fail<AppSettings>($"{ex.Message} ({ex.GetType()})");
+                return Result.Fail<ServerSettings>($"{ex.Message} ({ex.GetType()})");
             }
 
             settings.InitializeIpAddresses();
@@ -65,9 +65,9 @@
             return Result.Ok(settings);
         }
         
-        public static void SaveToFile(AppSettings settings, string filePath)
+        public static void SaveToFile(ServerSettings settings, string filePath)
         {
-            var serializer = new XmlSerializer(typeof(AppSettings));
+            var serializer = new XmlSerializer(typeof(ServerSettings));
             using (var writer = new StreamWriter(filePath))
             {
                 serializer.Serialize(writer, settings);

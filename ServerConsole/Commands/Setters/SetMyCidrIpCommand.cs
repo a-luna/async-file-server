@@ -27,7 +27,7 @@
             var cidrNetworkBitCount = SharedFunctions.GetCidrIpNetworkBitCountFromUser();
             _state.Settings.LocalNetworkCidrIp = $"{cidrIp}/{cidrNetworkBitCount}";
 
-            AppSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
+            ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
             await Task.Delay(1);
             return Result.Ok();
         }

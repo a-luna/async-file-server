@@ -14,22 +14,16 @@
 
         public SendTextMessageCommand(AppState state)
         {
-            _log.Info("Begin: Instantiate SendTextMessageCommand");
-
             ReturnToParent = false;
             ItemText = "Send text message";
 
-            _state = state;
-
-            _log.Info("Complete: Instantiate SendTextMessageCommand");
+            _state = state;            
         }
 
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
         public async Task<Result> ExecuteAsync()
         {
-            _log.Info("Begin: SendTextMessageCommand.ExecuteAsync");
-
             var ipAddress = _state.RemoteServerInfo.SessionIpAddress;
             var port = _state.RemoteServerInfo.Port;
 
@@ -47,8 +41,6 @@
             {
                 _log.Error($"Error: {sendMessageResult.Error} (SendTextMessageCommand.ExecuteAsync)");
             }
-
-            _log.Info("Complete: SendTextMessageCommand.ExecuteAsync");
 
             return sendMessageResult.Success
                 ? Result.Ok()

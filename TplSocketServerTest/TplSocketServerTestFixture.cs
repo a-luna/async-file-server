@@ -1,5 +1,3 @@
-using System.Linq;
-
 namespace TplSocketServerTest
 {
     using System;
@@ -50,7 +48,6 @@ namespace TplSocketServerTest
         string _messageFromServer;
         string _transferFolderPath;
         string _publicIp;
-        List<(string, long)> _fileInfoList;
         
         bool _serverReceivedTextMessage;
         bool _serverReceivedAllFileBytes;
@@ -76,7 +73,6 @@ namespace TplSocketServerTest
             _messageFromServer = string.Empty;
             _transferFolderPath = string.Empty;
             _publicIp = string.Empty;
-            _fileInfoList = new List<(string, long)>();
 
             _clientLogMessages = new List<string>();
             _serverLogMessages = new List<string>();
@@ -157,8 +153,8 @@ namespace TplSocketServerTest
         {
             try
             {
-                var shutdownClientTask = Task.Run(() => _client.ShutdownServerAsync());
-                var shutdownServerTask = Task.Run(() => _server.ShutdownServerAsync());
+                var shutdownClientTask = Task.Run(() => _client.ShutdownAsync());
+                var shutdownServerTask = Task.Run(() => _server.ShutdownAsync());
 
                 await Task.WhenAll(
                     _runClientTask,
@@ -178,9 +174,7 @@ namespace TplSocketServerTest
             {
                 Console.WriteLine("Accept connection task canceled");
             }
-
-            //await Task.Delay(500);
-
+            
             if (GenerateLogFiles)
             {
                 File.AppendAllLines(_clientLogFilePath, _clientLogMessages);
@@ -199,13 +193,13 @@ namespace TplSocketServerTest
             const string messageForServer = "Hello, fellow TPL $ocket Server! This is a text message with a few special ch@r@cters. `~/|\\~'";
             const string messageForClient = "I don't know who or what you are referring to. I am a normal human, sir, and most definitely NOT some type of server. Good day.";
             
-            _server.InitializeServer(_localIp, remoteServerPort);
+            _server.Initialize(_localIp, remoteServerPort);
             _server.SocketSettings = _socketSettings;
             _server.MyTransferFolderPath = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            _client.InitializeServer(_localIp, localPort);
+            _client.Initialize(_localIp, localPort);
             _client.SocketSettings = _socketSettings;
             _client.MyTransferFolderPath = _localFolder;
             _client.EventOccurred += HandleClientEvent;
@@ -215,16 +209,16 @@ namespace TplSocketServerTest
 
            _runServerTask =
                 Task.Run(() =>
-                    _server.RunServerAsync(),
+                    _server.RunAsync(),
                     token);
 
            _runClientTask =
                 Task.Run(() =>
-                    _client.RunServerAsync(),
+                    _client.RunAsync(),
                     token);
 
-            while (!_server.ServerIsRunning) { }
-            while (!_client.ServerIsRunning) { }
+            while (!_server.IsListening) { }
+            while (!_client.IsListening) { }
 
             Assert.AreEqual(string.Empty, _messageFromClient);
             Assert.AreEqual(string.Empty, _messageFromServer);
@@ -273,13 +267,13 @@ namespace TplSocketServerTest
             var receiveFilePath = _remoteFilePath;
             var receiveFolderPath = _remoteFolder;
 
-            _server.InitializeServer(_localIp, remoteServerPort);
+            _server.Initialize(_localIp, remoteServerPort);
             _server.SocketSettings = _socketSettings;
             _server.MyTransferFolderPath = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            _client.InitializeServer(_localIp, localPort);
+            _client.Initialize(_localIp, localPort);
             _client.SocketSettings = _socketSettings;
             _client.MyTransferFolderPath = _localFolder;
             _client.EventOccurred += HandleClientEvent;
@@ -289,14 +283,14 @@ namespace TplSocketServerTest
 
            _runServerTask =
                 Task.Run(() =>
-                        _server.RunServerAsync(), token);
+                        _server.RunAsync(), token);
 
            _runClientTask =
                 Task.Run(() =>
-                        _client.RunServerAsync(), token);
+                        _client.RunAsync(), token);
 
-            while (!_server.ServerIsRunning) { }
-            while (!_client.ServerIsRunning) { }
+            while (!_server.IsListening) { }
+            while (!_client.IsListening) { }
 
             var sizeOfFileToSend = new FileInfo(sendFilePath).Length;
             FileHelper.DeleteFileIfAlreadyExists(receiveFilePath);
@@ -345,13 +339,13 @@ namespace TplSocketServerTest
             var getFilePath = _remoteFilePath;
             var receivedFilePath = _localFilePath;
 
-            _server.InitializeServer(_localIp, remoteServerPort);
+            _server.Initialize(_localIp, remoteServerPort);
             _server.SocketSettings = _socketSettings;
             _server.MyTransferFolderPath = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            _client.InitializeServer(_localIp, localPort);
+            _client.Initialize(_localIp, localPort);
             _client.SocketSettings = _socketSettings;
             _client.MyTransferFolderPath = _localFolder;
             _client.EventOccurred += HandleClientEvent;
@@ -361,16 +355,16 @@ namespace TplSocketServerTest
 
            _runServerTask =
                 Task.Run(() =>
-                    _server.RunServerAsync(),
+                    _server.RunAsync(),
                     token);
 
            _runClientTask =
                 Task.Run(() =>
-                    _client.RunServerAsync(),
+                    _client.RunAsync(),
                     token);
 
-            while (!_server.ServerIsRunning) { }
-            while (!_client.ServerIsRunning) { }
+            while (!_server.IsListening) { }
+            while (!_client.IsListening) { }
 
             FileHelper.DeleteFileIfAlreadyExists(receivedFilePath);
             Assert.IsFalse(File.Exists(receivedFilePath));
@@ -414,13 +408,13 @@ namespace TplSocketServerTest
             const int localPort = 8007;
             const int remoteServerPort = 8008;
 
-            _server.InitializeServer(_localIp, remoteServerPort);
+            _server.Initialize(_localIp, remoteServerPort);
             _server.SocketSettings = _socketSettings;
             _server.MyTransferFolderPath = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            _client.InitializeServer(_localIp, localPort);
+            _client.Initialize(_localIp, localPort);
             _client.SocketSettings = _socketSettings;
             _client.MyTransferFolderPath = _localFolder;
             _client.EventOccurred += HandleClientEvent;
@@ -431,16 +425,16 @@ namespace TplSocketServerTest
 
            _runServerTask =
                 Task.Run(() =>
-                        _server.RunServerAsync(),
+                        _server.RunAsync(),
                         token);
 
            _runClientTask =
                 Task.Run(() =>
-                        _client.RunServerAsync(),
+                        _client.RunAsync(),
                         token);
 
-            while (!_server.ServerIsRunning) { }
-            while (!_client.ServerIsRunning) { }
+            while (!_server.IsListening) { }
+            while (!_client.IsListening) { }
 
             Assert.AreEqual(string.Empty, _transferFolderPath);
 
@@ -467,13 +461,13 @@ namespace TplSocketServerTest
             const int localPort = 8009;
             const int remoteServerPort = 8010;
 
-            _server.InitializeServer(_localIp, remoteServerPort);
+            _server.Initialize(_localIp, remoteServerPort);
             _server.SocketSettings = _socketSettings;
             _server.MyTransferFolderPath = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            _client.InitializeServer(_localIp, localPort);
+            _client.Initialize(_localIp, localPort);
             _client.SocketSettings = _socketSettings;
             _client.MyTransferFolderPath = _localFolder;
             _client.EventOccurred += HandleClientEvent;
@@ -490,16 +484,16 @@ namespace TplSocketServerTest
 
            _runServerTask =
                 Task.Run(() =>
-                        _server.RunServerAsync(),
+                        _server.RunAsync(),
                     token);
 
            _runClientTask =
                 Task.Run(() =>
-                        _client.RunServerAsync(),
+                        _client.RunAsync(),
                     token);
 
-            while (!_server.ServerIsRunning) { }
-            while (!_client.ServerIsRunning) { }
+            while (!_server.IsListening) { }
+            while (!_client.IsListening) { }
 
             Assert.AreEqual(string.Empty, _publicIp);
 
@@ -526,13 +520,13 @@ namespace TplSocketServerTest
             const int localPort = 8011;
             const int remoteServerPort = 8012;
 
-            _server.InitializeServer(_localIp, remoteServerPort);
+            _server.Initialize(_localIp, remoteServerPort);
             _server.SocketSettings = _socketSettings;
             _server.MyTransferFolderPath = _testFilesFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            _client.InitializeServer(_localIp, localPort);
+            _client.Initialize(_localIp, localPort);
             _client.SocketSettings = _socketSettings;
             _client.MyTransferFolderPath = _localFolder;
             _client.EventOccurred += HandleClientEvent;
@@ -542,16 +536,16 @@ namespace TplSocketServerTest
 
            _runServerTask =
                 Task.Run(() =>
-                        _server.RunServerAsync(),
+                        _server.RunAsync(),
                     token);
 
            _runClientTask =
                 Task.Run(() =>
-                        _client.RunServerAsync(),
+                        _client.RunAsync(),
                     token);
 
-            while (!_server.ServerIsRunning) { }
-            while (!_client.ServerIsRunning) { }
+            while (!_server.IsListening) { }
+            while (!_client.IsListening) { }
 
             var fileListRequest =
                 await _client.RequestFileListAsync(
@@ -566,19 +560,22 @@ namespace TplSocketServerTest
 
             while (!_clientReceivedFileInfoList) { }
 
-            Assert.AreEqual(4, _fileInfoList.Count);
+            var fileInfoList = _client.RemoteServerFileList;
+            Assert.AreEqual(4, fileInfoList.Count);
             
             var fiDictionaryActual = new Dictionary<string, long>();
-            foreach (var fi in _fileInfoList)
+            foreach (var fi in fileInfoList)
             {
                 fiDictionaryActual.Add(fi.Item1, fi.Item2);
             }
 
-            var expectedFileNames = new List<string>();
-            expectedFileNames.Add(Path.Combine(_testFilesFolder, "fake.exe"));
-            expectedFileNames.Add(Path.Combine(_testFilesFolder, "loremipsum1.txt"));
-            expectedFileNames.Add(Path.Combine(_testFilesFolder, "loremipsum2.txt"));
-            expectedFileNames.Add(Path.Combine(_testFilesFolder, "smallFile.jpg"));
+            var expectedFileNames = new List<string>
+            {
+                Path.Combine(_testFilesFolder, "fake.exe"),
+                Path.Combine(_testFilesFolder, "loremipsum1.txt"),
+                Path.Combine(_testFilesFolder, "loremipsum2.txt"),
+                Path.Combine(_testFilesFolder, "smallFile.jpg")
+            };
 
             foreach (var fileName in expectedFileNames)
             {
@@ -604,13 +601,13 @@ namespace TplSocketServerTest
             const int remoteServerPort = 8013;
             const int localPort = 8014;
 
-            _server.InitializeServer(_localIp, remoteServerPort);
+            _server.Initialize(_localIp, remoteServerPort);
             _server.SocketSettings = _socketSettings;
             _server.MyTransferFolderPath = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            _client.InitializeServer(_localIp, localPort);
+            _client.Initialize(_localIp, localPort);
             _client.SocketSettings = _socketSettings;
             _client.MyTransferFolderPath = _localFolder;
             _client.EventOccurred += HandleClientEvent;
@@ -622,14 +619,14 @@ namespace TplSocketServerTest
             
             _runServerTask =
                 Task.Run(() =>
-                    _server.RunServerAsync());
+                    _server.RunAsync());
 
             _runClientTask =
                 Task.Run(() =>
-                    _client.RunServerAsync());
+                    _client.RunAsync());
 
-            while (!_server.ServerIsRunning) { }
-            while (!_client.ServerIsRunning) { }
+            while (!_server.IsListening) { }
+            while (!_client.IsListening) { }
 
             Assert.IsTrue(File.Exists(receiveFilePath));
 
@@ -691,13 +688,13 @@ namespace TplSocketServerTest
             var getFilePath = _remoteFilePath;
             var receivedFilePath = _localFilePath;
 
-            _server.InitializeServer(_localIp, remoteServerPort);
+            _server.Initialize(_localIp, remoteServerPort);
             _server.SocketSettings = _socketSettings;
             _server.MyTransferFolderPath = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            _client.InitializeServer(_localIp, localPort);
+            _client.Initialize(_localIp, localPort);
             _client.SocketSettings = _socketSettings;
             _client.MyTransferFolderPath = _localFolder;
             _client.EventOccurred += HandleClientEvent;
@@ -707,16 +704,16 @@ namespace TplSocketServerTest
 
             _runServerTask =
                 Task.Run(() =>
-                        _server.RunServerAsync(),
+                        _server.RunAsync(),
                     token);
 
             _runClientTask =
                 Task.Run(() =>
-                        _client.RunServerAsync(),
+                        _client.RunAsync(),
                     token);
 
-            while (!_server.ServerIsRunning) { }
-            while (!_client.ServerIsRunning) { }
+            while (!_server.IsListening) { }
+            while (!_client.IsListening) { }
 
             Assert.IsTrue(File.Exists(receivedFilePath));
 
@@ -776,13 +773,13 @@ namespace TplSocketServerTest
             const int localPort = 8017;
             const int remoteServerPort = 8018;
 
-            _server.InitializeServer(_localIp, remoteServerPort);
+            _server.Initialize(_localIp, remoteServerPort);
             _server.SocketSettings = _socketSettings;
             _server.MyTransferFolderPath = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            _client.InitializeServer(_localIp, localPort);
+            _client.Initialize(_localIp, localPort);
             _client.SocketSettings = _socketSettings;
             _client.MyTransferFolderPath = _localFolder;
             _client.EventOccurred += HandleClientEvent;
@@ -792,16 +789,16 @@ namespace TplSocketServerTest
 
             _runServerTask =
                 Task.Run(() =>
-                        _server.RunServerAsync(),
+                        _server.RunAsync(),
                     token);
 
             _runClientTask =
                 Task.Run(() =>
-                        _client.RunServerAsync(),
+                        _client.RunAsync(),
                     token);
 
-            while (!_server.ServerIsRunning) { }
-            while (!_client.ServerIsRunning) { }
+            while (!_server.IsListening) { }
+            while (!_client.IsListening) { }
 
             var fileListRequest1 =
                 await _client.RequestFileListAsync(
@@ -816,7 +813,8 @@ namespace TplSocketServerTest
 
             while (!_serverHasNoFilesAvailableToDownload) { }
 
-            Assert.AreEqual(0, _fileInfoList.Count);
+            var fileInfoList = _client.RemoteServerFileList;
+            Assert.AreEqual(0, fileInfoList.Count);
 
             var fileListRequest2 =
                 await _client.RequestFileListAsync(
@@ -831,19 +829,22 @@ namespace TplSocketServerTest
 
             while (!_clientReceivedFileInfoList) { }
 
-            Assert.AreEqual(4, _fileInfoList.Count);
+            fileInfoList = _client.RemoteServerFileList;
+            Assert.AreEqual(4, fileInfoList.Count);
 
             var fiDictionaryActual = new Dictionary<string, long>();
-            foreach (var fi in _fileInfoList)
+            foreach (var fi in fileInfoList)
             {
                 fiDictionaryActual.Add(fi.Item1, fi.Item2);
             }
 
-            var expectedFileNames = new List<string>();
-            expectedFileNames.Add(Path.Combine(_testFilesFolder, "fake.exe"));
-            expectedFileNames.Add(Path.Combine(_testFilesFolder, "loremipsum1.txt"));
-            expectedFileNames.Add(Path.Combine(_testFilesFolder, "loremipsum2.txt"));
-            expectedFileNames.Add(Path.Combine(_testFilesFolder, "smallFile.jpg"));
+            var expectedFileNames = new List<string>
+            {
+                Path.Combine(_testFilesFolder, "fake.exe"),
+                Path.Combine(_testFilesFolder, "loremipsum1.txt"),
+                Path.Combine(_testFilesFolder, "loremipsum2.txt"),
+                Path.Combine(_testFilesFolder, "smallFile.jpg")
+            };
 
             foreach (var fileName in expectedFileNames)
             {
@@ -869,13 +870,13 @@ namespace TplSocketServerTest
             const int localPort = 8019;
             const int remoteServerPort = 8020;
 
-            _server.InitializeServer(_localIp, remoteServerPort);
+            _server.Initialize(_localIp, remoteServerPort);
             _server.SocketSettings = _socketSettings;
             _server.MyTransferFolderPath = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            _client.InitializeServer(_localIp, localPort);
+            _client.Initialize(_localIp, localPort);
             _client.SocketSettings = _socketSettings;
             _client.MyTransferFolderPath = _localFolder;
             _client.EventOccurred += HandleClientEvent;
@@ -885,16 +886,16 @@ namespace TplSocketServerTest
             
             _runServerTask =
                 Task.Run(() =>
-                        _server.RunServerAsync(),
+                        _server.RunAsync(),
                     token);
 
             _runClientTask =
                 Task.Run(() =>
-                        _client.RunServerAsync(),
+                        _client.RunAsync(),
                     token);
 
-            while (!_server.ServerIsRunning) { }
-            while (!_client.ServerIsRunning) { }
+            while (!_server.IsListening) { }
+            while (!_client.IsListening) { }
             
             Assert.IsFalse(Directory.Exists(_tempFolder));
 
@@ -911,7 +912,8 @@ namespace TplSocketServerTest
 
             while (!_serverTransferFolderDoesNotExist) { }
 
-            Assert.AreEqual(0, _fileInfoList.Count);
+            var fileInfoList = _client.RemoteServerFileList;
+            Assert.AreEqual(0, fileInfoList.Count);
 
             var fileListRequest2 =
                 await _client.RequestFileListAsync(
@@ -926,19 +928,22 @@ namespace TplSocketServerTest
 
             while (!_clientReceivedFileInfoList) { }
 
-            Assert.AreEqual(4, _fileInfoList.Count);
+            fileInfoList = _client.RemoteServerFileList;
+            Assert.AreEqual(4, fileInfoList.Count);
 
             var fiDictionaryActual = new Dictionary<string, long>();
-            foreach (var fi in _fileInfoList)
+            foreach (var fi in fileInfoList)
             {
                 fiDictionaryActual.Add(fi.Item1, fi.Item2);
             }
 
-            var expectedFileNames = new List<string>();
-            expectedFileNames.Add(Path.Combine(_testFilesFolder, "fake.exe"));
-            expectedFileNames.Add(Path.Combine(_testFilesFolder, "loremipsum1.txt"));
-            expectedFileNames.Add(Path.Combine(_testFilesFolder, "loremipsum2.txt"));
-            expectedFileNames.Add(Path.Combine(_testFilesFolder, "smallFile.jpg"));
+            var expectedFileNames = new List<string>
+            {
+                Path.Combine(_testFilesFolder, "fake.exe"),
+                Path.Combine(_testFilesFolder, "loremipsum1.txt"),
+                Path.Combine(_testFilesFolder, "loremipsum2.txt"),
+                Path.Combine(_testFilesFolder, "smallFile.jpg")
+            };
 
             foreach (var fileName in expectedFileNames)
             {
@@ -981,7 +986,6 @@ namespace TplSocketServerTest
                     break;
 
                 case EventType.ReceivedFileList:
-                    _fileInfoList = serverEvent.RemoteServerFileList;
                     _clientReceivedFileInfoList = true;
                     break;
 

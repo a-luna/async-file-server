@@ -72,7 +72,7 @@
             Console.WriteLine($"{Environment.NewLine}Thank you! Connection info for new client has been successfully configured.\n");
 
             _state.Settings.RemoteServers.Add(_state.RemoteServerInfo);
-            AppSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
+            ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
             return Result.Ok();
         }
     }

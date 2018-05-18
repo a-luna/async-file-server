@@ -27,7 +27,7 @@
             const string prompt = "Enter the port number where this server will listen for incoming connections";
             _state.UserEntryLocalServerPort = SharedFunctions.GetPortNumberFromUser(prompt, true);
 
-            AppSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
+            ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
             await Task.Delay(1);
             return Result.Ok();
         }

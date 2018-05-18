@@ -10,8 +10,7 @@
     
     static class SharedFunctions
     {
-        public const string NoClientSelectedError = "Please select a remote server before choosing an action to perform.";
-        
+
         public const int OneHalfSecondInMilliseconds = 500;
 
         internal const int PortRangeMin = 49152;

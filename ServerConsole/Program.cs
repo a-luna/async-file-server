@@ -17,8 +17,8 @@
 
             Console.WriteLine("\nStarting asynchronous server...\n");
 
-            var serverConsole = new ServerConsole();
-            var result = await serverConsole.RunServerAsync().ConfigureAwait(false);
+            var server = new ServerApplication();
+            var result = await server.RunAsync().ConfigureAwait(false);
             if (result.Failure)
             {
                 Console.WriteLine(result.Error);

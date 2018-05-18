@@ -43,12 +43,9 @@
 
             var requestServerInfo = new RequestAdditionalInfoFromRemoteServerCommand(_state);
             var requestServerInfoResult = await requestServerInfo.ExecuteAsync();
-
             if (requestServerInfoResult.Success)
             {
                 _state.ClientSelected = true;
-
-                _log.Info("Complete: GetRemoteServerInfoFromUserCommand.ExecuteAsync");
                 return Result.Ok();
             }
 
