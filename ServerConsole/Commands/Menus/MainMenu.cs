@@ -1,20 +1,14 @@
 ﻿namespace ServerConsole.Commands.Menus
 {
     using System;
-    using System.IO;
     using System.Collections.Generic;
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Console.Menu;
-    using AaronLuna.Common.Extensions;
-    using AaronLuna.Common.IO;
     using AaronLuna.Common.Logging;
     using AaronLuna.Common.Result;
-    using AaronLuna.ConsoleProgressBar;
 
     using ServerCommands;
-
-    using TplSockets;
 
     class MainMenu : MenuLoop
     {
@@ -23,9 +17,11 @@
 
         public MainMenu(AppState state)
         {
+            _state = state;
+
             ReturnToParent = true;
             ItemText = "Main menu";
-            MenuText = "\nMenu for TPL socket server:";
+            MenuText = "Main Menu:";
             MenuOptions = new List<ICommand>();
 
             var selectServerCommand = new SelectRemoteServerMenu(state);
@@ -37,9 +33,6 @@
             MenuOptions.Add(selectActionCommand);
             MenuOptions.Add(changeSettingsCommand);
             MenuOptions.Add(shutdownCommand);
-
-            _state = state;
-            
         }
 
         public new async Task<Result> ExecuteAsync()
@@ -49,28 +42,35 @@
 
             while (!exit)
             {
-                Console.WriteLine($"Server is listening for incoming requests on port {_state.LocalServer.Info.Port}\nLocal IP: {_state.LocalServer.Info.LocalIpAddress}\nPublic IP: {_state.LocalServer.Info.PublicIpAddress}\n");
+                var localConnectionInfo = _state.ReportLocalServerConnectionInfo();
+                var remoteConnectionInfo = _state.ReportRemoteServerConnectionInfo();
+
+                Console.Clear();
+                Console.WriteLine(localConnectionInfo);
+                Console.WriteLine(remoteConnectionInfo);
+
                 var selectedOption = Menu.GetUserSelection(MenuText, MenuOptions);
                 exit = selectedOption.ReturnToParent;
                 result = await selectedOption.ExecuteAsync().ConfigureAwait(false);
 
                 if (result.Success) continue;
                 Console.WriteLine($"{Environment.NewLine}Error: {result.Error}");
-
-                if (result.Error.Contains(Resources.Error_NoClientSelectedError))
-                {
-                    Console.WriteLine("Press Enter to return to main menu.");
-                    Console.ReadLine();
-                    continue;
-                }
-
-                _log.Error($"Error: {result.Error} (MainMenu.ExecuteAsync)");
                 exit = SharedFunctions.PromptUserYesOrNo("Exit program?");
             }
-            
+
             return result;
         }
 
+        public void DisplayMenu()
+        {
+            var localConnectionInfo = _state.ReportLocalServerConnectionInfo();
+            var remoteConnectionInfo = _state.ReportRemoteServerConnectionInfo();
+
+            Console.Clear();
+            Console.WriteLine(localConnectionInfo);
+            Console.WriteLine(remoteConnectionInfo);
+
+            Menu.DisplayMenu(MenuText, MenuOptions);
+        }
     }
 }
- 

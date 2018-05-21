@@ -35,7 +35,7 @@ namespace ServerConsole.Commands.Getters
         {
             _state.RemoteServerInfo = _server;
             _state.ClientSelected = true;
-            
+
             await Task.Delay(1);
             return Result.Ok();
         }

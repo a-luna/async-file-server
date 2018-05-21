@@ -1,6 +1,7 @@
 ﻿namespace ServerConsole
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Net;
@@ -16,7 +17,6 @@
 
     using Commands.CompositeCommands;
     using Commands.Menus;
-
     using TplSockets;
 
     public class ServerApplication
@@ -26,6 +26,7 @@
         readonly string _settingsFilePath;
         readonly CancellationTokenSource _cts;
         readonly AppState _state;
+        MainMenu _mainMenu;
 
         public ServerApplication()
         {
@@ -44,7 +45,7 @@
             {
                 return initializeServerResult;
             }
-            
+
             var token = _cts.Token;
             var result = Result.Fail(string.Empty);
 
@@ -57,8 +58,8 @@
 
                 while (!_state.LocalServer.IsListening) { }
 
-                var mainMenu = new MainMenu(_state);
-                result = await mainMenu.ExecuteAsync();
+                _mainMenu = new MainMenu(_state);
+                result = await _mainMenu.ExecuteAsync();
 
                 if (_state.ProgressBarInstantiated)
                 {
@@ -100,12 +101,11 @@
 
         async void HandleServerEventAsync(object sender, ServerEvent serverEvent)
         {
-
             _log.Info(serverEvent.ToString());
             DisplayServerEvent(serverEvent);
             await ProcessServerEventAsync(serverEvent);
 
-            Console.Clear();
+            //Console.Clear();
             //Menu.DisplayMenu(MenuText, MenuOptions);
         }
 
@@ -119,6 +119,11 @@
         {
             switch (serverEvent.EventType)
             {
+                case EventType.ReceivedTextMessage:
+                    Console.WriteLine($"\n{serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} says:");
+                    Console.WriteLine(serverEvent.TextMessage);
+                    break;
+
                 case EventType.ReceivedOutboundFileTransferRequest:
                     Console.WriteLine("\nReceived outbound file transfer request");
                     Console.WriteLine($"File Requested:\t\t{serverEvent.FileName}\nFile Size:\t\t{serverEvent.FileSizeString}\nRemote Endpoint:\t{serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}\nTarget Directory:\t{serverEvent.RemoteFolder}");
@@ -182,8 +187,11 @@
                     break;
 
                 case EventType.SendTransferFolderPathStarted:
-                case EventType.SendPublicIpAddressStarted:
                     Console.Write("Sent");
+                    break;
+
+                case EventType.SendPublicIpAddressStarted:
+                    Console.Write("Sent\n");
                     break;
 
                 case EventType.ReceivedTransferFolderPath:
@@ -213,16 +221,17 @@
                     _state.WaitingForServerToBeginAcceptingConnections = false;
                     return;
 
-                case EventType.ReceivedTextMessage:
-                    ReceivedTextMessageComplete(serverEvent);
-                    break;
-
                 case EventType.ReceivedTransferFolderPath:
                     _state.WaitingForTransferFolderResponse = false;
                     break;
 
                 case EventType.ReceivedPublicIpAddress:
                     _state.WaitingForPublicIpResponse = false;
+                    _mainMenu.DisplayMenu();
+                    break;
+
+                case EventType.SendPublicIpAddressStarted:
+                    _mainMenu.DisplayMenu();
                     break;
 
                 case EventType.ReceiveFileBytesStarted:
@@ -271,39 +280,6 @@
                 default:
                     return;
             }
-        }
-
-        void ReceivedTextMessageComplete(ServerEvent serverEvent)
-        {
-            Console.Clear();
-            Console.WriteLine($"\n{serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} says:");
-            Console.WriteLine(serverEvent.TextMessage);
-
-            Console.WriteLine("Presss enter to return to main menu");
-            Console.ReadLine();
-            Console.WriteLine("Returning to main menu...");
-
-            //if (SharedFunctions.PromptUserYesOrNo($"{Environment.NewLine}Reply to {textIp}:{textPort}?"))
-            //{
-            //    var message = Console.ReadLine();
-
-            //    var sendMessageResult =
-            //        await _state.LocalServer.SendTextMessageAsync(
-            //            message,
-            //            textIp.ToString(),
-            //            textPort,
-            //            _state.MyLocalIpAddress,
-            //            _state.MyServerPort,
-            //            new CancellationToken()).ConfigureAwait(false);
-
-            //    if (sendMessageResult.Failure)
-            //    {
-            //        Console.WriteLine(sendMessageResult.Error);
-            //    }
-            //}
-
-            //_state.WaitingForUserInput = true;
-            //_state.SignalDispayMenu.Set();
         }
 
         void ReceiveFileBytesStarted(ServerEvent serverEvent)

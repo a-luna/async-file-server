@@ -17,7 +17,7 @@
             _incomingFile = null;
             _remoteFilePath = null;
         }
-        
+
         public byte[] Buffer { get; set; }
         public List<byte> UnreadBytes { get; set; }
         public int LastBytesReceivedCount { get; set; }

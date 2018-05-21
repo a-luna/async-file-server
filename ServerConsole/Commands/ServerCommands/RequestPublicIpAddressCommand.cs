@@ -42,17 +42,9 @@
                 return Result.Fail(error);
             }
 
-            while (_state.WaitingForPublicIpResponse) { }            
+            while (_state.WaitingForPublicIpResponse) { }
 
             return Result.Ok();
-        }
-        
-        void HandleServerEvent(object sender, ServerEvent serverEvent)
-        {
-            switch (serverEvent.EventType)
-            {
-                
-            }
         }
     }
 }

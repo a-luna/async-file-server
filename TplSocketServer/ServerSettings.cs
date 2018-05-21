@@ -46,6 +46,22 @@
 
         public static Result<ServerSettings> ReadFromFile(string filePath)
         {
+            if (!File.Exists(filePath)) return Result.Ok(GetDefaultSettings());
+
+            var deserializeResult = Deserialize(filePath);
+            if (deserializeResult.Failure)
+            {
+                return deserializeResult;
+            }
+
+            var settings = deserializeResult.Value;
+            settings.InitializeIpAddresses();
+
+            return Result.Ok(settings);
+        }
+
+        public static Result<ServerSettings> Deserialize(string filePath)
+        {
             ServerSettings settings;
             try
             {
@@ -60,11 +76,9 @@
                 return Result.Fail<ServerSettings>($"{ex.Message} ({ex.GetType()})");
             }
 
-            settings.InitializeIpAddresses();
-
             return Result.Ok(settings);
         }
-        
+
         public static void SaveToFile(ServerSettings settings, string filePath)
         {
             var serializer = new XmlSerializer(typeof(ServerSettings));
@@ -123,6 +137,19 @@
                     }
                 }
             }
+        }
+
+        static ServerSettings GetDefaultSettings()
+        {
+            var defaultTransferFolderPath
+                = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}transfer";
+
+            return new ServerSettings
+            {
+                MaxDownloadAttempts = 3,
+                LocalServerFolderPath = defaultTransferFolderPath,
+                FileTransferUpdateInterval = 0.0025f
+            };
         }
     }
 }

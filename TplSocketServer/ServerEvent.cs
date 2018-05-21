@@ -11,6 +11,7 @@
 
     public class ServerEvent
     {
+        
         public EventType EventType { get; set; }
         public int BytesReceived { get; set; }
         public int ExpectedByteCount { get; set; }
@@ -22,6 +23,8 @@
         public int MessageBytesRemaining { get; set; }
         public byte[] MessageData { get; set; }
         public MessageType MessageType { get; set; }
+        public Message Message { get; set; }
+        public int MessageId { get; set; }
         public string TextMessage { get; set; }
         public IPAddress RemoteServerIpAddress { get; set; }
         public int RemoteServerPortNumber { get; set; }

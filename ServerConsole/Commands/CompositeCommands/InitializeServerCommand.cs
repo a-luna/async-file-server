@@ -33,8 +33,7 @@
 
         public async Task<Result> ExecuteAsync()
         {
-            _state.SettingsFile = new FileInfo(_settingsFilePath);
-            _state.Settings = InitializeAppSettings(_state.SettingsFilePath);
+            InitializeSettings();
 
             var setPortCommand = new SetMyPortNumberCommand(_state);
             var setPortResult = Result.Ok();
@@ -68,10 +67,11 @@
             }
 
             var port = _state.Settings.LocalPort;
+            var cidrIp = _state.Settings.LocalNetworkCidrIp;
             var localIp = _state.UserEntryLocalIpAddress;
             var publicIp = _state.UserEntryPublicIpAddress;
 
-            _state.LocalServer.Initialize(localIp, port);
+            _state.LocalServer.Initialize(localIp, cidrIp, port);
             _state.LocalServer.SocketSettings = _state.Settings.SocketSettings;
             _state.LocalServer.TransferUpdateInterval = _state.Settings.FileTransferUpdateInterval;
             _state.LocalServer.Info.PublicIpAddress = publicIp;
@@ -80,33 +80,19 @@
             return Result.Ok();
         }
 
-        public ServerSettings InitializeAppSettings(string settingsFilePath)
+        void InitializeSettings()
         {
-            var defaultTransferFolderPath
-                = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}transfer";
+            _state.SettingsFile = new FileInfo(_settingsFilePath);
 
-            var settings = new ServerSettings
+            var readSettingsFileResult = ServerSettings.ReadFromFile(_state.SettingsFilePath);
+            if (readSettingsFileResult.Failure)
             {
-                MaxDownloadAttempts = 3,
-                LocalServerFolderPath = defaultTransferFolderPath,
-                FileTransferUpdateInterval = 0.0025f
-            };
-
-            if (!File.Exists(settingsFilePath)) return settings;
-
-            var readFromFileResult = ServerSettings.ReadFromFile(settingsFilePath);
-            if (readFromFileResult.Success)
-            {
-                settings = readFromFileResult.Value;
-                _state.UserEntryLocalServerPort = settings.LocalPort;
-                _state.UserEntryLocalNetworkCidrIp = settings.LocalNetworkCidrIp;
-            }
-            else
-            {
-                Console.WriteLine(readFromFileResult.Error);
+                Console.WriteLine(readSettingsFileResult.Error);
             }
 
-            return settings;
+            _state.Settings = readSettingsFileResult.Value;
+            _state.UserEntryLocalServerPort = _state.Settings.LocalPort;
+            _state.UserEntryLocalNetworkCidrIp = _state.Settings.LocalNetworkCidrIp;
         }
     }
 }

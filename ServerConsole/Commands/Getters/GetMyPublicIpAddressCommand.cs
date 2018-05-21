@@ -25,11 +25,11 @@
 
         public async Task<Result> ExecuteAsync()
         {
-            const string notifyLanTrafficOnly = 
+            const string notifyLanTrafficOnly =
                 "Unable to determine public IP address, this server will only be able " +
                 "to communicate with machines in the same local network.";
 
-            Console.Clear();
+            //Console.Clear();
             var retrievePublicIp =
                 await NetworkUtilities.GetPublicIPv4AddressAsync().ConfigureAwait(false);
 

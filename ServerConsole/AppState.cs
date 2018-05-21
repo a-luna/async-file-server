@@ -1,5 +1,6 @@
 ﻿namespace ServerConsole
 {
+    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Net;
@@ -25,7 +26,8 @@
             SignalRetryLimitExceeded = new AutoResetEvent(true);
             SignalReturnToMainMenu = new AutoResetEvent(true);
         }
-        
+
+        public ServerSettings Settings { get; set; }
         public FileInfo SettingsFile { get; set; }
         public string SettingsFilePath => SettingsFile.ToString();
 
@@ -47,8 +49,7 @@
         public IPAddress UserEntryLocalIpAddress { get; set; }
         public IPAddress UserEntryPublicIpAddress { get; set; }
         public int UserEntryLocalServerPort { get; set; }
-
-        public ServerSettings Settings { get; set; }
+        
         public TplSocketServer LocalServer { get; set; }
         public string IncomingFileName => Path.GetFileName(LocalServer.IncomingFilePath);
         public List<(string filePath, long fileSize)> FileInfoList => LocalServer.RemoteServerFileList;
@@ -63,6 +64,21 @@
         {
             get => LocalServer.RemoteServerInfo;
             set => LocalServer.RemoteServerInfo = value;
+        }
+
+        public string ReportLocalServerConnectionInfo()
+        {
+            return $"Server is listening for incoming requests on port {LocalServer.Info.Port}{Environment.NewLine}" +
+                   $"Local IP:  {LocalServer.Info.LocalIpAddress}{Environment.NewLine}" +
+                   $"Public IP: {LocalServer.Info.PublicIpAddress}{Environment.NewLine}";
+        }
+
+        public string ReportRemoteServerConnectionInfo()
+        {
+            return ClientSelected
+                ? $"Remote server endpoint: {RemoteServerInfo.SessionIpAddress}:{RemoteServerInfo.Port}{Environment.NewLine}"
+                : $"Please select a remote server{Environment.NewLine}";
+            ;
         }
     }
 }

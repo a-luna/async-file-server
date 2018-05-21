@@ -107,7 +107,7 @@ namespace TplSocketServerTest
 
             var acceptTask = Task.Run(AcceptConnectionTask);
 
-            var connectResult = 
+            var connectResult =
                 await _clientSocket.ConnectWithTimeoutAsync(
                     _serverIpAddress,
                     serverPort,

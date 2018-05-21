@@ -26,20 +26,13 @@ namespace ServerConsole.Commands.Getters
 
         public async Task<Result> ExecuteAsync()
         {
-            Console.Clear();
+            //Console.Clear();
             var cidrIp = _state.Settings.LocalNetworkCidrIp;
             var getLocalIpResult = NetworkUtilities.GetLocalIPv4Address(cidrIp);
 
             if (getLocalIpResult.Failure)
             {
-                const string useLoopbackIpPrompt =
-                    "Unable to determine the local IP address for this machine, please " +
-                    "ensure that the CIDR IP address is correct for your LAN.\nWould you " +
-                    "like to use 127.0.0.1 (loopback) as the IP address of this server? " +
-                    "(you will only be able to communicate with other servers running on " +
-                    "the same local machine, this is only useful for testing)";
-
-                var useLoopback = SharedFunctions.PromptUserYesOrNo(useLoopbackIpPrompt);
+                var useLoopback = SharedFunctions.PromptUserYesOrNo(Resources.Warning_UseLoopbackIp);
                 if (!useLoopback)
                 {
                     return Result.Fail(getLocalIpResult.Error);

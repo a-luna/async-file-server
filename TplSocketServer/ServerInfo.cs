@@ -24,18 +24,22 @@ namespace TplSockets
             SessionIpString = string.Empty;
             TransferFolder = string.Empty;
         }
-        
+
         public ServerInfo(IPAddress ipAddress, int port)
         {
             TransferFolder = string.Empty;
-            InitializeConnection(ipAddress, port);
+            Port = port;
+
+            InitializeConnection(ipAddress);
         }
 
         public ServerInfo(string ipAddress, int port)
         {
             TransferFolder = string.Empty;
+            Port = port;
+
             var sessionIp = NetworkUtilities.ParseSingleIPv4Address(ipAddress).Value;
-            InitializeConnection(sessionIp, port);
+            InitializeConnection(sessionIp);
         }
 
         public string TransferFolder { get; set; }
@@ -78,12 +82,11 @@ namespace TplSockets
         public string PublicIpString { get; set; }
         public int Port { get; set; }
 
-        void InitializeConnection(IPAddress ipAddress, int port)
+        void InitializeConnection(IPAddress ipAddress)
         {
             SessionIpAddress = ipAddress;
             LocalIpAddress = IPAddress.Loopback;
             PublicIpAddress = IPAddress.Loopback;
-            Port = port;
 
             switch (NetworkUtilities.GetAddressType(SessionIpAddress))
             {
@@ -105,9 +108,15 @@ namespace TplSockets
             //// Transfer Folder not used to determine equality, ip address
             //// and port number combination must be unique 
 
+            var sessionIpSimilarity = NetworkUtilities.CompareTwoIpAddresses(myInfo.SessionIpAddress, otherInfo.SessionIpAddress);
             var localIpSimilarity = NetworkUtilities.CompareTwoIpAddresses(myInfo.LocalIpAddress, otherInfo.LocalIpAddress);
             var publicIpSimilarity = NetworkUtilities.CompareTwoIpAddresses(myInfo.PublicIpAddress, otherInfo.PublicIpAddress);
             var bothPortsMatch = myInfo.Port == otherInfo.Port;
+
+            if (sessionIpSimilarity == IpAddressSimilarity.AllBytesMatch && bothPortsMatch)
+            {
+                return true;
+            }
 
             if (publicIpSimilarity == IpAddressSimilarity.AllBytesMatch && bothPortsMatch)
             {

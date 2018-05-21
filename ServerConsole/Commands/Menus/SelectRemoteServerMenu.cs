@@ -1,41 +1,61 @@
 ﻿namespace ServerConsole.Commands.Menus
 {
+    using System;
     using System.Collections.Generic;
+    using System.Threading.Tasks;
 
     using AaronLuna.Common.Console.Menu;
     using AaronLuna.Common.Logging;
+    using AaronLuna.Common.Result;
 
     using CompositeCommands;
-
     using Getters;
 
-    class SelectRemoteServerMenu : MenuSingleChoice
+    class SelectRemoteServerMenu : MenuSingleChoice, ICommand
     {
         readonly Logger _log = new Logger(typeof(SelectRemoteServerMenu));
+        readonly AppState _state;
 
         public SelectRemoteServerMenu(AppState state)
         {
+            _state = state;
+
             ReturnToParent = false;
             ItemText = "Select remote server";
-            MenuText = "\nChoose a remote server for this request:";
+            MenuText = "\nChoose a remote server:";
             MenuOptions = new List<ICommand>();
+        }
 
-            var savedClients = new List<ICommand>();
-            foreach (var server in state.Settings.RemoteServers)
+        Task<Result> ICommand.ExecuteAsync()
+        {
+            return ExecuteAsync();
+        }
+
+        public new async Task<Result> ExecuteAsync()
+        {
+            var localConnectionInfo = _state.ReportLocalServerConnectionInfo();
+            var remoteConnectionInfo = _state.ReportRemoteServerConnectionInfo();
+
+            Console.Clear();
+            Console.WriteLine(localConnectionInfo);
+            Console.WriteLine(remoteConnectionInfo);
+
+            PopulateMenu();
+            var selectedOption = Menu.GetUserSelection(MenuText, MenuOptions);
+            return await selectedOption.ExecuteAsync().ConfigureAwait(false);
+        }
+
+        void PopulateMenu()
+        {
+            MenuOptions.Clear();
+
+            foreach (var server in _state.Settings.RemoteServers)
             {
-                savedClients.Add(new GetSelectedRemoteServerCommand(state, server));
+                MenuOptions.Add(new GetSelectedRemoteServerCommand(_state, server));
             }
 
-            if (savedClients.Count > 0)
-            {
-                MenuOptions.AddRange(savedClients);
-            }
-
-            var addNewClientCommand = new GetRemoteServerInfoFromUserCommand(state);
-            var returnToParentCommand = new ReturnToParentCommand("Return to main menu", false);
-            
-            MenuOptions.Add(addNewClientCommand);
-            MenuOptions.Add(returnToParentCommand);
+            MenuOptions.Add(new GetRemoteServerInfoFromUserCommand(_state));
+            MenuOptions.Add(new ReturnToParentCommand("Return to main menu", false));
         }
     }
 }

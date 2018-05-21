@@ -17,24 +17,23 @@
             ReturnToParent = false;
             ItemText = "Send text message";
 
-            _state = state;            
+            _state = state;
         }
 
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
         public async Task<Result> ExecuteAsync()
         {
-            var ipAddress = _state.RemoteServerInfo.SessionIpAddress;
+            var ipAddress = _state.RemoteServerInfo.SessionIpAddress.ToString();
             var port = _state.RemoteServerInfo.Port;
 
-            Console.Clear();
             Console.WriteLine($"Please enter a text message to send to {ipAddress}:{port}");
             var message = Console.ReadLine();
 
             var sendMessageResult =
                 await _state.LocalServer.SendTextMessageAsync(
                     message,
-                    ipAddress.ToString(),
+                    ipAddress,
                     port).ConfigureAwait(false);
 
             if (sendMessageResult.Failure)
@@ -44,7 +43,7 @@
 
             return sendMessageResult.Success
                 ? Result.Ok()
-                : Result.Fail(sendMessageResult.Error);
+                : sendMessageResult;
         }
     }
 }

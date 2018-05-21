@@ -7,7 +7,7 @@
     using AaronLuna.Common.Result;
 
     using TplSockets;
-    
+
     static class SharedFunctions
     {
 
@@ -28,7 +28,7 @@
             var bitCount = 0;
             while (bitCount is 0)
             {
-                Console.Clear();
+                //Console.Clear();
                 Console.WriteLine($"{prompt} (range {CidrPrefixBitsCountMin}-{CidrPrefixBitsCountMax}):");
 
                 var input = Console.ReadLine();
@@ -44,20 +44,20 @@
 
             return bitCount;
         }
-        
+
         public static int GetPortNumberFromUser(string prompt, bool allowRandom)
         {
             var portNumber = 0;
             while (portNumber is 0)
             {
-                Console.Clear();
+                //Console.Clear();
                 Console.WriteLine($"{prompt} (range {PortRangeMin}-{PortRangeMax}):");
 
                 if (allowRandom)
                 {
                     Console.WriteLine("Enter zero to use a random port number");
                 }
-                
+
                 var input = Console.ReadLine() ?? string.Empty;
                 if (input.Equals("zero") || input.Equals("0"))
                 {
@@ -85,7 +85,7 @@
 
             return portNumber;
         }
-        
+
         public static Result<int> ValidateNumberIsWithinRange(string input, int rangeMin, int rangeMax)
         {
             if (string.IsNullOrEmpty(input))
@@ -106,19 +106,10 @@
             return Result.Ok(parsedNum);
         }
 
-        public static Result<ServerInfo> GetRemoteServerConnectionInfoFromUser()
-        {
-            var remoteServerIp = GetIpAddressFromUser("Enter the client's IPv4 address:");
-            var remoteServerPort = GetPortNumberFromUser("\nEnter the client's port number:", false);
-            var remoteServer = new ServerInfo(remoteServerIp, remoteServerPort);            
-
-            return Result.Ok(remoteServer);
-        }
-
         public static IPAddress GetIpAddressFromUser(string prompt)
         {
             var ipAddress = IPAddress.None;
-            Console.Clear();
+            //Console.Clear();
 
             while (ipAddress.Equals(IPAddress.None))
             {

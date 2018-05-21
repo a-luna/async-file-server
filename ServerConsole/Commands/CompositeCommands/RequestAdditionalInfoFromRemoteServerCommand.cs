@@ -56,17 +56,14 @@
                 return Result.Fail(requestFolderPathResult.Error);
             }
 
-            if (!Equals(clientIp, publicIp) || Equals(publicIp, IPAddress.None))
-            {
-                var requestPublicIpCommand =
-                    new RequestPublicIpAddressCommand(_state);
+            var requestPublicIpCommand =
+                new RequestPublicIpAddressCommand(_state);
 
-                var requestPublicIpResult = await requestPublicIpCommand.ExecuteAsync();
-                if (requestPublicIpResult.Failure)
-                {
-                    _log.Error($"Error: {requestPublicIpResult.Error} (RequestAdditionalInfoFromRemoteServerCommand.ExecuteAsync)");
-                    return Result.Fail<ServerInfo>(requestPublicIpResult.Error);
-                }                
+            var requestPublicIpResult = await requestPublicIpCommand.ExecuteAsync();
+            if (requestPublicIpResult.Failure)
+            {
+                _log.Error($"Error: {requestPublicIpResult.Error} (RequestAdditionalInfoFromRemoteServerCommand.ExecuteAsync)");
+                return Result.Fail<ServerInfo>(requestPublicIpResult.Error);
             }
 
             Console.WriteLine($"{Environment.NewLine}Thank you! Connection info for new client has been successfully configured.\n");

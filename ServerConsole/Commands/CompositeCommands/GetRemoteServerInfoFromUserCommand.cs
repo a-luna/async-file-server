@@ -1,4 +1,6 @@
-﻿namespace ServerConsole.Commands.CompositeCommands
+﻿using TplSockets;
+
+namespace ServerConsole.Commands.CompositeCommands
 {
     using System;
     using System.Threading.Tasks;
@@ -25,21 +27,9 @@
 
         public async Task<Result> ExecuteAsync()
         {
-            var clientInfoIsValid = false;
-
-            while (!clientInfoIsValid)
-            {
-                var addClientResult = SharedFunctions.GetRemoteServerConnectionInfoFromUser();
-                if (addClientResult.Failure)
-                {
-                    _log.Error($"Error: {addClientResult.Error} (GetRemoteServerInfoFromUserCommand.ExecuteAsync)");
-                    Console.WriteLine(addClientResult.Error);
-                    return Result.Fail(addClientResult.Error);
-                }
-
-                _state.RemoteServerInfo = addClientResult.Value;
-                clientInfoIsValid = true;
-            }
+            var remoteServerIp = SharedFunctions.GetIpAddressFromUser("Enter the client's IPv4 address:");
+            var remoteServerPort = SharedFunctions.GetPortNumberFromUser("\nEnter the client's port number:", false);
+            _state.RemoteServerInfo = new ServerInfo(remoteServerIp, remoteServerPort);
 
             var requestServerInfo = new RequestAdditionalInfoFromRemoteServerCommand(_state);
             var requestServerInfoResult = await requestServerInfo.ExecuteAsync();
