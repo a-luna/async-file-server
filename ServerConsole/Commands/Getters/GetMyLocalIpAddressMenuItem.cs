@@ -9,11 +9,11 @@ namespace ServerConsole.Commands.Getters
     using AaronLuna.Common.Network;
     using AaronLuna.Common.Result;
 
-    class GetMyLocalIpAddressCommand : ICommand
+    class GetMyLocalIpAddressMenuItem : IMenuItem
     {
-        AppState _state;
+        readonly AppState _state;
 
-        public GetMyLocalIpAddressCommand(AppState state)
+        public GetMyLocalIpAddressMenuItem(AppState state)
         {
             ReturnToParent = false;
             ItemText = "Refresh the value of this server's local/private IP address";
@@ -26,7 +26,6 @@ namespace ServerConsole.Commands.Getters
 
         public async Task<Result> ExecuteAsync()
         {
-            //Console.Clear();
             var cidrIp = _state.Settings.LocalNetworkCidrIp;
             var getLocalIpResult = NetworkUtilities.GetLocalIPv4Address(cidrIp);
 
@@ -40,8 +39,10 @@ namespace ServerConsole.Commands.Getters
 
                 _state.UserEntryLocalIpAddress = IPAddress.Loopback;
             }
-
-            _state.UserEntryLocalIpAddress = getLocalIpResult.Value;
+            else
+            {
+                _state.UserEntryLocalIpAddress = getLocalIpResult.Value;
+            }
 
             await Task.Delay(1);
             return Result.Ok();

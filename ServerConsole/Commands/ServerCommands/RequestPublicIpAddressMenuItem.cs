@@ -1,20 +1,15 @@
 ﻿namespace ServerConsole.Commands.ServerCommands
 {
-    using System.Net;
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Console.Menu;
-    using AaronLuna.Common.Logging;
     using AaronLuna.Common.Result;
 
-    using TplSockets;
-
-    class RequestPublicIpAddressCommand : ICommand
+    class RequestPublicIpAddressMenuItem : IMenuItem
     {
         readonly AppState _state;
-        readonly Logger _log = new Logger(typeof(RequestPublicIpAddressCommand));
-
-        public RequestPublicIpAddressCommand(AppState state)
+        
+        public RequestPublicIpAddressMenuItem(AppState state)
         {
             _state = state;
 
@@ -27,13 +22,15 @@
 
         public async Task<Result> ExecuteAsync()
         {
+            var remoteIp = _state.SelectedServer.SessionIpAddress;
+            var remotePort = _state.SelectedServer.Port;
+
             _state.WaitingForPublicIpResponse = true;
-            _state.RemoteServerInfo.PublicIpAddress = IPAddress.None;
 
             var sendIpRequestResult =
                 await _state.LocalServer.RequestPublicIpAsync(
-                        _state.RemoteServerInfo.SessionIpAddress.ToString(),
-                        _state.RemoteServerInfo.Port)
+                        remoteIp,
+                        remotePort)
                     .ConfigureAwait(false);
 
             if (sendIpRequestResult.Failure)

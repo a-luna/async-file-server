@@ -11,7 +11,7 @@
 
     public class ServerEvent
     {
-        
+
         public EventType EventType { get; set; }
         public int BytesReceived { get; set; }
         public int ExpectedByteCount { get; set; }
@@ -73,20 +73,20 @@
                     break;
 
                 case EventType.ConnectionAccepted:
-                    report += $"Remote client connected: {RemoteServerIpAddress}";
+                    report += $"Connection accepted from {RemoteServerIpAddress}";
                     break;
 
                 case EventType.ConnectToRemoteServerStarted:
                     report +=
-                        $"Attempting to connect to remote client: {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+                        $"START PROCESS: CONNECT TO SERVER: {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 
                 case EventType.ConnectToRemoteServerComplete:
-                    report += "Successfully connected!";
+                    report += $"PROCESS COMPLETE: CONNECT TO SERVER: {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 
                 case EventType.ReceiveMessageFromClientStarted:
-                    report += $"BEGIN PROCESS: RECEIVE MESSAGE FROM CLIENT: {RemoteServerIpAddress}";
+                    report += $"START PROCESS: RECEIVE MESSAGE FROM CLIENT: {RemoteServerIpAddress}";
                     break;
 
                 case EventType.ReceiveMessageFromClientComplete:
@@ -423,7 +423,7 @@
                     break;
 
                 case EventType.SendShutdownServerCommandStarted:
-                    report += "BEGIN PROCESS: INITIATE SERVER SHUTDOWN";
+                    report += "START PROCESS: INITIATE SERVER SHUTDOWN";
                     break;
 
                 case EventType.SendShutdownServerCommandComplete:

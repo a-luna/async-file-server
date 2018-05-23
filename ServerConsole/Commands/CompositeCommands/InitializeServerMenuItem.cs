@@ -13,13 +13,13 @@
 
     using TplSockets;
 
-    class InitializeServerCommand : ICommand
+    class InitializeServerMenuItem : IMenuItem
     {
         readonly AppState _state;
         readonly string _settingsFilePath;
-        readonly Logger _log = new Logger(typeof(InitializeServerCommand));
+        readonly Logger _log = new Logger(typeof(InitializeServerMenuItem));
 
-        public InitializeServerCommand(AppState state, string settingsFilePath)
+        public InitializeServerMenuItem(AppState state, string settingsFilePath)
         {
             ReturnToParent = false;
             ItemText = "Initialize Local Server";
@@ -34,35 +34,38 @@
         public async Task<Result> ExecuteAsync()
         {
             InitializeSettings();
+            var settingsChanged = false;
 
-            var setPortCommand = new SetMyPortNumberCommand(_state);
+            var setPortCommand = new SetMyPortNumberMenuItem(_state);
             var setPortResult = Result.Ok();
 
             if (_state.Settings.LocalPort == 0)
             {
                 setPortResult = await setPortCommand.ExecuteAsync();
                 _state.Settings.LocalPort = _state.UserEntryLocalServerPort;
+                settingsChanged = true;
             }
 
-            var setCidrIpCommand = new SetMyCidrIpCommand(_state);
+            var setCidrIpCommand = new SetMyCidrIpMenuItem(_state);
             var setCidrIpResult = Result.Ok();
 
             if (string.IsNullOrEmpty(_state.Settings.LocalNetworkCidrIp))
             {
                 setCidrIpResult = await setCidrIpCommand.ExecuteAsync();
                 _state.Settings.LocalNetworkCidrIp = _state.UserEntryLocalNetworkCidrIp;
+                settingsChanged = true;
             }
 
-            var getLocalIpCommand = new GetMyLocalIpAddressCommand(_state);
+            var getLocalIpCommand = new GetMyLocalIpAddressMenuItem(_state);
             var getLocalIpResult = await getLocalIpCommand.ExecuteAsync();
 
-            var getPublicIpCommand = new GetMyPublicIpAddressCommand(_state);
+            var getPublicIpCommand = new GetMyPublicIpAddressMenuItem(_state);
             var getPublicIpResult = await getPublicIpCommand.ExecuteAsync();
 
             var result = Result.Combine(setPortResult, setCidrIpResult, getLocalIpResult, getPublicIpResult);
             if (result.Failure)
             {
-                _log.Error($"Error: {result.Error} (InitializeServerCommand.ExecuteAsync)");
+                _log.Error($"Error: {result.Error} (InitializeServerMenuItem.ExecuteAsync)");
                 return Result.Fail("There was an error initializing the server");
             }
 
@@ -76,6 +79,11 @@
             _state.LocalServer.TransferUpdateInterval = _state.Settings.FileTransferUpdateInterval;
             _state.LocalServer.Info.PublicIpAddress = publicIp;
             _state.LocalServer.Info.TransferFolder = _state.Settings.LocalServerFolderPath;
+
+            if (settingsChanged)
+            {
+                ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
+            }
 
             return Result.Ok();
         }

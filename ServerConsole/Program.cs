@@ -15,17 +15,29 @@
             var logger = new Logger(typeof(Program));
             logger.Info("Application started");
 
-            Console.WriteLine("\nStarting asynchronous server...\n");
-
-            var server = new ServerApplication();
-            var result = await server.RunAsync().ConfigureAwait(false);
-            if (result.Failure)
+            var exit = false;
+            while (!exit)
             {
-                Console.WriteLine(result.Error);
-            }
+                Console.WriteLine($"{Environment.NewLine}Starting asynchronous server...{Environment.NewLine}");
 
-            Console.WriteLine("Press enter to exit.");
-            Console.ReadLine();
+                var server = new ServerApplication();
+                var result = await server.RunAsync().ConfigureAwait(false);
+
+                if (result.Failure)
+                {
+                    Console.WriteLine($"{Environment.NewLine}{result.Error}");
+
+                    if (result.Error.Contains("Restarting"))
+                    {
+                        await Task.Delay(Constants.TwoSecondsInMilliseconds);
+                        continue;
+                    }
+                }
+
+                exit = true;
+                Console.WriteLine($"{Environment.NewLine}Press enter to exit.");
+                Console.ReadLine();
+            }
 
             logger.Info("Application shutdown");
             Logger.ShutDown();

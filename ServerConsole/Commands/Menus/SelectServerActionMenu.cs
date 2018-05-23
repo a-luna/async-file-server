@@ -1,76 +1,49 @@
 ﻿namespace ServerConsole.Commands.Menus
 {
-    using System;
+    using System.Collections.Generic;
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Console.Menu;
-    using AaronLuna.Common.Logging;
     using AaronLuna.Common.Result;
 
     using ServerCommands;
 
-    class SelectServerActionMenu : MenuLoop, ICommand
+    class SelectServerActionMenu : MenuSingleChoice, IMenuItem
     {
         readonly AppState _state;
-        readonly Logger _log = new Logger(typeof(SelectServerActionMenu));
 
         public SelectServerActionMenu(AppState state)
         {
             _state = state;
 
             ReturnToParent = false;
-            ItemText = "All server actions";
+            ItemText = "Remote server options";
             MenuText = "Please make a choice from the menu below:";
+            MenuItems = new List<IMenuItem>();
 
-            var sendTextMessageCommand = new SendTextMessageCommand(state);
-            var sendFileCommand = new SendFileCommand();
-            var getFileCommand = new GetFileCommand();
-            var returnToMainMenuCommand = new ReturnToParentCommand("Return to main menu", true);
+            var sendTextMessage = new SendTextMessageMenuItem(state);
+            var sendFile = new SelectFileMenu(state, true);
+            var getFile = new SelectFileMenu(state, false);
+            var returnToMainMenu = new ReturnToParentMenuItem("Return to main menu");
 
-            MenuOptions.Add(sendTextMessageCommand);
-            MenuOptions.Add(sendFileCommand);
-            MenuOptions.Add(getFileCommand);
-            MenuOptions.Add(returnToMainMenuCommand);
+            MenuItems.Add(sendTextMessage);
+            MenuItems.Add(sendFile);
+            MenuItems.Add(getFile);
+            MenuItems.Add(returnToMainMenu);
         }
 
-        Task<Result> ICommand.ExecuteAsync()
+        Task<Result> IMenuItem.ExecuteAsync()
         {
             return ExecuteAsync();
         }
 
-        public new async Task<Result> ExecuteAsync()
+        public new Task<Result> ExecuteAsync()
         {
-            if (!_state.ClientSelected)
-            {
-                var selectServer = new SelectRemoteServerMenu(_state);
-                var selectServerResult = await selectServer.ExecuteAsync();
-                if (selectServerResult.Failure)
-                {
-                    return selectServerResult;
-                }
-            }
+            _state.DoNotRefreshMainMenu = true;
+            _state.DisplayCurrentStatus();
 
-            var exit = false;
-            Result result = null;
-
-            while (!exit)
-            {
-                var localConnectionInfo = _state.ReportLocalServerConnectionInfo();
-                var remoteConnectionInfo = _state.ReportRemoteServerConnectionInfo();
-
-                Console.Clear();
-                Console.WriteLine(localConnectionInfo);
-                Console.WriteLine(remoteConnectionInfo);
-
-                var selectedOption = Menu.GetUserSelection(MenuText, MenuOptions);
-                exit = selectedOption.ReturnToParent;
-                result = await selectedOption.ExecuteAsync().ConfigureAwait(false);
-
-                if (result.Success) continue;
-                _log.Error($"Error: {result.Error} (SelectServerActionMenu.ExecuteAsync)");
-                exit = true;
-            }
-            return result;
+            var menuItem = Menu.GetUserSelection(MenuText, MenuItems);
+            return menuItem.ExecuteAsync();
         }
     }
 }

@@ -13,26 +13,18 @@
     class MainMenu : MenuLoop
     {
         readonly AppState _state;
+        readonly ShutdownServerMenuItem _shutdownServer;
         readonly Logger _log = new Logger(typeof(MainMenu));
 
         public MainMenu(AppState state)
         {
             _state = state;
+            _shutdownServer = new ShutdownServerMenuItem(state);
 
             ReturnToParent = true;
             ItemText = "Main menu";
             MenuText = "Main Menu:";
-            MenuOptions = new List<ICommand>();
-
-            var selectServerCommand = new SelectRemoteServerMenu(state);
-            var selectActionCommand = new SelectServerActionMenu(state);
-            var changeSettingsCommand = new ChangeSettingsMenu(state);
-            var shutdownCommand = new ShutdownServerCommand();
-
-            MenuOptions.Add(selectServerCommand);
-            MenuOptions.Add(selectActionCommand);
-            MenuOptions.Add(changeSettingsCommand);
-            MenuOptions.Add(shutdownCommand);
+            MenuItems = new List<IMenuItem>();
         }
 
         public new async Task<Result> ExecuteAsync()
@@ -42,35 +34,82 @@
 
             while (!exit)
             {
-                var localConnectionInfo = _state.ReportLocalServerConnectionInfo();
-                var remoteConnectionInfo = _state.ReportRemoteServerConnectionInfo();
+                _state.DoNotRefreshMainMenu = false;
 
-                Console.Clear();
-                Console.WriteLine(localConnectionInfo);
-                Console.WriteLine(remoteConnectionInfo);
+                if (_state.RestartRequired)
+                {
+                    exit = true;
+                    continue;
+                }
 
-                var selectedOption = Menu.GetUserSelection(MenuText, MenuOptions);
-                exit = selectedOption.ReturnToParent;
-                result = await selectedOption.ExecuteAsync().ConfigureAwait(false);
+                if (_state.ErrorOccurred)
+                {
+                    var shutdown = SharedFunctions.PromptUserYesOrNo("Shutdown server?");
+                    if (shutdown)
+                    {
+                        await _shutdownServer.ExecuteAsync();
+                        exit = true;
+                    }
+
+                    continue;
+                }
+
+                _state.DisplayCurrentStatus();
+                PopulateMenu();
+
+                var menuItem = Menu.GetUserSelection(MenuText, MenuItems);
+                result = await menuItem.ExecuteAsync().ConfigureAwait(false);
+                exit = menuItem.ReturnToParent;
 
                 if (result.Success) continue;
+                _log.Error($"Error: {result.Error}");
                 Console.WriteLine($"{Environment.NewLine}Error: {result.Error}");
-                exit = SharedFunctions.PromptUserYesOrNo("Exit program?");
+            }
+
+            if (_state.ProgressBarInstantiated)
+            {
+                _state.ProgressBar.Dispose();
+                _state.ProgressBarInstantiated = false;
             }
 
             return result;
         }
 
+        public void PopulateMenu()
+        {
+            MenuItems.Clear();
+            if (_state.LocalServer.Queue.Count > 0)
+            {
+                MenuItems.Add(new ViewRequestQueueMenu(_state));
+            }
+
+            if (_state.LocalServer.Archive.Count > 0)
+            {
+                MenuItems.Add(new ViewEventLogsMenu(_state));
+            }
+
+            MenuItems.Add(new SelectRemoteServerMenu(_state));
+
+            if (_state.ClientSelected)
+            {
+                MenuItems.Add(new SelectServerActionMenu(_state));
+            }
+
+            MenuItems.Add(new ServerConfigurationMenu(_state));
+            MenuItems.Add(_shutdownServer);
+        }
+
         public void DisplayMenu()
         {
-            var localConnectionInfo = _state.ReportLocalServerConnectionInfo();
-            var remoteConnectionInfo = _state.ReportRemoteServerConnectionInfo();
+            if (_state.DoNotRefreshMainMenu) return;
 
-            Console.Clear();
-            Console.WriteLine(localConnectionInfo);
-            Console.WriteLine(remoteConnectionInfo);
+            _state.DoNotRefreshMainMenu = true;
 
-            Menu.DisplayMenu(MenuText, MenuOptions);
+            _state.DisplayCurrentStatus();
+            PopulateMenu();
+            Menu.DisplayMenu(MenuText, MenuItems);
+
+            _state.DoNotRefreshMainMenu = false;
         }
     }
 }

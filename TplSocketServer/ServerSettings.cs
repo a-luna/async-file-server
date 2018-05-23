@@ -148,7 +148,9 @@
             {
                 MaxDownloadAttempts = 3,
                 LocalServerFolderPath = defaultTransferFolderPath,
-                FileTransferUpdateInterval = 0.0025f
+                FileTransferUpdateInterval = 0.0025f,
+                LocalNetworkCidrIp = string.Empty,
+                LocalPort = 0
             };
         }
     }

@@ -140,7 +140,7 @@ namespace TplSocketServerTest
 
             _socketSettings = new SocketSettings
             {
-                MaxNumberOfConnections = 1,
+                ListenBacklogSize = 1,
                 BufferSize = 1024,
                 ConnectTimeoutMs = 5000,
                 ReceiveTimeoutMs = 5000,
@@ -212,12 +212,12 @@ namespace TplSocketServerTest
 
            _runServerTask =
                 Task.Run(() =>
-                    _server.RunAsync(),
+                    _server.RunAsync(token),
                     token);
 
            _runClientTask =
                 Task.Run(() =>
-                    _client.RunAsync(),
+                    _client.RunAsync(token),
                     token);
 
             while (!_server.IsListening) { }
@@ -239,7 +239,7 @@ namespace TplSocketServerTest
             }
 
             while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueue(token);
+            await _server.ProcessNextMessageInQueueAsync();
             while (!_serverReceivedTextMessage) { }
 
             Assert.AreEqual(messageForServer, _messageFromClient);
@@ -255,7 +255,7 @@ namespace TplSocketServerTest
             }
 
             while (_client.QueueIsEmpty) { }
-            await _client.ProcessNextMessageInQueue(token);
+            await _client.ProcessNextMessageInQueueAsync();
             while (!_clientReceivedTextMessage) { }
 
             Assert.AreEqual(messageForServer, _messageFromClient);
@@ -291,11 +291,11 @@ namespace TplSocketServerTest
 
            _runServerTask =
                 Task.Run(() =>
-                        _server.RunAsync(), token);
+                        _server.RunAsync(token), token);
 
            _runClientTask =
                 Task.Run(() =>
-                        _client.RunAsync(), token);
+                        _client.RunAsync(token), token);
 
             while (!_server.IsListening) { }
             while (!_client.IsListening) { }
@@ -317,7 +317,7 @@ namespace TplSocketServerTest
             }
 
             while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueue(token);
+            await _server.ProcessNextMessageInQueueAsync();
             while (!_serverReceivedAllFileBytes)
             {
                 if (_serverErrorOccurred)
@@ -327,7 +327,7 @@ namespace TplSocketServerTest
             }
 
             while (!_clientReceivedConfirmationMessage) { }
-            
+
             Assert.IsTrue(File.Exists(receiveFilePath));
             Assert.AreEqual(FileName, Path.GetFileName(receiveFilePath));
 
@@ -362,12 +362,12 @@ namespace TplSocketServerTest
 
            _runServerTask =
                 Task.Run(() =>
-                    _server.RunAsync(),
+                    _server.RunAsync(token),
                     token);
 
            _runClientTask =
                 Task.Run(() =>
-                    _client.RunAsync(),
+                    _client.RunAsync(token),
                     token);
 
             while (!_server.IsListening) { }
@@ -389,10 +389,10 @@ namespace TplSocketServerTest
             }
 
             while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueue(token);
+            await _server.ProcessNextMessageInQueueAsync();
 
             while (_client.QueueIsEmpty) { }
-            await _client.ProcessNextMessageInQueue(token);
+            await _client.ProcessNextMessageInQueueAsync();
 
             while (!_clientReceivedAllFileBytes)
             {
@@ -438,12 +438,12 @@ namespace TplSocketServerTest
 
            _runServerTask =
                 Task.Run(() =>
-                        _server.RunAsync(),
+                        _server.RunAsync(token),
                         token);
 
            _runClientTask =
                 Task.Run(() =>
-                        _client.RunAsync(),
+                        _client.RunAsync(token),
                         token);
 
             while (!_server.IsListening) { }
@@ -453,19 +453,13 @@ namespace TplSocketServerTest
 
             var transferFolderRequest =
                await _client.RequestTransferFolderPathAsync(
-                    _localIp.ToString(),
+                    _localIp,
                     remoteServerPort).ConfigureAwait(false);
 
             if (transferFolderRequest.Failure)
             {
                 Assert.Fail("Error sending request for transfer folder path.");
             }
-
-            while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueue(token);
-
-            while (_client.QueueIsEmpty) { }
-            await _client.ProcessNextMessageInQueue(token);
 
             while (!_clientReceivedTransferFolderPath) { }
             Assert.AreEqual(_remoteFolder, _transferFolderPath);
@@ -503,12 +497,12 @@ namespace TplSocketServerTest
 
            _runServerTask =
                 Task.Run(() =>
-                        _server.RunAsync(),
+                        _server.RunAsync(token),
                     token);
 
            _runClientTask =
                 Task.Run(() =>
-                        _client.RunAsync(),
+                        _client.RunAsync(token),
                     token);
 
             while (!_server.IsListening) { }
@@ -518,19 +512,13 @@ namespace TplSocketServerTest
 
             var publicIpRequest =
                await _client.RequestPublicIpAsync(
-                    _localIp.ToString(),
+                    _localIp,
                     remoteServerPort).ConfigureAwait(false);
 
             if (publicIpRequest.Failure)
             {
                 Assert.Fail("Error sending request for public IP address.");
             }
-
-            while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueue(token);
-
-            while (_client.QueueIsEmpty) { }
-            await _client.ProcessNextMessageInQueue(token);
 
             while (!(_clientReceivedPublicIp)) { }
             Assert.AreEqual(publicIp, _publicIp);
@@ -561,12 +549,12 @@ namespace TplSocketServerTest
 
            _runServerTask =
                 Task.Run(() =>
-                        _server.RunAsync(),
+                        _server.RunAsync(token),
                     token);
 
            _runClientTask =
                 Task.Run(() =>
-                        _client.RunAsync(),
+                        _client.RunAsync(token),
                     token);
 
             while (!_server.IsListening) { }
@@ -574,7 +562,7 @@ namespace TplSocketServerTest
 
             var fileListRequest =
                 await _client.RequestFileListAsync(
-                        _localIp.ToString(),
+                        _localIp,
                         remoteServerPort,
                         _testFilesFolder).ConfigureAwait(false);
 
@@ -582,12 +570,6 @@ namespace TplSocketServerTest
             {
                 Assert.Fail("Error sending request for transfer folder path.");
             }
-
-            while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueue(token);
-
-            while (_client.QueueIsEmpty) { }
-            await _client.ProcessNextMessageInQueue(token);
 
             while (!_clientReceivedFileInfoList) { }
 
@@ -652,11 +634,11 @@ namespace TplSocketServerTest
 
             _runServerTask =
                 Task.Run(() =>
-                    _server.RunAsync());
+                    _server.RunAsync(token), token);
 
             _runClientTask =
                 Task.Run(() =>
-                    _client.RunAsync());
+                    _client.RunAsync(token), token);
 
             while (!_server.IsListening) { }
             while (!_client.IsListening) { }
@@ -671,7 +653,7 @@ namespace TplSocketServerTest
                     receiveFolderPath);
 
             while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueue(token);
+            await _server.ProcessNextMessageInQueueAsync();
 
             while (!_serverRejectedFileTransfer) { }
 
@@ -692,7 +674,7 @@ namespace TplSocketServerTest
                     receiveFolderPath);
 
             while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueue(token);
+            await _server.ProcessNextMessageInQueueAsync();
 
             while (!_serverReceivedAllFileBytes)
             {
@@ -743,12 +725,12 @@ namespace TplSocketServerTest
 
             _runServerTask =
                 Task.Run(() =>
-                        _server.RunAsync(),
+                        _server.RunAsync(token),
                     token);
 
             _runClientTask =
                 Task.Run(() =>
-                        _client.RunAsync(),
+                        _client.RunAsync(token),
                     token);
 
             while (!_server.IsListening) { }
@@ -764,10 +746,10 @@ namespace TplSocketServerTest
                             _localFolder).ConfigureAwait(false);
 
             while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueue(token);
+            await _server.ProcessNextMessageInQueueAsync();
 
             while (_client.QueueIsEmpty) { }
-            await _client.ProcessNextMessageInQueue(token);
+            await _client.ProcessNextMessageInQueueAsync();
 
             if (getFileResult1.Failure)
             {
@@ -787,10 +769,10 @@ namespace TplSocketServerTest
                             _localFolder).ConfigureAwait(false);
 
             while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueue(token);
+            await _server.ProcessNextMessageInQueueAsync();
 
             while (_client.QueueIsEmpty) { }
-            await _client.ProcessNextMessageInQueue(token);
+            await _client.ProcessNextMessageInQueueAsync();
 
             if (getFileResult2.Failure)
             {
@@ -840,12 +822,12 @@ namespace TplSocketServerTest
 
             _runServerTask =
                 Task.Run(() =>
-                        _server.RunAsync(),
+                        _server.RunAsync(token),
                     token);
 
             _runClientTask =
                 Task.Run(() =>
-                        _client.RunAsync(),
+                        _client.RunAsync(token),
                     token);
 
             while (!_server.IsListening) { }
@@ -853,7 +835,7 @@ namespace TplSocketServerTest
 
             var fileListRequest1 =
                 await _client.RequestFileListAsync(
-                    _localIp.ToString(),
+                    _localIp,
                     remoteServerPort,
                     _emptyFolder).ConfigureAwait(false);
 
@@ -862,12 +844,6 @@ namespace TplSocketServerTest
                 Assert.Fail("Error sending request for transfer folder path.");
             }
 
-            while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueue(token);
-
-            while (_client.QueueIsEmpty) { }
-            await _client.ProcessNextMessageInQueue(token);
-
             while (!_serverHasNoFilesAvailableToDownload) { }
 
             var fileInfoList = _client.RemoteServerFileList;
@@ -875,7 +851,7 @@ namespace TplSocketServerTest
 
             var fileListRequest2 =
                 await _client.RequestFileListAsync(
-                    _localIp.ToString(),
+                    _localIp,
                     remoteServerPort,
                     _testFilesFolder).ConfigureAwait(false);
 
@@ -883,12 +859,6 @@ namespace TplSocketServerTest
             {
                 Assert.Fail("Error sending request for transfer folder path.");
             }
-
-            while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueue(token);
-
-            while (_client.QueueIsEmpty) { }
-            await _client.ProcessNextMessageInQueue(token);
 
             while (!_clientReceivedFileInfoList) { }
 
@@ -949,12 +919,12 @@ namespace TplSocketServerTest
 
             _runServerTask =
                 Task.Run(() =>
-                        _server.RunAsync(),
+                        _server.RunAsync(token),
                     token);
 
             _runClientTask =
                 Task.Run(() =>
-                        _client.RunAsync(),
+                        _client.RunAsync(token),
                     token);
 
             while (!_server.IsListening) { }
@@ -964,7 +934,7 @@ namespace TplSocketServerTest
 
             var fileListRequest1 =
                 await _client.RequestFileListAsync(
-                    _localIp.ToString(),
+                    _localIp,
                     remoteServerPort,
                     _tempFolder).ConfigureAwait(false);
 
@@ -973,12 +943,6 @@ namespace TplSocketServerTest
                 Assert.Fail("Error sending request for transfer folder path.");
             }
 
-            while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueue(token);
-
-            while (_client.QueueIsEmpty) { }
-            await _client.ProcessNextMessageInQueue(token);
-
             while (!_serverTransferFolderDoesNotExist) { }
 
             var fileInfoList = _client.RemoteServerFileList;
@@ -986,7 +950,7 @@ namespace TplSocketServerTest
 
             var fileListRequest2 =
                 await _client.RequestFileListAsync(
-                    _localIp.ToString(),
+                    _localIp,
                     remoteServerPort,
                     _testFilesFolder).ConfigureAwait(false);
 
@@ -994,12 +958,6 @@ namespace TplSocketServerTest
             {
                 Assert.Fail("Error sending request for transfer folder path.");
             }
-
-            while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueue(token);
-
-            while (_client.QueueIsEmpty) { }
-            await _client.ProcessNextMessageInQueue(token);
 
             while (!_clientReceivedFileInfoList) { }
 

@@ -28,22 +28,22 @@
             switch (messageType)
             {
                 case MessageType.TextMessage:
-                    return "RECEIVE TEXT MESSAGE";
-                    
+                    return "TEXT MESSAGE";
+
                 case MessageType.OutboundFileTransferRequest:
                     return "FILE TRANSFER REQUEST";
 
                 case MessageType.FileTransferAccepted:
-                    return "SEND FILE";
+                    return "FILE TRANSFER ACCEPTED";
 
                 case MessageType.InboundFileTransferRequest:
-                    return "RECEIVE FILE";
+                    return "INBOUND FILE TRANSFER REQUEST";
 
                 case MessageType.FileTransferRejected:
-                    return "SERVER RESPONSE: FILE TRANSFER REJECTED";
+                    return "FILE TRANSFER REJECTED";
 
                 case MessageType.FileTransferStalled:
-                    return "SERVER RESPONSE: FILE TRANSFER STALLED";
+                    return "FILE TRANSFER STALLED";
 
                 case MessageType.RetryOutboundFileTransfer:
                     return "RETRY STALLED FILE TRANSFER";
@@ -52,25 +52,25 @@
                     return "FILE LIST REQUEST";
 
                 case MessageType.FileListResponse:
-                    return "RECEIVE FILE LIST";
+                    return "FILE LIST RESPONSE";
 
                 case MessageType.TransferFolderPathRequest:
                     return "TRANSFER FOLDER PATH REQUEST";
 
                 case MessageType.TransferFolderPathResponse:
-                    return "RECEIVE TRANSFER FOLDER PATH";
+                    return "TRANSFER FOLDER PATH RESPONSE";
 
                 case MessageType.NoFilesAvailableForDownload:
-                    return "SERVER RESPONSE: REQUESTED FOLDER IS EMPTY";
+                    return "REQUESTED FOLDER IS EMPTY";
 
                 case MessageType.RequestedFolderDoesNotExist:
-                    return "SERVER RESPONSE: REQUESTED FOLDER DOES NOT EXIST";
+                    return "REQUESTED FOLDER DOES NOT EXIST";
 
                 case MessageType.PublicIpAddressRequest:
                     return "PUBLIC IP ADDRESS REQUEST";
 
                 case MessageType.PublicIpAddressResponse:
-                    return "RECEIVE PUBLIC IP ADDRESS";
+                    return "PUBLIC IP ADDRESS RESPONSE";
 
                 case MessageType.ShutdownServerCommand:
                     return "SHUTDOWN SERVER";

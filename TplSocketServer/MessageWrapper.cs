@@ -1,6 +1,4 @@
-﻿using AaronLuna.Common.Extensions;
-
-namespace TplSockets
+﻿namespace TplSockets
 {
     using System;
     using System.Collections.Generic;
@@ -9,7 +7,7 @@ namespace TplSockets
     using System.Linq;
     using System.Text;
 
-    using AaronLuna.Common.Numeric;
+    using AaronLuna.Common.Extensions;
 
     static class MessageWrapper
     {

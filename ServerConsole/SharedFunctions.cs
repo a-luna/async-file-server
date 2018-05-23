@@ -2,7 +2,11 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
     using System.Net;
+
+    using AaronLuna.Common.IO;
     using AaronLuna.Common.Network;
     using AaronLuna.Common.Result;
 
@@ -29,7 +33,7 @@
             while (bitCount is 0)
             {
                 //Console.Clear();
-                Console.WriteLine($"{prompt} (range {CidrPrefixBitsCountMin}-{CidrPrefixBitsCountMax}):");
+                Console.WriteLine($"{Environment.NewLine}{prompt} (range {CidrPrefixBitsCountMin}-{CidrPrefixBitsCountMax}):");
 
                 var input = Console.ReadLine();
                 var bitCountValidationResult = ValidateNumberIsWithinRange(input, CidrPrefixBitsCountMin, CidrPrefixBitsCountMax);
@@ -51,7 +55,7 @@
             while (portNumber is 0)
             {
                 //Console.Clear();
-                Console.WriteLine($"{prompt} (range {PortRangeMin}-{PortRangeMax}):");
+                Console.WriteLine($"{Environment.NewLine}{prompt} (range {PortRangeMin}-{PortRangeMax}):");
 
                 if (allowRandom)
                 {
@@ -113,7 +117,7 @@
 
             while (ipAddress.Equals(IPAddress.None))
             {
-                Console.WriteLine(prompt);
+                Console.WriteLine($"{Environment.NewLine}{prompt}");
                 var input = Console.ReadLine();
 
                 var parseIpResult = NetworkUtilities.ParseSingleIPv4Address(input);
@@ -149,11 +153,9 @@
             var match = new ServerInfo();
             foreach (var server in clientList)
             {
-                if (server.IsEqualTo(client))
-                {
-                    match = server;
-                    break;
-                }
+                if (!server.IsEqualTo(client)) continue;
+                match = server;
+                break;
             }
 
             return match;

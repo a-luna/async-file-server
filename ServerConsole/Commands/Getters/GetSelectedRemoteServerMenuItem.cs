@@ -5,17 +5,16 @@ namespace ServerConsole.Commands.Getters
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Console.Menu;
-    using AaronLuna.Common.Logging;
     using AaronLuna.Common.Result;
+
     using TplSockets;
 
-    class GetSelectedRemoteServerCommand : ICommand
+    class GetSelectedRemoteServerMenuItem : IMenuItem
     {
         readonly AppState _state;
         readonly ServerInfo _server;
-        readonly Logger _log = new Logger(typeof(GetSelectedRemoteServerCommand));
 
-        public GetSelectedRemoteServerCommand(AppState state, ServerInfo server)
+        public GetSelectedRemoteServerMenuItem(AppState state, ServerInfo server)
         {
             _state = state;
             _server = server;
@@ -31,12 +30,16 @@ namespace ServerConsole.Commands.Getters
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
 
-        public async Task<Result> ExecuteAsync()
+        public Task<Result> ExecuteAsync()
         {
-            _state.RemoteServerInfo = _server;
-            _state.ClientSelected = true;
+            return Task.Factory.StartNew(Execute);
+        }
 
-            await Task.Delay(1);
+        Result Execute()
+        {
+            _state.SelectedServer = _server;
+            _state.ClientSelected = true;
+            
             return Result.Ok();
         }
     }
