@@ -1,4 +1,4 @@
-﻿namespace ServerConsole.Commands.Menus
+﻿namespace ServerConsole.Menus
 {
     using System;
     using System.Collections.Generic;
@@ -9,9 +9,9 @@
     using AaronLuna.Common.Console.Menu;
     using AaronLuna.Common.Result;
 
-    using ServerCommands;
+    using SelectFileMenuItems;
 
-    class SelectFileMenu : MenuSingleChoice, IMenuItem
+    class SelectFileMenu : IMenu
     {
         readonly AppState _state;
         readonly bool _sendFile;
@@ -32,13 +32,13 @@
 
             MenuItems = new List<IMenuItem>();
         }
+        
+        public string ItemText { get; set; }
+        public bool ReturnToParent { get; set; }
+        public string MenuText { get; set; }
+        public List<IMenuItem> MenuItems { get; set; }
 
-        Task<Result> IMenuItem.ExecuteAsync()
-        {
-            return ExecuteAsync();
-        }
-
-        public new async Task<Result> ExecuteAsync()
+        public async Task<Result> ExecuteAsync()
         {
             _state.DoNotRefreshMainMenu = true;
             _state.DisplayCurrentStatus();

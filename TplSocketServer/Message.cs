@@ -38,10 +38,8 @@ namespace TplSockets
                 case MessageType.OutboundFileTransferRequest:
                     return false;
 
-                case MessageType.PublicIpAddressRequest:
-                case MessageType.PublicIpAddressResponse:
-                case MessageType.TransferFolderPathRequest:
-                case MessageType.TransferFolderPathResponse:
+                case MessageType.ServerInfoRequest:
+                case MessageType.ServerInfoResponse:
                 case MessageType.FileListRequest:
                 case MessageType.FileListResponse:
                 case MessageType.NoFilesAvailableForDownload:

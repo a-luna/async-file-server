@@ -1,9 +1,9 @@
-﻿using System.Threading.Tasks;
-using AaronLuna.Common.Result;
-
-namespace ServerConsole.Commands.ServerCommands
+﻿namespace ServerConsole.Menus.MainMenuItems
 {
+    using System.Threading.Tasks;
+
     using AaronLuna.Common.Console.Menu;
+    using AaronLuna.Common.Result;
 
     class ShutdownServerMenuItem : IMenuItem
     {
@@ -22,7 +22,6 @@ namespace ServerConsole.Commands.ServerCommands
         public Task<Result> ExecuteAsync()
         {
             return _state.LocalServer.ShutdownAsync();
-
         }
     }
 }

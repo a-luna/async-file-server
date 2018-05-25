@@ -181,13 +181,12 @@
                         $"{indentLevel1}Message:\t\t{TextMessage}{Environment.NewLine}";
                     break;
 
-                case EventType.RequestPublicIpAddressStarted:
+                case EventType.RequestServerInfoStarted:
                     report +=
-                        $"Sending request for public IP address to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+                        $"Sending request for server connection info to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 
-                case EventType.RequestPublicIpAddressComplete:
-                case EventType.RequestTransferFolderPathComplete:
+                case EventType.RequestServerInfoComplete:
                 case EventType.RequestFileListComplete:
                 case EventType.RequestInboundFileTransferComplete:
                 case EventType.RequestOutboundFileTransferComplete:
@@ -195,47 +194,20 @@
                     report += "Request was successfully sent";
                     break;
 
-                case EventType.ReceivedPublicIpAddressRequest:
-                case EventType.ReceivedTransferFolderPathRequest:
+                case EventType.ReceivedServerInfoRequest:
                 case EventType.ReceivedRetryOutboundFileTransferRequest:
                     report += $"Requested by: {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 
-                case EventType.SendPublicIpAddressStarted:
+                case EventType.SendServerInfoStarted:
                     report +=
-                        $"Sending public IP address to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}";
+                        $"Sending server connection info to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}";
                     break;
 
-                case EventType.SendPublicIpAddressComplete:
-                    report += "Public IP address was successfully sent";
+                case EventType.SendServerInfoComplete:
+                    report += "Server connection info was successfully sent";
                     break;
-
-                case EventType.ReceivedPublicIpAddress:
-                    report +=
-                        $"Public IP address {PublicIpAddress} received from {RemoteServerIpAddress}:{RemoteServerPortNumber}";
-                    break;
-
-                case EventType.RequestTransferFolderPathStarted:
-                    report +=
-                        $"Sending request for transfer folder path to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
-                    break;
-
-                case EventType.SendTransferFolderPathStarted:
-                    report +=
-                        $"Sending transfer folder path to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}Transfer Folder Path:\t{LocalFolder}{Environment.NewLine}";
-                    break;
-
-                case EventType.SendTransferFolderPathComplete:
-                    report += "Transfer folder path was successfuly sent";
-                    break;
-
-                case EventType.ReceivedTransferFolderPath:
-                    report +=
-                        $"Transfer folder path received from {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}Transfer Folder Path:\t{RemoteFolder}{Environment.NewLine}";
-                    break;
-
+                    
                 case EventType.RequestFileListStarted:
                     report +=
                         $"Sending request for available file information to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +

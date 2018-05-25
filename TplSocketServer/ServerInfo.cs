@@ -1,9 +1,9 @@
-﻿using AaronLuna.Common.Enums;
-
-namespace TplSockets
+﻿namespace TplSockets
 {
     using System.Net;
     using System.Xml.Serialization;
+
+    using AaronLuna.Common.Enums;
 
     using AaronLuna.Common.Network;
 
@@ -41,7 +41,7 @@ namespace TplSockets
             var sessionIp = NetworkUtilities.ParseSingleIPv4Address(ipAddress).Value;
             InitializeConnection(sessionIp);
         }
-
+        
         public string TransferFolder { get; set; }
 
         [XmlIgnore]

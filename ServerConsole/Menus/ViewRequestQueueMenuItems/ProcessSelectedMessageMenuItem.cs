@@ -1,4 +1,4 @@
-﻿namespace ServerConsole.Commands.ServerCommands
+﻿namespace ServerConsole.Menus.ViewRequestQueueMenuItems
 {
     using System.Threading.Tasks;
 
@@ -23,6 +23,7 @@
 
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
+
         public async Task<Result> ExecuteAsync()
         {
             if (_state.LocalServer.QueueIsEmpty)

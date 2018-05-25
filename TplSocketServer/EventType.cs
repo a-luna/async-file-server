@@ -76,23 +76,7 @@
         SendConfirmationMessageComplete,
         ReceiveConfirmationMessageStarted,
         ReceiveConfirmationMessageComplete,
-
-        RequestPublicIpAddressStarted,
-        RequestPublicIpAddressComplete,
-        ReceivedPublicIpAddressRequest,
-
-        SendPublicIpAddressStarted,
-        SendPublicIpAddressComplete,
-        ReceivedPublicIpAddress,
-
-        RequestTransferFolderPathStarted,
-        RequestTransferFolderPathComplete,
-        ReceivedTransferFolderPathRequest,
-
-        SendTransferFolderPathStarted,
-        SendTransferFolderPathComplete,
-        ReceivedTransferFolderPath,
-
+        
         RequestFileListStarted,
         RequestFileListComplete,
         ReceivedFileListRequest,
@@ -118,6 +102,14 @@
         SendShutdownServerCommandStarted,
         SendShutdownServerCommandComplete,
         ReceivedShutdownServerCommand,
+
+        RequestServerInfoStarted,
+        RequestServerInfoComplete,
+        ReceivedServerInfoRequest,
+
+        SendServerInfoStarted,
+        SendServerInfoComplete,
+        ReceivedServerInfo,
 
         ErrorOccurred
     }

@@ -1,5 +1,4 @@
-﻿
-namespace ServerConsole.Commands.Getters
+﻿namespace ServerConsole.Menus.SelectRemoteServerMenuItems
 {
     using System;
     using System.Threading.Tasks;
@@ -22,9 +21,8 @@ namespace ServerConsole.Commands.Getters
             ReturnToParent = false;
 
             ItemText =
-                $" Local IP: {_server.LocalIpString}{Environment.NewLine}" +
-                $"   Public IP: {_server.PublicIpString}{Environment.NewLine}" +
-                $"        Port: {_server.Port}{Environment.NewLine}";
+                $"IP: {_server.SessionIpAddress}{Environment.NewLine}" +
+                $"   Port: {_server.Port}{Environment.NewLine}";
         }
 
         public string ItemText { get; set; }

@@ -1,4 +1,8 @@
-﻿namespace ServerConsole
+﻿// TODO: User can clear the list of archived event logs/requests
+// TODO: Expose socket settings in config menu: buffer size, listen backlog size and socket timeout length
+// TODO: Expose file transfer settings in config menu: update interval length, file stalled timeout, max retries
+
+namespace ServerConsole
 {
     using System;
     using System.IO;
@@ -9,11 +13,11 @@
     using AaronLuna.Common.Extensions;
     using AaronLuna.Common.IO;
     using AaronLuna.Common.Logging;
+    using AaronLuna.Common.Network;
     using AaronLuna.Common.Result;
     using AaronLuna.ConsoleProgressBar;
 
-    using Commands.CompositeCommands;
-    using Commands.Menus;
+    using Menus;
     using TplSockets;
 
     public class ServerApplication
@@ -36,8 +40,7 @@
 
         public async Task<Result> RunAsync()
         {
-            var initializeServerCommand = new InitializeServerMenuItem(_state, _settingsFilePath);
-            var initializeServerResult = await initializeServerCommand.ExecuteAsync();
+            var initializeServerResult = await InitializeServerAsync();
             if (initializeServerResult.Failure)
             {
                 return initializeServerResult;
@@ -106,6 +109,58 @@
             return runServerResult;
         }
 
+        public async Task<Result> InitializeServerAsync()
+        {
+            InitializeSettings();
+            var settingsChanged = false;
+
+            if (_state.Settings.LocalPort == 0)
+            {
+                _state.Settings.LocalPort =
+                    SharedFunctions.GetPortNumberFromUser(
+                        Resources.Prompt_SetLocalPortNumber,
+                        true);
+
+                settingsChanged = true;
+            }
+
+            if (string.IsNullOrEmpty(_state.Settings.LocalNetworkCidrIp))
+            {
+                var cidrIp = SharedFunctions.GetIpAddressFromUser(Resources.Prompt_SetLanCidrIp);
+                var cidrNetworkBitCount = SharedFunctions.GetCidrIpNetworkBitCountFromUser();
+                _state.Settings.LocalNetworkCidrIp = $"{cidrIp}/{cidrNetworkBitCount}";
+
+                settingsChanged = true;
+            }
+
+            await _state.LocalServer.InitializeAsync(_state.Settings.LocalNetworkCidrIp, _state.Settings.LocalPort);
+            _state.LocalServer.SocketSettings = _state.Settings.SocketSettings;
+            _state.LocalServer.TransferUpdateInterval = _state.Settings.FileTransferUpdateInterval;
+            _state.LocalServer.Info.TransferFolder = _state.Settings.LocalServerFolderPath;
+
+            if (settingsChanged)
+            {
+                ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
+            }
+
+            return Result.Ok();
+        }
+
+        void InitializeSettings()
+        {
+            _state.SettingsFile = new FileInfo(_settingsFilePath);
+
+            var readSettingsFileResult = ServerSettings.ReadFromFile(_state.SettingsFilePath);
+            if (readSettingsFileResult.Failure)
+            {
+                Console.WriteLine(readSettingsFileResult.Error);
+            }
+
+            _state.Settings = readSettingsFileResult.Value;
+            _state.UserEntryLocalServerPort = _state.Settings.LocalPort;
+            _state.UserEntryLocalNetworkCidrIp = _state.Settings.LocalNetworkCidrIp;
+        }
+
         async void HandleServerEventAsync(object sender, ServerEvent serverEvent)
         {
             _log.Info(serverEvent.ToString());
@@ -122,8 +177,8 @@
 
                     if (!serverEvent.Message.MustBeProcessedImmediately())
                     {
-                        Console.WriteLine($"{Environment.NewLine}New {serverEvent.Message.Type.Name()} request from {serverEvent.RemoteServerIpAddress}, added to queue");
-                        await Task.Delay(Constants.FourSecondsInMilliseconds);
+                        Console.WriteLine($"{Environment.NewLine}New {serverEvent.Message.Type.Name()} from {serverEvent.RemoteServerIpAddress}, added to queue");
+                        await Task.Delay(Constants.TwoSecondsInMilliseconds);
                         _mainMenu.DisplayMenu();
                     }
 
@@ -135,8 +190,8 @@
 
                     if (serverEvent.MessageType.MustBeProcessedImmediately())
                     {
-                        Console.WriteLine($"{Environment.NewLine}Processed {serverEvent.MessageType.Name()} request from {serverEvent.RemoteServerIpAddress}, addded to archive");
-                        await Task.Delay(Constants.FourSecondsInMilliseconds);
+                        Console.WriteLine($"{Environment.NewLine}Processed {serverEvent.MessageType.Name()} from {serverEvent.RemoteServerIpAddress}, addded to archive");
+                        await Task.Delay(Constants.TwoSecondsInMilliseconds);
                         _mainMenu.DisplayMenu();
                     }
 
@@ -152,14 +207,9 @@
 
                     break;
 
-                case EventType.ReceivedTransferFolderPath:
-                    _state.SelectedServer.TransferFolder = serverEvent.RemoteFolder;
-                    _state.WaitingForTransferFolderResponse = false;
-                    break;
-
-                case EventType.ReceivedPublicIpAddress:
-                    _state.SelectedServer.PublicIpAddress = serverEvent.PublicIpAddress;
-                    _state.WaitingForPublicIpResponse = false;
+                case EventType.ReceivedServerInfo:
+                    ReceivedServerInfo(serverEvent);
+                    _state.WaitingForServerInfoResponse = false;
                     break;
 
                 case EventType.ReceivedFileList:
@@ -175,20 +225,6 @@
                     _state.RequestedFolderDoesNotExist = true;
                     _state.WaitingForFileListResponse = false;
                     break;
-
-                //case EventType.ReceivedOutboundFileTransferRequest:
-                //    Console.WriteLine("\nReceived outbound file transfer request");
-                //    Console.WriteLine($"File Requested:\t\t{serverEvent.FileName}\nFile Size:\t\t{serverEvent.FileSizeString}\nRemote Endpoint:\t{serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}\nTarget Directory:\t{serverEvent.RemoteFolder}");
-                //    break;
-
-                //case EventType.SendFileBytesStarted:
-                //    Console.WriteLine("\nSending file to client...");
-                //    break;
-
-                //case EventType.ReceiveConfirmationMessageComplete:
-                //    Console.WriteLine("Client confirmed file transfer completed successfully");
-                //    await Task.Delay(Constants.FourSecondsInMilliseconds);
-                //    break;
 
                 case EventType.ReceivedInboundFileTransferRequest:
                     Console.WriteLine($"\nIncoming file transfer from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}:");
@@ -208,7 +244,8 @@
                     break;
 
                 case EventType.SendFileTransferRejectedComplete:
-                    _state.SignalRetryLimitExceeded.WaitOne();
+                    await Task.Delay(Constants.TwoSecondsInMilliseconds);
+                    _mainMenu.DisplayMenu();
                     break;
 
                 case EventType.SendFileTransferStalledComplete:
@@ -225,6 +262,26 @@
 
                 default:
                     return;
+            }
+        }
+
+        void ReceivedServerInfo(ServerEvent serverEvent)
+        {
+            _state.SelectedServer.TransferFolder = serverEvent.RemoteFolder;
+            _state.SelectedServer.PublicIpAddress = serverEvent.PublicIpAddress;
+            _state.SelectedServer.LocalIpAddress = serverEvent.LocalIpAddress;
+
+            var remoteServerLocalIp = serverEvent.LocalIpAddress;
+            var cidrIp = _state.Settings.LocalNetworkCidrIp;
+            var addressInRangeCheck = NetworkUtilities.IpAddressIsInRange(remoteServerLocalIp, cidrIp);
+
+            if (addressInRangeCheck.Success && addressInRangeCheck.Value)
+            {
+                _state.SelectedServer.SessionIpAddress = serverEvent.LocalIpAddress;
+            }
+            else
+            {
+                _state.SelectedServer.SessionIpAddress = serverEvent.PublicIpAddress;
             }
         }
 
@@ -263,7 +320,6 @@
 
             _state.RetryCounter = 0;
             _state.SignalRetryLimitExceeded.Set();
-            Console.Clear();
         }
 
         async void HandleStalledFileTransferAsync(object sender, ProgressEventArgs eventArgs)

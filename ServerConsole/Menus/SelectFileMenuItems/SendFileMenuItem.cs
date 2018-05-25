@@ -1,4 +1,4 @@
-﻿namespace ServerConsole.Commands.ServerCommands
+﻿namespace ServerConsole.Menus.SelectFileMenuItems
 {
     using System.IO;
     using System.Threading.Tasks;

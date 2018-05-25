@@ -1,4 +1,4 @@
-﻿namespace ServerConsole.Commands.ServerCommands
+﻿namespace ServerConsole.Menus.SelectServerActionMenuItems
 {
     using System;
     using System.Threading.Tasks;

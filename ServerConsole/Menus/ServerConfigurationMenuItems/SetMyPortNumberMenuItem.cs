@@ -1,4 +1,4 @@
-﻿namespace ServerConsole.Commands.Setters
+﻿namespace ServerConsole.Menus.ServerConfigurationMenuItems
 {
     using System.Threading.Tasks;
 
@@ -30,11 +30,7 @@
             _state.UserEntryLocalServerPort =
                 SharedFunctions.GetPortNumberFromUser(Resources.Prompt_SetLocalPortNumber, true);
 
-            if (_state.LocalServer.Initialized)
-            {
-                _state.RestartRequired = true;
-            }
-            
+            _state.RestartRequired = true;
             return Result.Ok();
         }
     }

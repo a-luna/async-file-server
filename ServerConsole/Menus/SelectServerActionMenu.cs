@@ -1,4 +1,4 @@
-﻿namespace ServerConsole.Commands.Menus
+﻿namespace ServerConsole.Menus
 {
     using System.Collections.Generic;
     using System.Threading.Tasks;
@@ -6,9 +6,9 @@
     using AaronLuna.Common.Console.Menu;
     using AaronLuna.Common.Result;
 
-    using ServerCommands;
+    using SelectServerActionMenuItems;
 
-    class SelectServerActionMenu : MenuSingleChoice, IMenuItem
+    class SelectServerActionMenu : IMenu
     {
         readonly AppState _state;
 
@@ -32,12 +32,12 @@
             MenuItems.Add(returnToMainMenu);
         }
 
-        Task<Result> IMenuItem.ExecuteAsync()
-        {
-            return ExecuteAsync();
-        }
+        public string ItemText { get; set; }
+        public bool ReturnToParent { get; set; }
+        public string MenuText { get; set; }
+        public List<IMenuItem> MenuItems { get; set; }
 
-        public new Task<Result> ExecuteAsync()
+        public Task<Result> ExecuteAsync()
         {
             _state.DoNotRefreshMainMenu = true;
             _state.DisplayCurrentStatus();

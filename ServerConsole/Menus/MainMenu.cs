@@ -1,4 +1,4 @@
-﻿namespace ServerConsole.Commands.Menus
+﻿namespace ServerConsole.Menus
 {
     using System;
     using System.Collections.Generic;
@@ -8,9 +8,9 @@
     using AaronLuna.Common.Logging;
     using AaronLuna.Common.Result;
 
-    using ServerCommands;
+    using MainMenuItems;
 
-    class MainMenu : MenuLoop
+    class MainMenu : IMenu
     {
         readonly AppState _state;
         readonly ShutdownServerMenuItem _shutdownServer;
@@ -27,7 +27,12 @@
             MenuItems = new List<IMenuItem>();
         }
 
-        public new async Task<Result> ExecuteAsync()
+        public string ItemText { get; set; }
+        public bool ReturnToParent { get; set; }
+        public string MenuText { get; set; }
+        public List<IMenuItem> MenuItems { get; set; }
+
+        public async Task<Result> ExecuteAsync()
         {
             var exit = false;
             Result result = null;

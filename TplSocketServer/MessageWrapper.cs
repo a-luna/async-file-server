@@ -204,15 +204,20 @@
 
             return messageWrapper.ToArray();
         }
-
-        public static byte[] ConstructTransferFolderResponse(string localIpAddress, int localPort,
+        
+        public static byte[] ConstructServerInfoResponse(
+            string localIpAddress,
+            int localPort,
+            string publicIp,
             string transferFolder)
         {
-            var requestFlag = BitConverter.GetBytes((int) MessageType.TransferFolderPathResponse);
+            var requestFlag = BitConverter.GetBytes((int)MessageType.ServerInfoResponse);
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
             var thisServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));
             var thisServerPortLen = BitConverter.GetBytes(thisServerPortData.Length);
+            var publicIpData = Encoding.UTF8.GetBytes(publicIp);
+            var publicIpLen = BitConverter.GetBytes(publicIpData.Length);
             var transferFolderData = Encoding.UTF8.GetBytes(transferFolder);
             var transferFolderLen = BitConverter.GetBytes(transferFolderData.Length);
 
@@ -222,31 +227,10 @@
             messageWrapper.AddRange(thisServerIpData);
             messageWrapper.AddRange(thisServerPortLen);
             messageWrapper.AddRange(thisServerPortData);
-            messageWrapper.AddRange(transferFolderLen);
-            messageWrapper.AddRange(transferFolderData);
-
-            return messageWrapper.ToArray();
-        }
-
-        public static byte[] ConstructPublicIpAddressResponse(string localIpAddress, int localPort,
-            string publicIp)
-        {
-            var requestFlag = BitConverter.GetBytes((int)MessageType.PublicIpAddressResponse);
-            var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
-            var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
-            var thisServerPortData = Encoding.UTF8.GetBytes(localPort.ToString(CultureInfo.InvariantCulture));
-            var thisServerPortLen = BitConverter.GetBytes(thisServerPortData.Length);
-            var publicIpData = Encoding.UTF8.GetBytes(publicIp);
-            var publicIpLen = BitConverter.GetBytes(publicIpData.Length);
-
-            var messageWrapper = new List<byte>();
-            messageWrapper.AddRange(requestFlag);
-            messageWrapper.AddRange(thisServerIpLen);
-            messageWrapper.AddRange(thisServerIpData);
-            messageWrapper.AddRange(thisServerPortLen);
-            messageWrapper.AddRange(thisServerPortData);
             messageWrapper.AddRange(publicIpLen);
             messageWrapper.AddRange(publicIpData);
+            messageWrapper.AddRange(transferFolderLen);
+            messageWrapper.AddRange(transferFolderData);
 
             return messageWrapper.ToArray();
         }

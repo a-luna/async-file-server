@@ -117,7 +117,7 @@
 
         public float TransferUpdateInterval { get; set; }
         public SocketSettings SocketSettings { get; set; }
-        public int MaxNumberOfConnections => SocketSettings.ListenBacklogSize;
+        public int ListenBacklogSize => SocketSettings.ListenBacklogSize;
         public int BufferSize => SocketSettings.BufferSize;
         public int ConnectTimeoutMs => SocketSettings.ConnectTimeoutMs;
         public int ReceiveTimeoutMs => SocketSettings.ReceiveTimeoutMs;
@@ -184,17 +184,37 @@
             return defaultPath;
         }
 
-        public void Initialize(IPAddress localIpAddress, string cidrIp, int port)
+        public async Task InitializeAsync(string cidrIp, int port)
         {
             if (Initialized) return;
+            
+            var getLocalIpResult = NetworkUtilities.GetLocalIPv4Address(cidrIp);
 
-            Info = new ServerInfo(localIpAddress, port);
+            var localIp = getLocalIpResult.Success
+                ? getLocalIpResult.Value
+                : IPAddress.Loopback;
+            
+            var getPublicIResult =
+                await NetworkUtilities.GetPublicIPv4AddressAsync().ConfigureAwait(false);
 
-            var ipRangeCheck = NetworkUtilities.IpAddressIsInRange(Info.SessionIpAddress, cidrIp);
-            if (ipRangeCheck.Success && ipRangeCheck.Value)
+            var publicIp = getPublicIResult.Success
+                ? getPublicIResult.Value
+                : IPAddress.None;
+
+            Info = new ServerInfo
             {
-                Info.LocalIpAddress = Info.SessionIpAddress;
-                Info.PublicIpAddress = IPAddress.Loopback;
+                Port = port,
+                LocalIpAddress = localIp,
+                PublicIpAddress = publicIp
+            };
+
+            if (getLocalIpResult.Success)
+            {
+                Info.SessionIpAddress = localIp;
+            }
+            else if (getPublicIResult.Success)
+            {
+                Info.SessionIpAddress = publicIp;
             }
 
             Initialized = true;
@@ -235,7 +255,7 @@
             {
                 _listenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 _listenSocket.Bind(ipEndPoint);
-                _listenSocket.Listen(MaxNumberOfConnections);
+                _listenSocket.Listen(ListenBacklogSize);
             }
             catch (SocketException ex)
             {
@@ -644,22 +664,6 @@
                     ReceiveFileList(message);
                     break;
 
-                case MessageType.TransferFolderPathRequest:
-                    await SendTransferFolderPathAsync(message).ConfigureAwait(false);
-                    break;
-
-                case MessageType.TransferFolderPathResponse:
-                    ReceiveTransferFolderPath(message);
-                    break;
-
-                case MessageType.PublicIpAddressRequest:
-                    await SendPublicIpAsync(message).ConfigureAwait(false);
-                    break;
-
-                case MessageType.PublicIpAddressResponse:
-                    ReceivePublicIpAddress(message);
-                    break;
-
                 case MessageType.NoFilesAvailableForDownload:
                     HandleNoFilesAvailableForDownload(message);
                     break;
@@ -670,6 +674,14 @@
 
                 case MessageType.RequestedFolderDoesNotExist:
                     HandleRequestedFolderDoesNotExist(message);
+                    break;
+
+                case MessageType.ServerInfoRequest:
+                    await SendServerInfoAsync(message).ConfigureAwait(false);
+                    break;
+
+                case MessageType.ServerInfoResponse:
+                    ReceiveServerInfo(message);
                     break;
 
                 case MessageType.ShutdownServerCommand:
@@ -1494,16 +1506,17 @@
             EventType sendMessageStartedEventType,
             EventType sendMessageCompleteEventType)
         {
-            EventOccurred?.Invoke(this,
-                new ServerEvent
-                {
-                    EventType = sendMessageStartedEventType,
-                    RemoteServerIpAddress = RemoteServerSessionIpAddress,
-                    RemoteServerPortNumber = RemoteServerPort,
-                    LocalIpAddress = MyLocalIpAddress,
-                    LocalPortNumber = MyServerPort,
-                    MessageId = message.Id
-                });
+            _eventLog.Add(new ServerEvent
+            {
+                EventType = sendMessageStartedEventType,
+                RemoteServerIpAddress = RemoteServerSessionIpAddress,
+                RemoteServerPortNumber = RemoteServerPort,
+                LocalIpAddress = MyLocalIpAddress,
+                LocalPortNumber = MyServerPort,
+                MessageId = message.Id
+            });
+
+            EventOccurred?.Invoke(this, _eventLog.Last());
 
             var connectResult = await ConnectToServerAsync().ConfigureAwait(false);
             if (connectResult.Failure)
@@ -1821,20 +1834,18 @@
             EventOccurred?.Invoke(this, _eventLog.Last());
         }
 
-        public Task<Result> RequestTransferFolderPathAsync(
-            IPAddress remoteServerIpAddress,
-            int remoteServerPort)
+        public Task<Result> RequestServerInfoAsync(IPAddress remoteServerIpAddress, int remoteServerPort)
         {
             RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
             return
                 SendSimpleMessageToClientAsync(
-                    new Message{ Type = MessageType.TransferFolderPathRequest },
-                    EventType.RequestTransferFolderPathStarted,
-                    EventType.RequestTransferFolderPathComplete);
+                    new Message { Type = MessageType.ServerInfoRequest },
+                    EventType.RequestServerInfoStarted,
+                    EventType.RequestServerInfoComplete);
         }
-
-        async Task<Result> SendTransferFolderPathAsync(Message message)
+        
+        async Task<Result> SendServerInfoAsync(Message message)
         {
             (string remoteServerIpAddress,
                 int remoteServerPort) = MessageUnwrapper.ReadServerConnectionInfo(message.Data);
@@ -1843,100 +1854,7 @@
 
             _eventLog.Add(new ServerEvent
             {
-                EventType = EventType.ReceivedTransferFolderPathRequest,
-                RemoteServerIpAddress = RemoteServerSessionIpAddress,
-                RemoteServerPortNumber = RemoteServerPort,
-                MessageId = message.Id
-            });
-
-            EventOccurred?.Invoke(this, _eventLog.Last());
-
-            _eventLog.Add(new ServerEvent
-            {
-                EventType = EventType.SendTransferFolderPathStarted,
-                RemoteServerIpAddress = RemoteServerSessionIpAddress,
-                RemoteServerPortNumber = RemoteServerPort,
-                LocalFolder = MyTransferFolderPath,
-                MessageId = message.Id
-            });
-
-            EventOccurred?.Invoke(this, _eventLog.Last());
-
-            var connectResult = await ConnectToServerAsync().ConfigureAwait(false);
-            if (connectResult.Failure)
-            {
-                return connectResult;
-            }
-
-            var responseData =
-                MessageWrapper.ConstructTransferFolderResponse(
-                    MyLocalIpAddress.ToString(),
-                    MyServerPort,
-                    MyTransferFolderPath);
-
-            var sendMessageDataResult = await SendMessageData(responseData).ConfigureAwait(false);
-            if (sendMessageDataResult.Failure)
-            {
-                return sendMessageDataResult;
-            }
-
-            CloseServerSocket();
-
-            _eventLog.Add(new ServerEvent
-            {
-                EventType = EventType.SendTransferFolderPathComplete,
-                MessageId = message.Id
-            });
-
-            EventOccurred?.Invoke(this, _eventLog.Last());
-
-            return Result.Ok();
-        }
-
-        void ReceiveTransferFolderPath(Message message)
-        {
-            var (remoteServerIpAddress,
-                remoteServerPort,
-                transferFolder) = MessageUnwrapper.ReadTransferFolderResponse(message.Data);
-
-            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
-            RemoteServerTransferFolderPath = transferFolder;
-
-            _eventLog.Add(new ServerEvent
-            {
-                EventType = EventType.ReceivedTransferFolderPath,
-                RemoteServerIpAddress = RemoteServerSessionIpAddress,
-                RemoteServerPortNumber = RemoteServerPort,
-                RemoteFolder = RemoteServerTransferFolderPath,
-                MessageId = message.Id
-            });
-
-            EventOccurred?.Invoke(this, _eventLog.Last());
-        }
-
-        public Task<Result> RequestPublicIpAsync(
-            IPAddress remoteServerIpAddress,
-            int remoteServerPort)
-        {
-            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
-
-            return
-                SendSimpleMessageToClientAsync(
-                    new Message{ Type = MessageType.PublicIpAddressRequest },
-                    EventType.RequestPublicIpAddressStarted,
-                    EventType.RequestPublicIpAddressComplete);
-        }
-
-        async Task<Result> SendPublicIpAsync(Message message)
-        {
-            (string remoteServerIpAddress,
-                int remoteServerPort) = MessageUnwrapper.ReadServerConnectionInfo(message.Data);
-
-            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
-
-            _eventLog.Add(new ServerEvent
-            {
-                EventType = EventType.ReceivedPublicIpAddressRequest,
+                EventType = EventType.ReceivedServerInfoRequest,
                 RemoteServerIpAddress = RemoteServerSessionIpAddress,
                 RemoteServerPortNumber = RemoteServerPort,
                 MessageId = message.Id
@@ -1949,9 +1867,10 @@
 
             _eventLog.Add(new ServerEvent
             {
-                EventType = EventType.SendPublicIpAddressStarted,
+                EventType = EventType.SendServerInfoStarted,
                 RemoteServerIpAddress = RemoteServerSessionIpAddress,
                 RemoteServerPortNumber = RemoteServerPort,
+                LocalFolder = MyTransferFolderPath,
                 LocalIpAddress = MyLocalIpAddress,
                 LocalPortNumber = MyServerPort,
                 PublicIpAddress = MyPublicIpAddress,
@@ -1967,10 +1886,11 @@
             }
 
             var responseData =
-                MessageWrapper.ConstructPublicIpAddressResponse(
+                MessageWrapper.ConstructServerInfoResponse(
                     MyLocalIpAddress.ToString(),
                     MyServerPort,
-                    MyPublicIpAddress.ToString());
+                    MyPublicIpAddress.ToString(),
+                    MyTransferFolderPath);
 
             var sendMessageDataResult = await SendMessageData(responseData).ConfigureAwait(false);
             if (sendMessageDataResult.Failure)
@@ -1982,7 +1902,7 @@
 
             _eventLog.Add(new ServerEvent
             {
-                EventType = EventType.SendPublicIpAddressComplete,
+                EventType = EventType.SendServerInfoComplete,
                 MessageId = message.Id
             });
 
@@ -1991,29 +1911,35 @@
             return Result.Ok();
         }
 
-        void ReceivePublicIpAddress(Message message)
+        void ReceiveServerInfo(Message message)
         {
             var (remoteServerIpAddress,
                 remoteServerPort,
-                publicIpAddress) = MessageUnwrapper.ReadPublicIpAddressResponse(message.Data);
+                remoteServerPublicIpAddress,
+                transferFolder) = MessageUnwrapper.ReadServerInfoResponse(message.Data);
 
-            RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort)
+            RemoteServerInfo = new ServerInfo
             {
-                PublicIpAddress = NetworkUtilities.ParseSingleIPv4Address(publicIpAddress).Value
+                Port = remoteServerPort,
+                LocalIpAddress = NetworkUtilities.ParseSingleIPv4Address(remoteServerIpAddress).Value,
+                PublicIpAddress = NetworkUtilities.ParseSingleIPv4Address(remoteServerPublicIpAddress).Value,
+                TransferFolder = transferFolder
             };
 
             _eventLog.Add(new ServerEvent
             {
-                EventType = EventType.ReceivedPublicIpAddress,
+                EventType = EventType.ReceivedServerInfo,
                 RemoteServerIpAddress = RemoteServerSessionIpAddress,
                 RemoteServerPortNumber = RemoteServerPort,
+                RemoteFolder = RemoteServerTransferFolderPath,
+                LocalIpAddress = RemoteServerLocalIpAddress,
                 PublicIpAddress = RemoteServerPublicIpAddress,
                 MessageId = message.Id
             });
 
             EventOccurred?.Invoke(this, _eventLog.Last());
         }
-
+        
         public async Task<Result> ShutdownAsync()
         {
             if (!IsListening)

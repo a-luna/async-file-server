@@ -8,17 +8,15 @@
         OutboundFileTransferRequest           = 3,
         FileListRequest                       = 4,
         FileListResponse                      = 5,
-        TransferFolderPathRequest             = 6,
-        TransferFolderPathResponse            = 7,
-        PublicIpAddressRequest                = 8,
-        PublicIpAddressResponse               = 9,
-        NoFilesAvailableForDownload           = 10,
-        FileTransferAccepted                  = 11,
-        FileTransferRejected                  = 12,
-        FileTransferStalled                   = 13,
-        RetryOutboundFileTransfer             = 14,
-        RequestedFolderDoesNotExist           = 15,
-        ShutdownServerCommand                 = 16
+        NoFilesAvailableForDownload           = 6,
+        FileTransferAccepted                  = 7,
+        FileTransferRejected                  = 8,
+        FileTransferStalled                   = 9,
+        RetryOutboundFileTransfer             = 10,
+        RequestedFolderDoesNotExist           = 11,
+        ServerInfoRequest                     = 12,
+        ServerInfoResponse                    = 13,
+        ShutdownServerCommand                 = 14
     }
 
     public static class MessageTypeExtensions
@@ -27,11 +25,17 @@
         {
             switch (messageType)
             {
+                case MessageType.ServerInfoRequest:
+                    return "SERVER INFO REQUEST";
+
+                case MessageType.ServerInfoResponse:
+                    return "SERVER INFO RESPONSE";
+
                 case MessageType.TextMessage:
                     return "TEXT MESSAGE";
 
                 case MessageType.OutboundFileTransferRequest:
-                    return "FILE TRANSFER REQUEST";
+                    return "OUTBOUND FILE TRANSFER REQUEST";
 
                 case MessageType.FileTransferAccepted:
                     return "FILE TRANSFER ACCEPTED";
@@ -54,24 +58,12 @@
                 case MessageType.FileListResponse:
                     return "FILE LIST RESPONSE";
 
-                case MessageType.TransferFolderPathRequest:
-                    return "TRANSFER FOLDER PATH REQUEST";
-
-                case MessageType.TransferFolderPathResponse:
-                    return "TRANSFER FOLDER PATH RESPONSE";
-
                 case MessageType.NoFilesAvailableForDownload:
                     return "REQUESTED FOLDER IS EMPTY";
 
                 case MessageType.RequestedFolderDoesNotExist:
                     return "REQUESTED FOLDER DOES NOT EXIST";
-
-                case MessageType.PublicIpAddressRequest:
-                    return "PUBLIC IP ADDRESS REQUEST";
-
-                case MessageType.PublicIpAddressResponse:
-                    return "PUBLIC IP ADDRESS RESPONSE";
-
+                    
                 case MessageType.ShutdownServerCommand:
                     return "SHUTDOWN SERVER";
             }

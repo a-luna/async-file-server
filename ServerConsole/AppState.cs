@@ -17,8 +17,7 @@
             LocalServer = new TplSocketServer();
 
             WaitingForServerToBeginAcceptingConnections = true;
-            WaitingForTransferFolderResponse = true;
-            WaitingForPublicIpResponse = true;
+            WaitingForServerInfoResponse = true;
             WaitingForFileListResponse = true;
             WaitingForDownloadToComplete = true;
 
@@ -31,8 +30,7 @@
         public string SettingsFilePath => SettingsFile.ToString();
 
         public bool WaitingForServerToBeginAcceptingConnections { get; set; }
-        public bool WaitingForTransferFolderResponse { get; set; }
-        public bool WaitingForPublicIpResponse { get; set; }
+        public bool WaitingForServerInfoResponse { get; set; }
         public bool WaitingForFileListResponse { get; set; }
         public bool WaitingForDownloadToComplete { get; set; }
         public bool ClientSelected { get; set; }
@@ -94,7 +92,7 @@
         public string ReportRemoteServerConnectionInfo()
         {
             return ClientSelected
-                ? $"Remote server endpoint: {RemoteServerInfo.SessionIpAddress}:{RemoteServerInfo.Port}{Environment.NewLine}"
+                ? $"Remote server endpoint: {SelectedServer.SessionIpAddress}:{SelectedServer.Port}{Environment.NewLine}"
                 : $"Please select a remote server{Environment.NewLine}";
             ;
         }

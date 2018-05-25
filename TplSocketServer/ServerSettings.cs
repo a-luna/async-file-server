@@ -46,7 +46,13 @@
 
         public static Result<ServerSettings> ReadFromFile(string filePath)
         {
-            if (!File.Exists(filePath)) return Result.Ok(GetDefaultSettings());
+            if (!File.Exists(filePath))
+            {
+                var defaultSettings = GetDefaultSettings();
+                SaveToFile(defaultSettings, filePath);
+
+                return Result.Ok(defaultSettings);
+            }
 
             var deserializeResult = Deserialize(filePath);
             if (deserializeResult.Failure)

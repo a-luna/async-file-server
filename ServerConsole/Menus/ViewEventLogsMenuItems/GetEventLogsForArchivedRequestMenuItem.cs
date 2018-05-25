@@ -1,4 +1,4 @@
-﻿namespace ServerConsole.Commands.Getters
+﻿namespace ServerConsole.Menus.ViewEventLogsMenuItems
 {
     using System;
     using System.Threading.Tasks;

@@ -1,4 +1,4 @@
-﻿namespace ServerConsole.Commands.Menus
+﻿namespace ServerConsole.Menus
 {
     using System.Collections.Generic;
     using System.Threading.Tasks;
@@ -6,9 +6,9 @@
     using AaronLuna.Common.Console.Menu;
     using AaronLuna.Common.Result;
 
-    using ServerCommands;
+    using ViewRequestQueueMenuItems;
 
-    class ViewRequestQueueMenu : MenuSingleChoice, IMenuItem
+    class ViewRequestQueueMenu : IMenu
     {
         readonly AppState _state;
 
@@ -21,13 +21,13 @@
             MenuText = "The requests below are waiting to be processed:";
             MenuItems = new List<IMenuItem>();
         }
+        
+        public string ItemText { get; set; }
+        public bool ReturnToParent { get; set; }
+        public string MenuText { get; set; }
+        public List<IMenuItem> MenuItems { get; set; }
 
-        Task<Result> IMenuItem.ExecuteAsync()
-        {
-            return ExecuteAsync();
-        }
-
-        public new async Task<Result> ExecuteAsync()
+        public async Task<Result> ExecuteAsync()
         {
             if (_state.LocalServer.QueueIsEmpty)
             {

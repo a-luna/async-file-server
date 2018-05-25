@@ -1,4 +1,4 @@
-﻿namespace ServerConsole.Commands.Setters
+﻿namespace ServerConsole.Menus.ServerConfigurationMenuItems
 {
     using System.Threading.Tasks;
 
@@ -29,14 +29,9 @@
         {
             var cidrIp = SharedFunctions.GetIpAddressFromUser(Resources.Prompt_SetLanCidrIp);
             var cidrNetworkBitCount = SharedFunctions.GetCidrIpNetworkBitCountFromUser();
-
             _state.UserEntryLocalNetworkCidrIp = $"{cidrIp}/{cidrNetworkBitCount}";
-
-            if (_state.LocalServer.Initialized)
-            {
-                _state.RestartRequired = true;
-            }
-
+            
+            _state.RestartRequired = true;
             return Result.Ok();
         }
     }
