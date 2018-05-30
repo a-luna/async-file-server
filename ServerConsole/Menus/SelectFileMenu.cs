@@ -38,6 +38,20 @@
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
 
+        public async Task<Result> DisplayMenuAsync()
+        {
+            _state.DisplayCurrentStatus();
+
+            var populateMenuResult = await PopulateMenuAsync();
+            if (populateMenuResult.Failure)
+            {
+                return Result.Fail(populateMenuResult.Error);
+            }
+
+            Menu.DisplayMenu(MenuText, MenuItems);
+            return Result.Ok();
+        }
+
         public async Task<Result> ExecuteAsync()
         {
             _state.DoNotRefreshMainMenu = true;
@@ -49,8 +63,8 @@
                 return Result.Fail(populateMenuResult.Error);
             }
 
-            var selectedOption = Menu.GetUserSelection(MenuText, MenuItems);
-            return await selectedOption.ExecuteAsync();
+            var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);
+            return await menuItem.ExecuteAsync();
         }
 
         async Task<Result> PopulateMenuAsync()
@@ -125,6 +139,7 @@
 
             _state.WaitingForFileListResponse = true;
             _state.NoFilesAvailableForDownload = false;
+            _state.RequestedFolderDoesNotExist = false;
 
             var requestFileListResult =
                 await _state.LocalServer.RequestFileListAsync(

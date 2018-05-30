@@ -403,11 +403,9 @@ namespace TplSocketServerTest
 
             if (getFileResult.Failure)
             {
-                Assert.Fail("There was an error requesting the file from the remote server: " + getFileResult.Error);
+                var getFileError = "There was an error requesting the file from the remote server: " + getFileResult.Error;
+                Assert.Fail(getFileError);
             }
-
-            while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueueAsync();
 
             while (_client.QueueIsEmpty) { }
             await _client.ProcessNextMessageInQueueAsync();
@@ -707,10 +705,7 @@ namespace TplSocketServerTest
                             remoteServerPort,
                             getFilePath,
                             _localFolder).ConfigureAwait(false);
-
-            while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueueAsync();
-
+            
             while (_client.QueueIsEmpty) { }
             await _client.ProcessNextMessageInQueueAsync();
 
@@ -730,9 +725,6 @@ namespace TplSocketServerTest
                             remoteServerPort,
                             getFilePath,
                             _localFolder).ConfigureAwait(false);
-
-            while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextMessageInQueueAsync();
 
             while (_client.QueueIsEmpty) { }
             await _client.ProcessNextMessageInQueueAsync();

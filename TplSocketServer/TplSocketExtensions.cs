@@ -1,13 +1,14 @@
-﻿using System;
-using System.Net;
-using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
-using AaronLuna.Common.Result;
-using AaronLuna.Common.Threading;
-
-namespace TplSockets
+﻿namespace TplSockets
 {
+    using System;
+    using System.Net;
+    using System.Net.Sockets;
+    using System.Threading;
+    using System.Threading.Tasks;
+
+    using AaronLuna.Common.Result;
+    using AaronLuna.Common.Threading;
+
     public static class TplSocketExtensions
     {
         public static async Task<Result> ConnectWithTimeoutAsync(this Socket socket, IPAddress remoteIpAddress, int port, int timeoutMs)

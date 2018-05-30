@@ -9,6 +9,7 @@
     {
         static async Task Main()
         {
+
             Logger.LogToConsole = false;
             Logger.Start("server.log");
 

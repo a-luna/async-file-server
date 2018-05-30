@@ -1,5 +1,6 @@
 ﻿namespace ServerConsole.Menus
 {
+    using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
 
@@ -37,13 +38,36 @@
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
 
-        public Task<Result> ExecuteAsync()
+        public Task<Result> DisplayMenuAsync()
+        {
+            return Task.Run(() => DisplayMenu());
+        }
+
+        public Result DisplayMenu()
+        {
+            _state.DisplayCurrentStatus();
+            Menu.DisplayMenu(MenuText, MenuItems);
+
+            return Result.Ok();
+        }
+
+        public async Task<Result> ExecuteAsync()
         {
             _state.DoNotRefreshMainMenu = true;
             _state.DisplayCurrentStatus();
 
-            var menuItem = Menu.GetUserSelection(MenuText, MenuItems);
-            return menuItem.ExecuteAsync();
+            var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);
+
+            var serverActionResult = await menuItem.ExecuteAsync();
+            if (serverActionResult.Failure && menuItem is SelectFileMenu)
+            {
+                Console.WriteLine(serverActionResult.Error);
+                Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
+                Console.ReadLine();
+                return Result.Ok();
+            }
+
+            return serverActionResult;
         }
     }
 }

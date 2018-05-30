@@ -26,6 +26,20 @@
         public bool ReturnToParent { get; set; }
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
+
+        public Task<Result> DisplayMenuAsync()
+        {
+            return Task.Run(() => DisplayMenu());
+        }
+
+        public Result DisplayMenu()
+        {
+            _state.DisplayCurrentStatus();
+            PopulateMenu();
+            Menu.DisplayMenu(MenuText, MenuItems);
+
+            return Result.Ok();
+        }
         
         public async Task<Result> ExecuteAsync()
         {
@@ -43,9 +57,9 @@
                 _state.DisplayCurrentStatus();
                 PopulateMenu();
 
-                var selectedOption = Menu.GetUserSelection(MenuText, MenuItems);
-                exit = selectedOption.ReturnToParent;
-                result = await selectedOption.ExecuteAsync().ConfigureAwait(false);
+                var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);
+                exit = menuItem.ReturnToParent;
+                result = await menuItem.ExecuteAsync();                
             }
 
             return result;
@@ -60,6 +74,7 @@
                 MenuItems.Add(new GetEventLogsForArchivedRequestMenuItem(message));
             }
 
+            MenuItems.Add(new ClearEventLogsMenuItem(_state));
             MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));
         }
     }

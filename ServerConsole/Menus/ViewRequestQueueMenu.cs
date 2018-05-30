@@ -27,6 +27,20 @@
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
 
+        public Task<Result> DisplayMenuAsync()
+        {
+            return Task.Run(() => DisplayMenu());
+        }
+
+        public Result DisplayMenu()
+        {
+            _state.DisplayCurrentStatus();
+            PopulateMenu();
+            Menu.DisplayMenu(MenuText, MenuItems);
+
+            return Result.Ok();
+        }
+
         public async Task<Result> ExecuteAsync()
         {
             if (_state.LocalServer.QueueIsEmpty)
@@ -38,8 +52,8 @@
             _state.DisplayCurrentStatus();
             PopulateMenu();
 
-            var selectedOption = Menu.GetUserSelection(MenuText, MenuItems);
-            return await selectedOption.ExecuteAsync().ConfigureAwait(false);
+            var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);
+            return await menuItem.ExecuteAsync();
         }
 
         void PopulateMenu()

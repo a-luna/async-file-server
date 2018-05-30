@@ -2,11 +2,10 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
-    using System.Linq;
     using System.Net;
+    using System.Threading.Tasks;
 
-    using AaronLuna.Common.IO;
+    using AaronLuna.Common.Console.Menu;
     using AaronLuna.Common.Network;
     using AaronLuna.Common.Result;
 
@@ -14,14 +13,32 @@
 
     static class SharedFunctions
     {
+        public static async Task<IMenuItem> GetUserSelectionAsync(
+            string menuText,
+            List<IMenuItem> menuItems,
+            AppState state)
+        {
+            var userSelection = 0;
+            while (userSelection == 0)
+            {
+                Menu.DisplayMenu(menuText, menuItems);
+                var input = Console.ReadLine();
 
-        public const int OneHalfSecondInMilliseconds = 500;
+                var validationResult = ValidateNumberIsWithinRange(input, 1, menuItems.Count);
+                if (validationResult.Failure)
+                {
+                    Console.WriteLine(Environment.NewLine + validationResult.Error);
+                    await Task.Delay(state.MessageDisplayTime);
+                    state.DisplayCurrentStatus();
 
-        internal const int PortRangeMin = 49152;
-        internal const int PortRangeMax = 65535;
+                    continue;
+                }
 
-        internal const int CidrPrefixBitsCountMin = 0;
-        internal const int CidrPrefixBitsCountMax = 32;
+                userSelection = validationResult.Value;
+            }
+
+            return menuItems[userSelection - 1];
+        }
 
         public static int GetCidrIpNetworkBitCountFromUser()
         {
@@ -33,10 +50,10 @@
             while (bitCount is 0)
             {
                 //Console.Clear();
-                Console.WriteLine($"{Environment.NewLine}{prompt} (range {CidrPrefixBitsCountMin}-{CidrPrefixBitsCountMax}):");
+                Console.WriteLine($"{Environment.NewLine}{prompt} (range {Constants.CidrPrefixBitsCountMin}-{Constants.CidrPrefixBitsCountMax}):");
 
                 var input = Console.ReadLine();
-                var bitCountValidationResult = ValidateNumberIsWithinRange(input, CidrPrefixBitsCountMin, CidrPrefixBitsCountMax);
+                var bitCountValidationResult = ValidateNumberIsWithinRange(input, Constants.CidrPrefixBitsCountMin, Constants.CidrPrefixBitsCountMax);
                 if (bitCountValidationResult.Failure)
                 {
                     Console.WriteLine(bitCountValidationResult.Error);
@@ -55,7 +72,7 @@
             while (portNumber is 0)
             {
                 //Console.Clear();
-                Console.WriteLine($"{Environment.NewLine}{prompt} (range {PortRangeMin}-{PortRangeMax}):");
+                Console.WriteLine($"{Environment.NewLine}{prompt} (range {Constants.PortRangeMin}-{Constants.PortRangeMax}):");
 
                 if (allowRandom)
                 {
@@ -72,12 +89,12 @@
                     }
 
                     var rnd = new Random();
-                    portNumber = rnd.Next(PortRangeMin, PortRangeMax + 1);
+                    portNumber = rnd.Next(Constants.PortRangeMin, Constants.PortRangeMax + 1);
                     Console.WriteLine($"Your randomly chosen port number is: {portNumber}");
                     break;
                 }
 
-                var portValidationResult = ValidateNumberIsWithinRange(input, PortRangeMin, PortRangeMax);
+                var portValidationResult = ValidateNumberIsWithinRange(input, Constants.PortRangeMin, Constants.PortRangeMax);
                 if (portValidationResult.Failure)
                 {
                     Console.WriteLine(portValidationResult.Error);
@@ -102,7 +119,7 @@
                 return Result.Fail<int>($"Unable to parse int value from input string: {input}");
             }
 
-            if (parsedNum < rangeMin || parsedNum > rangeMax)
+            if (rangeMin > parsedNum || parsedNum > rangeMax)
             {
                 return Result.Fail<int>($"{parsedNum} is not within allowed range {rangeMin}-{rangeMax}");
             }

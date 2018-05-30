@@ -23,6 +23,8 @@ namespace ServerConsole
     public class ServerApplication
     {
         const string SettingsFileName = "settings.xml";
+        readonly int _displayMessageDelay = Constants.TwoSecondsInMilliseconds;
+
         readonly Logger _log = new Logger(typeof(ServerApplication));
         readonly string _settingsFilePath;
         readonly CancellationTokenSource _cts;
@@ -34,6 +36,7 @@ namespace ServerConsole
             _settingsFilePath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}";
             _cts = new CancellationTokenSource();
             _state = new AppState();
+            _state.MessageDisplayTime = _displayMessageDelay;
             _state.LocalServer.EventOccurred += HandleServerEventAsync;
             _state.LocalServer.FileTransferProgress += HandleFileTransferProgress;
         }
@@ -88,28 +91,53 @@ namespace ServerConsole
                 foreach (var ie in ex.InnerExceptions)
                 {
                     _log.Error("Error raised in method RunAsync", ie);
-                    Console.WriteLine($"\t{ie.GetType().Name}: {ie.Message}");
+
+                    var exceptionDetails = 
+                        $"\t{ie.GetType().Name}: {ie.Message}{Environment.NewLine}" +
+                        $"{ie.StackTrace}";
+
+                    Console.WriteLine(exceptionDetails);
                 }
             }
             catch (SocketException ex)
             {
                 _log.Error("Error raised in method RunAsync", ex);
-                Console.WriteLine($"{ex.Message} ({ex.GetType()}) raised in method ServerApplication.RunAsync");
+
+                var exceptionDetails =
+                    $"{ex.Message} ({ex.GetType()}) raised in method ServerApplication.RunAsync" +
+                    $"{Environment.NewLine}{ex.StackTrace}";
+
+                Console.WriteLine(exceptionDetails);
             }
             catch (TaskCanceledException)
             {
                 Console.WriteLine("Accept connection task canceled");
             }
+            catch (IOException ex)
+            {
+                _log.Error("Error raised in method RunAsync", ex);
+
+                var exceptionDetails =
+                    $"{ex.Message} ({ex.GetType()}) raised in method ServerApplication.RunAsync" +
+                    $"{Environment.NewLine}{ex.StackTrace}";
+
+                Console.WriteLine(exceptionDetails);
+            }
             catch (Exception ex)
             {
                 _log.Error("Error raised in method RunAsync", ex);
-                Console.WriteLine($"{ex.Message} ({ex.GetType()}) raised in method ServerApplication.RunAsync");
+
+                var exceptionDetails =
+                    $"{ex.Message} ({ex.GetType()}) raised in method ServerApplication.RunAsync" +
+                    $"{Environment.NewLine}{ex.StackTrace}";
+
+                Console.WriteLine(exceptionDetails);
             }
 
             return runServerResult;
         }
 
-        public async Task<Result> InitializeServerAsync()
+        async Task<Result> InitializeServerAsync()
         {
             InitializeSettings();
             var settingsChanged = false;
@@ -167,44 +195,16 @@ namespace ServerConsole
 
             switch (serverEvent.EventType)
             {
-                case EventType.ServerStartedListening:
-                    _state.WaitingForServerToBeginAcceptingConnections = false;
-                    break;
-
                 case EventType.ReceiveMessageFromClientComplete:
-
-                    if (serverEvent.MessageType == MessageType.ShutdownServerCommand) return;
-
-                    if (!serverEvent.Message.MustBeProcessedImmediately())
-                    {
-                        Console.WriteLine($"{Environment.NewLine}New {serverEvent.Message.Type.Name()} from {serverEvent.RemoteServerIpAddress}, added to queue");
-                        await Task.Delay(Constants.TwoSecondsInMilliseconds);
-                        _mainMenu.DisplayMenu();
-                    }
-
+                    await ReceiveMessageFromClientCompleteAsync(serverEvent);
                     break;
 
                 case EventType.ProcessRequestComplete:
-
-                    if (serverEvent.MessageType == MessageType.ShutdownServerCommand) return;
-
-                    if (serverEvent.MessageType.MustBeProcessedImmediately())
-                    {
-                        Console.WriteLine($"{Environment.NewLine}Processed {serverEvent.MessageType.Name()} from {serverEvent.RemoteServerIpAddress}, addded to archive");
-                        await Task.Delay(Constants.TwoSecondsInMilliseconds);
-                        _mainMenu.DisplayMenu();
-                    }
-
+                    await ProcessRequestCompleteAsync(serverEvent);
                     break;
 
                 case EventType.ReceivedTextMessage:
-
-                    Console.WriteLine($"\n{serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} says:");
-                    Console.WriteLine(serverEvent.TextMessage);
-
-                    Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
-                    Console.ReadLine();
-
+                    await ReceivedTextMessageAsync(serverEvent);
                     break;
 
                 case EventType.ReceivedServerInfo:
@@ -226,9 +226,19 @@ namespace ServerConsole
                     _state.WaitingForFileListResponse = false;
                     break;
 
+                case EventType.SendFileBytesStarted:
+                    _state.FileTransferInProgress = true;
+                    await _mainMenu.DisplayMenuAsync();
+                    break;
+
+                case EventType.FileTransferStalled:
+                case EventType.ReceiveConfirmationMessageComplete:
+                    _state.FileTransferInProgress = false;
+                    await _mainMenu.DisplayMenuAsync();
+                    break;
+
                 case EventType.ReceivedInboundFileTransferRequest:
-                    Console.WriteLine($"\nIncoming file transfer from {serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}:");
-                    Console.WriteLine($"File Name:\t{serverEvent.FileName}\nFile Size:\t{serverEvent.FileSizeString}\nSave To:\t{serverEvent.LocalFolder}");
+                    ReceivedInboundFileTransferRequest(serverEvent);
                     break;
 
                 case EventType.ReceiveFileBytesStarted:
@@ -240,22 +250,13 @@ namespace ServerConsole
                     break;
 
                 case EventType.SendFileTransferRejectedStarted:
-                    Console.WriteLine("\nA file with the same name already exists in the download folder, please rename or remove this file in order to proceed");
-                    break;
-
-                case EventType.SendFileTransferRejectedComplete:
-                    await Task.Delay(Constants.TwoSecondsInMilliseconds);
-                    _mainMenu.DisplayMenu();
+                    await RejectFileTransfer(serverEvent);
                     break;
 
                 case EventType.SendFileTransferStalledComplete:
-                    FileTransferStalled();
+                    await NotifiedRemoteServerThatFileTransferIsStalledAsync(serverEvent);
                     break;
-
-                case EventType.SendShutdownServerCommandStarted:
-                    _state.ShutdownInitiated = true;
-                    break;
-
+                    
                 case EventType.ErrorOccurred:
                     _state.ErrorOccurred = true;
                     break;
@@ -263,6 +264,70 @@ namespace ServerConsole
                 default:
                     return;
             }
+        }
+        
+        async Task ReceiveMessageFromClientCompleteAsync(ServerEvent serverEvent)
+        {
+            if (_state.FileTransferInProgress) return;
+            if (serverEvent.MessageType == MessageType.ShutdownServerCommand) return;
+            if (serverEvent.Message.MustBeProcessedImmediately()) return;
+            
+            Console.WriteLine($"{Environment.NewLine}New {serverEvent.Message.Type.Name()} from {serverEvent.RemoteServerIpAddress}, added to queue");
+            await Task.Delay(_state.MessageDisplayTime);
+            await _mainMenu.DisplayMenuAsync();
+        }
+
+        async Task ProcessRequestCompleteAsync(ServerEvent serverEvent)
+        {
+            if (_state.FileTransferInProgress) return;
+            if (DoNotDisplayRequestProcessedMessage(serverEvent.MessageType)) return;
+
+            Console.WriteLine($"{Environment.NewLine}Processed {serverEvent.MessageType.Name()} from {serverEvent.RemoteServerIpAddress}, addded to archive");
+            await Task.Delay(_state.MessageDisplayTime);
+            await _mainMenu.DisplayMenuAsync();
+        }
+
+        bool DoNotDisplayRequestProcessedMessage(MessageType messageType)
+        {
+            switch (messageType)
+            {
+                case MessageType.TextMessage:
+                case MessageType.RequestedFolderDoesNotExist:
+                case MessageType.NoFilesAvailableForDownload:
+                case MessageType.FileListResponse:
+                case MessageType.FileTransferAccepted:
+                case MessageType.InboundFileTransferRequest:
+                case MessageType.ShutdownServerCommand:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        async Task ReceivedTextMessageAsync(ServerEvent serverEvent)
+        {
+            _state.SignalReturnToMainMenu.Set();
+            Console.WriteLine($"{Environment.NewLine}{serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} says:");
+            Console.WriteLine(serverEvent.TextMessage);
+
+            Console.WriteLine($"{Environment.NewLine}Processed {MessageType.InboundFileTransferRequest.Name()} from {serverEvent.RemoteServerIpAddress}, addded to archive");
+            await Task.Delay(_state.MessageDisplayTime);
+            _state.SignalReturnToMainMenu.WaitOne();
+        }
+
+        async Task RejectFileTransfer(ServerEvent serverEvent)
+        {
+            var fileAlreadyExists =
+                $"{Environment.NewLine}A file with the same name already exists in the " +
+                "download folder, please rename or remove this file in order to proceed";
+
+            _state.SignalReturnToMainMenu.Set();
+            Console.WriteLine(fileAlreadyExists);
+
+            Console.WriteLine($"{Environment.NewLine}Processed {MessageType.InboundFileTransferRequest.Name()} from {serverEvent.RemoteServerIpAddress}, addded to archive");
+            await Task.Delay(_state.MessageDisplayTime);
+            _state.SignalReturnToMainMenu.WaitOne();
         }
 
         void ReceivedServerInfo(ServerEvent serverEvent)
@@ -285,10 +350,30 @@ namespace ServerConsole
             }
         }
 
-        void HandleFileTransferProgress(object sender, ServerEvent serverEvent)
+        void ReceivedInboundFileTransferRequest(ServerEvent serverEvent)
         {
-            _state.ProgressBar.BytesReceived = serverEvent.TotalFileBytesReceived;
-            _state.ProgressBar.Report(serverEvent.PercentComplete);
+            if (_state.RetryLimitExceeded && !_state.FileTransferStalled)
+            {
+                _state.RetryCounter = 0;
+            }
+
+            var fileTransferSender =
+                $"{Environment.NewLine}Incoming file transfer from " +
+                $"{serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber}:" +
+                $"{Environment.NewLine}";
+
+            var retryCounter = _state.RetryCounter > 0
+                ? $"Attempt #{_state.RetryCounter}/{_state.Settings.MaxDownloadAttempts}" +
+                  Environment.NewLine
+                : string.Empty;
+
+            var fileTransferDetails =
+                $"File Name:\t{serverEvent.FileName}{Environment.NewLine}" +
+                $"File Size:\t{serverEvent.FileSizeString}{Environment.NewLine}" +
+                $"Save To:\t{serverEvent.LocalFolder}{Environment.NewLine}";
+
+            Console.WriteLine($"{fileTransferSender}{retryCounter}");
+            Console.WriteLine(fileTransferDetails);
         }
 
         void ReceiveFileBytesStarted(ServerEvent serverEvent)
@@ -306,79 +391,97 @@ namespace ServerConsole
 
             _state.ProgressBar.FileTransferStalled += HandleStalledFileTransferAsync;
             _state.ProgressBarInstantiated = true;
-            Console.WriteLine(Environment.NewLine);
+        }
+
+        void HandleFileTransferProgress(object sender, ServerEvent serverEvent)
+        {
+            _state.ProgressBar.BytesReceived = serverEvent.TotalFileBytesReceived;
+            _state.ProgressBar.Report(serverEvent.PercentComplete);
         }
 
         async Task ReceiveFileBytesCompleteAsync(ServerEvent serverEvent)
         {
             _state.ProgressBar.BytesReceived = serverEvent.FileSizeInBytes;
             _state.ProgressBar.Report(1);
-            await Task.Delay(Constants.OneHalfSecondInMilliseconds);
+            _state.SignalReturnToMainMenu.WaitOne(Constants.OneHalfSecondInMilliseconds);
+
+            var report =
+                $"{Environment.NewLine}{Environment.NewLine}" +
+                $"Download Started:\t{serverEvent.FileTransferStartTime:MM/dd/yyyy HH:mm:ss.fff}{Environment.NewLine}" +
+                $"Download Finished:\t{serverEvent.FileTransferCompleteTime:MM/dd/yyyy HH:mm:ss.fff}{Environment.NewLine}" +
+                $"Elapsed Time:\t\t{serverEvent.FileTransferElapsedTimeString}{Environment.NewLine}" +
+                $"Transfer Rate:\t\t{serverEvent.FileTransferRate}";
+            
+            Console.WriteLine(report);
+            _state.SignalReturnToMainMenu.Set();
+            Console.WriteLine($"{Environment.NewLine}Processed {MessageType.InboundFileTransferRequest.Name()} from {serverEvent.RemoteServerIpAddress}, addded to archive");
 
             _state.ProgressBar.Dispose();
             _state.ProgressBarInstantiated = false;
-
             _state.RetryCounter = 0;
-            _state.SignalRetryLimitExceeded.Set();
+
+            await Task.Delay(_state.MessageDisplayTime);
+            _state.SignalReturnToMainMenu.WaitOne();
         }
 
         async void HandleStalledFileTransferAsync(object sender, ProgressEventArgs eventArgs)
         {
             _state.FileStalledInfo = eventArgs;
-            _state.FileTransferStalled = true;
-
             _state.ProgressBar.Dispose();
             _state.ProgressBarInstantiated = false;
 
-            var notifyStalledResult = await NotifyClientThatFileTransferHasStalled();
+            FileHelper.DeleteFileIfAlreadyExists(_state.LocalServer.IncomingFilePath);
+
+            var notifyStalledResult = await SendFileTransferStalledNotification();
             if (notifyStalledResult.Failure)
             {
                 Console.WriteLine(notifyStalledResult.Error);
             }
+        }
 
-            if (_state.RetryCounter >= _state.Settings.MaxDownloadAttempts)
+        async Task<Result> SendFileTransferStalledNotification()
+        {
+            var fileStalledMessage =
+                $"{Environment.NewLine}{Environment.NewLine}Data is no longer being received " +
+                "from remote server, attempting to cancel file transfer...";
+
+            Console.WriteLine(fileStalledMessage);
+
+            var notifyClientResult = await _state.LocalServer.SendNotificationFileTransferStalledAsync();
+
+            var notifyClientError =
+                $"{Environment.NewLine}Error occurred when notifying client that file transfer data " +
+                $"is no longer being received:\n{notifyClientResult.Error}";
+
+            return notifyClientResult.Success
+                ? Result.Ok()
+                : Result.Fail(notifyClientError);
+        }
+        
+        async Task NotifiedRemoteServerThatFileTransferIsStalledAsync(ServerEvent serverEvent)
+        {
+            var sinceLastActivity = DateTime.Now - _state.FileStalledInfo.LastDataReceived;
+
+            var sentFileStalledNotification =
+                $"{Environment.NewLine}Successfully notified remote server that file transfer has " +
+                $"stalled, {sinceLastActivity.ToFormattedString()} elapsed since last data received.";
+
+            Console.WriteLine(sentFileStalledNotification);
+
+            if (_state.RetryLimitExceeded)
             {
-                _state.RetryCounter = 0;
-
                 var maxRetriesReached =
-                    "Maximum # of attempts to complete stalled file transfer reached or exceeded: " +
+                    $"{Environment.NewLine}Maximum # of attempts to complete stalled file transfer reached or exceeded: " +
                     $"({_state.Settings.MaxDownloadAttempts} failed attempts for \"{_state.IncomingFileName}\")";
 
                 Console.WriteLine(maxRetriesReached);
-
-                var folder = _state.Settings.LocalServerFolderPath;
-                var filePath = Path.Combine(folder, _state.IncomingFileName);
-
-                FileHelper.DeleteFileIfAlreadyExists(filePath);
-
-                _state.SignalRetryLimitExceeded.Set();
-                return;
             }
 
-            var userPrompt = $"Try again to download file \"{_state.IncomingFileName}\" from {_state.SelectedServer.SessionIpAddress}:{_state.SelectedServer.Port}?";
-            if (SharedFunctions.PromptUserYesOrNo(userPrompt))
-            {
-                _state.RetryCounter++;
-                await _state.LocalServer.RetryLastFileTransferAsync(
-                    _state.SelectedServer.SessionIpAddress,
-                    _state.SelectedServer.Port);
-            }
-        }
+            Console.WriteLine($"{Environment.NewLine}Processed {MessageType.InboundFileTransferRequest.Name()} from {serverEvent.RemoteServerIpAddress}, addded to archive");
+            _state.SignalReturnToMainMenu.Set();
 
-        async Task<Result> NotifyClientThatFileTransferHasStalled()
-        {
-            var notifyCientResult = await _state.LocalServer.SendNotificationFileTransferStalledAsync();
-
-            return notifyCientResult.Failure
-                ? Result.Fail($"\nError occurred when notifying client that file transfer data is no longer being received:\n{notifyCientResult.Error}")
-                : Result.Fail("File transfer canceled, data is no longer being received from client");
-
-        }
-
-        void FileTransferStalled()
-        {
-            var sinceLastActivity = DateTime.Now - _state.FileStalledInfo.LastDataReceived;
-            Console.WriteLine($"\n\nFile transfer has stalled, {sinceLastActivity.ToFormattedString()} elapsed since last data received");
+            await Task.Delay(_state.MessageDisplayTime);
+            _state.SignalReturnToMainMenu.WaitOne();
         }
     }
 }

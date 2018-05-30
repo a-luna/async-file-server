@@ -22,7 +22,12 @@
 
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
-        public async Task<Result> ExecuteAsync()
+        public Task<Result> ExecuteAsync()
+        {
+            return Task.Factory.StartNew(Execute);
+        }
+
+        Result Execute()
         {
             Console.WriteLine();
             foreach (var serverEvent in _message.EventLog)
@@ -32,8 +37,7 @@
 
             Console.WriteLine($"{Environment.NewLine}Press enter to return to the previous menu.");
             Console.ReadLine();
-
-            await Task.Delay(1);
+            
             return Result.Ok();
         }
     }

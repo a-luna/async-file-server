@@ -32,6 +32,22 @@
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
 
+        public Task<Result> DisplayMenuAsync()
+        {
+            return Task.Run(() => DisplayMenu());
+        }
+
+        Result DisplayMenu()
+        {
+            if (_state.DoNotRefreshMainMenu) return Result.Ok();
+            _state.DisplayCurrentStatus();
+
+            PopulateMenu();
+            Menu.DisplayMenu(MenuText, MenuItems);
+
+            return Result.Ok();
+        }
+
         public async Task<Result> ExecuteAsync()
         {
             var exit = false;
@@ -62,13 +78,14 @@
                 _state.DisplayCurrentStatus();
                 PopulateMenu();
 
-                var menuItem = Menu.GetUserSelection(MenuText, MenuItems);
+                var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);
                 result = await menuItem.ExecuteAsync().ConfigureAwait(false);
                 exit = menuItem.ReturnToParent;
 
                 if (result.Success) continue;
                 _log.Error($"Error: {result.Error}");
                 Console.WriteLine($"{Environment.NewLine}Error: {result.Error}");
+                await Task.Delay(_state.MessageDisplayTime);
             }
 
             if (_state.ProgressBarInstantiated)
@@ -93,6 +110,11 @@
                 MenuItems.Add(new ViewEventLogsMenu(_state));
             }
 
+            if (_state.FileTransferStalled && !_state.RetryLimitExceeded)
+            {
+                MenuItems.Add(new RetryStalledFileTransferMenuItem(_state));
+            }
+
             MenuItems.Add(new SelectRemoteServerMenu(_state));
 
             if (_state.ClientSelected)
@@ -102,19 +124,6 @@
 
             MenuItems.Add(new ServerConfigurationMenu(_state));
             MenuItems.Add(_shutdownServer);
-        }
-
-        public void DisplayMenu()
-        {
-            if (_state.DoNotRefreshMainMenu) return;
-
-            _state.DoNotRefreshMainMenu = true;
-
-            _state.DisplayCurrentStatus();
-            PopulateMenu();
-            Menu.DisplayMenu(MenuText, MenuItems);
-
-            _state.DoNotRefreshMainMenu = false;
         }
     }
 }

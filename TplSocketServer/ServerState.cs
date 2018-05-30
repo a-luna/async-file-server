@@ -2,8 +2,9 @@
 {
     using System.Collections.Generic;
     using System.IO;
+    using System.Threading;
 
-    internal class ServerState
+    public class ServerState
     {
         FileInfo _outgoingFile;
         FileInfo _incomingFile;
@@ -12,6 +13,7 @@
         public ServerState()
         {
             UnreadBytes = new List<byte>();
+            SignalFileTransferStalled = new AutoResetEvent(true);
 
             _outgoingFile = null;
             _incomingFile = null;
@@ -22,8 +24,7 @@
         public List<byte> UnreadBytes { get; set; }
         public int LastBytesReceivedCount { get; set; }
         public int LastBytesSentCount { get; set; }
-        public bool FileTransferStalled { get; set; }
-        public bool FileTransferCanceled { get; set; }
+        public AutoResetEvent SignalFileTransferStalled { get; set; }
 
         public string OutgoingFilePath
         {

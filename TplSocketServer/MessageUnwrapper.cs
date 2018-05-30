@@ -147,6 +147,21 @@
             return (remoteIp, remotePort);
         }
 
+        public static (string remoteIpAddress, int remotePortNumber, string message)
+            ReadRequestWithStringValue(byte[] buffer)
+        {
+            var remoteIpAddressLen = BitConverter.ToInt32(buffer, SizeOfInt32InBytes);
+            var remoteIp = Encoding.UTF8.GetString(buffer, SizeOfInt32InBytes * 2, remoteIpAddressLen);
+
+            var remotePortNumberLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 2) + remoteIpAddressLen);
+            var remotePort = int.Parse(Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 3) + remoteIpAddressLen, remotePortNumberLen));
+
+            var messageLen = BitConverter.ToInt32(buffer, (SizeOfInt32InBytes * 3) + remoteIpAddressLen + remotePortNumberLen);
+            var message = Encoding.UTF8.GetString(buffer, (SizeOfInt32InBytes * 4) + remoteIpAddressLen + remotePortNumberLen, messageLen);
+
+            return (remoteIp, remotePort, message);
+        }
+
         public static (string remoteIpAddress, int remotePortNumber, string remoteFolderPath)
             ReadTransferFolderResponse(byte[] buffer)
         {

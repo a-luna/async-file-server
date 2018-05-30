@@ -1,5 +1,6 @@
 ﻿namespace ServerConsole.Menus.ViewRequestQueueMenuItems
 {
+    using System;
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Console.Menu;
@@ -30,8 +31,21 @@
             {
                 return Result.Ok();
             }
+            
+            var result = await _state.LocalServer.ProcessMessageFromQueueAsync(_message.Id);
+            if (result.Failure)
+            {
+                return result;
+            }
 
-            return await _state.LocalServer.ProcessMessageFromQueueAsync(_message.Id);
+            _state.SignalReturnToMainMenu.WaitOne();
+            _state.SignalReturnToMainMenu.Reset();
+
+            Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
+            Console.ReadLine();
+
+            _state.SignalReturnToMainMenu.Set();
+            return Result.Ok();
         }
     }
 }

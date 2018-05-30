@@ -26,7 +26,21 @@
         public bool ReturnToParent { get; set; }
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
-        
+
+        public Task<Result> DisplayMenuAsync()
+        {
+            return Task.Run(() => DisplayMenu());
+        }
+
+        public Result DisplayMenu()
+        {
+            _state.DisplayCurrentStatus();
+            PopulateMenu();
+
+            Menu.DisplayMenu(MenuText, MenuItems);
+            return Result.Ok();
+        }
+
         public async Task<Result> ExecuteAsync()
         {
             _state.DoNotRefreshMainMenu = true;
@@ -34,9 +48,10 @@
             _state.DisplayCurrentStatus();
             PopulateMenu();
 
-            var selectedOption = Menu.GetUserSelection(MenuText, MenuItems);
-            var selectRemoteServerResult = await selectedOption.ExecuteAsync();
-            if (selectRemoteServerResult.Success && !(selectedOption is ReturnToParentMenuItem))
+            var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);
+
+            var selectRemoteServerResult = await menuItem.ExecuteAsync();
+            if (selectRemoteServerResult.Success && !(menuItem is ReturnToParentMenuItem))
             {
                 _state.ClientSelected = true;
             }

@@ -33,6 +33,19 @@
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
 
+        public Task<Result> DisplayMenuAsync()
+        {
+            return Task.Run(() => DisplayMenu());
+        }
+
+        public Result DisplayMenu()
+        {
+            _state.DisplayCurrentStatus();
+            Menu.DisplayMenu(MenuText, MenuItems);
+
+            return Result.Ok();
+        }
+
         public async Task<Result> ExecuteAsync()
         {
             _state.DoNotRefreshMainMenu = true;
@@ -43,17 +56,17 @@
             {
                 _state.DisplayCurrentStatus();
 
-                var selectedOption = Menu.GetUserSelection(MenuText, MenuItems);
-                result = await selectedOption.ExecuteAsync().ConfigureAwait(false);
+                var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);
+                result = await menuItem.ExecuteAsync();
 
-                if (result.Success && !(selectedOption is ReturnToParentMenuItem))
+                if (result.Success && !(menuItem is ReturnToParentMenuItem))
                 {
                     ApplyChanges();
                     exit = true;
                     continue;
                 }
 
-                exit = selectedOption.ReturnToParent;
+                exit = menuItem.ReturnToParent;
                 if (result.Success) continue;
                 
                 exit = true;

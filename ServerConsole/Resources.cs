@@ -44,5 +44,11 @@
         public static int TenSecondsInMilliseconds = 10000;
         public static int TwentySecondsInMilliseconds = 20000;
         public static int ThirtySecondsInMilliseconds = 30000;
+        
+        public const int PortRangeMin = 49152;
+        public const int PortRangeMax = 65535;
+
+        public const int CidrPrefixBitsCountMin = 0;
+        public const int CidrPrefixBitsCountMax = 32;
     }
 }

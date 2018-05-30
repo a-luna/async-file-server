@@ -1,7 +1,6 @@
-﻿using System;
-
-namespace TplSockets
+﻿namespace TplSockets
 {
+    using System;
     using System.Collections.Generic;
     using System.Net;
 
@@ -24,6 +23,11 @@ namespace TplSockets
         {
             return $"{Type.Name()} from {RemoteServerIp} at {Timestamp:g}";
         }
+
+        public bool MustBeProcessedImmediately()
+        {
+            return Type.MustBeProcessedImmediately();
+        }
     }
 
     public static class MessageExtensions
@@ -35,13 +39,13 @@ namespace TplSockets
                 case MessageType.None:
                 case MessageType.TextMessage:
                 case MessageType.InboundFileTransferRequest:
-                case MessageType.OutboundFileTransferRequest:
                     return false;
 
                 case MessageType.ServerInfoRequest:
                 case MessageType.ServerInfoResponse:
                 case MessageType.FileListRequest:
                 case MessageType.FileListResponse:
+                case MessageType.OutboundFileTransferRequest:
                 case MessageType.NoFilesAvailableForDownload:
                 case MessageType.RequestedFolderDoesNotExist:
                 case MessageType.FileTransferAccepted:

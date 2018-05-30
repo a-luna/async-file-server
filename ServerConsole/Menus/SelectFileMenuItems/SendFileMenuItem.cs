@@ -32,7 +32,7 @@
             var ipAddress = _state.SelectedServer.SessionIpAddress;
             var port = _state.SelectedServer.Port;
             var transferFolderPath = _state.SelectedServer.TransferFolder;
-
+            
             var sendFileResult =
                 await _state.LocalServer.SendFileAsync(
                     ipAddress,

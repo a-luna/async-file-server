@@ -28,8 +28,8 @@
 
         public async Task<Result> ExecuteAsync()
         {
-            var remoteIp = _state.RemoteServerInfo.SessionIpString;
-            var remotePort = _state.RemoteServerInfo.Port;
+            var remoteIp = _state.SelectedServer.SessionIpString;
+            var remotePort = _state.SelectedServer.Port;
 
             var getFileResult =
                 await _state.LocalServer.GetFileAsync(
