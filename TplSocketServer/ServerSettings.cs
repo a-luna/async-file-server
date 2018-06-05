@@ -12,7 +12,8 @@
 
     public class ServerSettings
     {
-        float _fileTransferFolderPath;
+        float _transferUpdateInterval;
+        TimeSpan _retryLimitLockout;
 
         public ServerSettings()
         {
@@ -23,22 +24,36 @@
         }
 
         [XmlIgnore]
-        public float FileTransferUpdateInterval
+        public float TransferUpdateInterval
         {
-            get => _fileTransferFolderPath;
-            set => _fileTransferFolderPath = value;
+            get => _transferUpdateInterval;
+            set => _transferUpdateInterval = value;
         }
 
-        [XmlElement("FileTransferUpdateInterval")]
+        [XmlIgnore]
+        public TimeSpan RetryLimitLockout
+        {
+            get => _retryLimitLockout;
+            set => _retryLimitLockout = value;
+        }
+
+        [XmlElement("TransferUpdateInterval")]
         public string CustomFileTransferUpdateInterval
         {
-            get => FileTransferUpdateInterval.ToString("#0.0000", CultureInfo.InvariantCulture);
-            set => float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _fileTransferFolderPath);
+            get => TransferUpdateInterval.ToString("#0.0000", CultureInfo.InvariantCulture);
+            set => float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _transferUpdateInterval);
         }
 
-        public int MaxDownloadAttempts { get; set; }
+        [XmlElement("RetryLimitLockout")]
+        public double CUstomRetryLimitLockout
+        {
+            get => RetryLimitLockout.TotalMinutes;
+            set => _retryLimitLockout = TimeSpan.FromMinutes(value);
+        }
+
+        public int TransferRetryLimit { get; set; }
         public string LocalServerFolderPath { get; set; }
-        public int LocalPort { get; set; }
+        public int LocalServerPortNumber { get; set; }
         public string LocalNetworkCidrIp { get; set; }
 
         public SocketSettings SocketSettings { get; set; }
@@ -152,11 +167,11 @@
 
             return new ServerSettings
             {
-                MaxDownloadAttempts = 3,
+                TransferRetryLimit = 3,
                 LocalServerFolderPath = defaultTransferFolderPath,
-                FileTransferUpdateInterval = 0.0025f,
+                TransferUpdateInterval = 0.0025f,
                 LocalNetworkCidrIp = string.Empty,
-                LocalPort = 0
+                LocalServerPortNumber = 0
             };
         }
     }

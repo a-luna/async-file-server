@@ -50,13 +50,15 @@
 
         SendFileTransferRejectedStarted,
         SendFileTransferRejectedComplete,
-        ReceiveFileTransferRejectedStarted,
-        ClientRejectedFileTransfer,
+        RemoteServerRejectedFileTransfer,
 
         SendFileTransferAcceptedStarted,
         SendFileTransferAcceptedComplete,
-        ReceiveFileTransferAcceptedStarted,
-        ClientAcceptedFileTransfer,
+        RemoteServerAcceptedFileTransfer,
+
+        SendFileTransferCompletedStarted,
+        SendFileTransferCompletedCompleted,
+        RemoteServerConfirmedFileTransferCompleted,
 
         ReceiveFileBytesStarted,
         ReceivedFileBytesFromSocket,
@@ -69,8 +71,11 @@
 
         RetryOutboundFileTransferStarted,
         RetryOutboundFileTransferComplete,
-        ReceiveRetryOutboundFileTransferStarted,
         ReceivedRetryOutboundFileTransferRequest,
+
+        SendRetryLimitExceededStarted,
+        SendRetryLimitExceededCompleted,
+        ReceiveRetryLimitExceeded,
 
         SendConfirmationMessageStarted,
         SendConfirmationMessageComplete,
@@ -92,6 +97,10 @@
         SendNotificationFolderDoesNotExistStarted,
         SendNotificationFolderDoesNotExistComplete,
         ReceivedNotificationFolderDoesNotExist,
+
+        SendNotificationFileDoesNotExistStarted,
+        SendNotificationFileDoesNotExistComplete,
+        ReceivedNotificationFileDoesNotExist,
 
         ShutdownListenSocketStarted,
         ShutdownListenSocketCompletedWithoutError,

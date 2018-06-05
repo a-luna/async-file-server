@@ -4,18 +4,16 @@
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Console.Menu;
+    using AaronLuna.Common.Network;
     using AaronLuna.Common.Result;
 
-    class SetMyPortNumberMenuItem : IMenuItem
+    class DisplayLocalIPv4AddressesMenuItemcs : IMenuItem
     {
-        readonly AppState _state;
-
-        public SetMyPortNumberMenuItem(AppState state)
+        public DisplayLocalIPv4AddressesMenuItemcs()
         {
-            _state = state;
-
             ReturnToParent = false;
-            ItemText = $"Local server port number * ({_state.Settings.LocalServerPortNumber})";
+            ItemText = "Display Local IPv4 Address Info";
+
         }
 
         public string ItemText { get; set; }
@@ -23,15 +21,16 @@
 
         public Task<Result> ExecuteAsync()
         {
-            return Task.Run((Func<Result>)Execute);
+            return Task.Run(() => Execute());
         }
 
         Result Execute()
         {
-            _state.UserEntryLocalServerPort =
-                SharedFunctions.GetPortNumberFromUser(Resources.Prompt_SetLocalPortNumber, true);
+            NetworkUtilities.DisplayLocalIPv4AddressInfo();
 
-            _state.RestartRequired = true;
+            Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
+            Console.ReadLine();
+
             return Result.Ok();
         }
     }

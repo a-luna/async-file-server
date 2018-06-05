@@ -11,6 +11,8 @@
 
     using SelectFileMenuItems;
 
+    using TplSockets;
+
     class SelectFileMenu : IMenu
     {
         readonly AppState _state;
@@ -22,9 +24,10 @@
             _sendFile = sendFile;
 
             ReturnToParent = false;
+            
             ItemText = sendFile
-                ? "Send file"
-                : "Get file";
+                ? "Send file to remote server"
+                : "Download file from remote server" + Environment.NewLine;
 
             MenuText = sendFile
                 ? "Choose a file to send:"
@@ -131,10 +134,10 @@
             return Result.Ok();
         }
 
-        async Task<Result<List<(string, long)>>> GetListOfFilesFromRemoteServer()
+        async Task<Result<FileInfoList>> GetListOfFilesFromRemoteServer()
         {
             var ipAddress = _state.SelectedServer.SessionIpAddress;
-            var port = _state.SelectedServer.Port;
+            var port = _state.SelectedServer.PortNumber;
             var remoteFolder = _state.SelectedServer.TransferFolder;
 
             _state.WaitingForFileListResponse = true;
@@ -150,19 +153,19 @@
 
             if (requestFileListResult.Failure)
             {
-                return Result.Fail<List<(string, long)>>(requestFileListResult.Error);
+                return Result.Fail<FileInfoList>(requestFileListResult.Error);
             }
 
             while (_state.WaitingForFileListResponse) { }
 
             if (_state.NoFilesAvailableForDownload)
             {
-                return Result.Fail<List<(string, long)>>("There are no files in the requested folder.");
+                return Result.Fail<FileInfoList>("There are no files in the requested folder.");
             }
 
             if (_state.RequestedFolderDoesNotExist)
             {
-                return Result.Fail<List<(string, long)>>("The requested folder does not exist on the remote server.");
+                return Result.Fail<FileInfoList>("The requested folder does not exist on the remote server.");
             }
 
             return Result.Ok(_state.LocalServer.RemoteServerFileList);

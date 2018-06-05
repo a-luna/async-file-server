@@ -30,7 +30,7 @@
         public async Task<Result> ExecuteAsync()
         {
             var ipAddress = _state.SelectedServer.SessionIpAddress;
-            var port = _state.SelectedServer.Port;
+            var port = _state.SelectedServer.PortNumber;
             var transferFolderPath = _state.SelectedServer.TransferFolder;
             
             var sendFileResult =

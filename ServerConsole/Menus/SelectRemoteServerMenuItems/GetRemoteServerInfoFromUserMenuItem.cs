@@ -39,7 +39,7 @@
         async Task<Result> RequestAdditionalInfoFromRemoteServerAsync()
         {
             var clientIp = _state.SelectedServer.SessionIpAddress;
-            var clientPort = _state.SelectedServer.Port;
+            var clientPort = _state.SelectedServer.PortNumber;
 
             if (_state.SelectedServer.IsEqualTo(_state.LocalServer.Info))
             {
@@ -70,7 +70,7 @@
         async Task<Result> RequestServerInfoAsync()
         {
             var remoteIp = _state.SelectedServer.SessionIpAddress;
-            var remotePort = _state.SelectedServer.Port;
+            var remotePort = _state.SelectedServer.PortNumber;
 
             _state.WaitingForServerInfoResponse = true;
 

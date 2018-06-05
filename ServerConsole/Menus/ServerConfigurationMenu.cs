@@ -25,6 +25,7 @@
 
             MenuItems.Add(new SetMyPortNumberMenuItem(state));
             MenuItems.Add(new SetMyCidrIpMenuItem(state));
+            MenuItems.Add(new DisplayLocalIPv4AddressesMenuItemcs());
             MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));
         }
 
@@ -76,7 +77,7 @@
 
         void ApplyChanges()
         {
-            _state.Settings.LocalPort = _state.UserEntryLocalServerPort;
+            _state.Settings.LocalServerPortNumber = _state.UserEntryLocalServerPort;
             _state.Settings.LocalNetworkCidrIp = _state.UserEntryLocalNetworkCidrIp;
 
             ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);

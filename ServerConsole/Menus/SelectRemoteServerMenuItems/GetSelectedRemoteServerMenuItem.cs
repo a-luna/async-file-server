@@ -22,7 +22,7 @@
 
             ItemText =
                 $"IP: {_server.SessionIpAddress}{Environment.NewLine}" +
-                $"   Port: {_server.Port}{Environment.NewLine}";
+                $"   Port: {_server.PortNumber}{Environment.NewLine}";
         }
 
         public string ItemText { get; set; }
@@ -30,7 +30,7 @@
 
         public Task<Result> ExecuteAsync()
         {
-            return Task.Factory.StartNew(Execute);
+            return Task.Run((Func<Result>) Execute);
         }
 
         Result Execute()

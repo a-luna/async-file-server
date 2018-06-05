@@ -1,5 +1,6 @@
 ﻿namespace ServerConsole.Menus
 {
+    using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
 
@@ -17,7 +18,7 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = "Select remote server";
+            ItemText = $"Select remote server";
             MenuText = "Choose a remote server:";
             MenuItems = new List<IMenuItem>();
         }

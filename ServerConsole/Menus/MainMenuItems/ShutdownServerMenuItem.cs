@@ -7,21 +7,27 @@
 
     class ShutdownServerMenuItem : IMenuItem
     {
-        AppState _state;
+        readonly AppState _state;
 
         public ShutdownServerMenuItem(AppState state)
         {
             _state = state;
-            ReturnToParent = true;
             ItemText = "Shutdown";
         }
 
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
 
-        public Task<Result> ExecuteAsync()
+        public async Task<Result> ExecuteAsync()
         {
-            return _state.LocalServer.ShutdownAsync();
+            ReturnToParent = false;
+            var shutdown = SharedFunctions.PromptUserYesOrNo("Shutdown server?");
+            if (!shutdown) return Result.Ok();
+
+            await _state.LocalServer.ShutdownAsync();
+            ReturnToParent = true;
+
+            return Result.Ok();
         }
     }
 }

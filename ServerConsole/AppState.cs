@@ -39,13 +39,14 @@
         public bool DoNotRefreshMainMenu { get; set; }
         public bool RestartRequired { get; set; }
 
+        public int InboundFileTransferId { get; set; }
+        public int LogViewerFileTransferId { get; set; }
         public bool FileTransferRejected => LocalServer.FileTransferRejected;
         public bool FileTransferInProgress { get; set; }
         public bool FileTransferStalled => LocalServer.FileTransferStalled;
         public bool FileTransferAccepted => LocalServer.FileTransferAccepted;
         public bool FileTransferCanceled => LocalServer.FileTransferCanceled;
-        public bool RetryStalledFileTransfer => LocalServer.RetryStalledFileTransfer;
-        
+
         public string UserEntryLocalNetworkCidrIp { get; set; }
         public IPAddress UserEntryLocalIpAddress { get; set; }
         public IPAddress UserEntryPublicIpAddress { get; set; }
@@ -58,7 +59,6 @@
         public FileTransferProgressBar ProgressBar { get; set; }
         public int RetryCounter { get; set; }
         public ProgressEventArgs FileStalledInfo { get; set; }
-        public bool RetryLimitExceeded => RetryCounter >= Settings.MaxDownloadAttempts;
 
         public ServerInfo SelectedServer { get; set; }
 
@@ -72,21 +72,21 @@
 
         public string ReportLocalServerConnectionInfo()
         {
-            return $"Server is listening for incoming requests on port {LocalServer.Info.Port}{Environment.NewLine}" +
+            return $"Server is listening for incoming requests on port {LocalServer.Info.PortNumber}{Environment.NewLine}" +
                    $"Local IP:  {LocalServer.Info.LocalIpAddress}{Environment.NewLine}" +
                    $"Public IP: {LocalServer.Info.PublicIpAddress}{Environment.NewLine}";
         }
 
         public string ReportItemsInQueue()
         {
-            return $"Requests in queue: {LocalServer.Queue.Count}{Environment.NewLine}" +
-                   $"Total requests processed: {LocalServer.Archive.Count}{Environment.NewLine}";
+            return $"Requests in queue: {LocalServer.RequestQueue.Count}{Environment.NewLine}" +
+                   $"Total requests processed: {LocalServer.RequestArchive.Count}{Environment.NewLine}";
         }
 
         public string ReportRemoteServerConnectionInfo()
         {
-            var selectedServerInfo = $"{SelectedServer.SessionIpAddress}:{SelectedServer.Port}";
-            var remoteServerInfo = $"{LocalServer.RemoteServerSessionIpAddress}:{LocalServer.RemoteServerPort}";
+            var selectedServerInfo = $"{SelectedServer.SessionIpAddress}:{SelectedServer.PortNumber}";
+            var remoteServerInfo = $"{LocalServer.RemoteServerSessionIpAddress}:{LocalServer.RemoteServerPortNumber}";
 
             var selectedServerStatus = ClientSelected
                 ? $"Remote server endpoint: {selectedServerInfo}{Environment.NewLine}"

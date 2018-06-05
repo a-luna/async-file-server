@@ -59,9 +59,9 @@
         void PopulateMenu()
         {
             MenuItems.Clear();
-            foreach (var message in _state.LocalServer.Queue)
+            foreach (var request in _state.LocalServer.RequestQueue)
             {
-                MenuItems.Add(new ProcessSelectedMessageMenuItem(_state, message));
+                MenuItems.Add(new ProcessSelectedRequestMenuItem(_state, request, false));
             }
 
             MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));

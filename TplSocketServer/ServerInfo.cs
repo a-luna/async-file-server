@@ -25,18 +25,18 @@
             TransferFolder = string.Empty;
         }
 
-        public ServerInfo(IPAddress ipAddress, int port)
+        public ServerInfo(IPAddress ipAddress, int portNumber)
         {
             TransferFolder = string.Empty;
-            Port = port;
+            PortNumber = portNumber;
 
             InitializeConnection(ipAddress);
         }
 
-        public ServerInfo(string ipAddress, int port)
+        public ServerInfo(string ipAddress, int portNumber)
         {
             TransferFolder = string.Empty;
-            Port = port;
+            PortNumber = portNumber;
 
             var sessionIp = NetworkUtilities.ParseSingleIPv4Address(ipAddress).Value;
             InitializeConnection(sessionIp);
@@ -80,7 +80,7 @@
         public string SessionIpString { get; set; }
         public string LocalIpString { get; set; }
         public string PublicIpString { get; set; }
-        public int Port { get; set; }
+        public int PortNumber { get; set; }
 
         void InitializeConnection(IPAddress ipAddress)
         {
@@ -111,7 +111,7 @@
             var sessionIpSimilarity = NetworkUtilities.CompareTwoIpAddresses(myInfo.SessionIpAddress, otherInfo.SessionIpAddress);
             var localIpSimilarity = NetworkUtilities.CompareTwoIpAddresses(myInfo.LocalIpAddress, otherInfo.LocalIpAddress);
             var publicIpSimilarity = NetworkUtilities.CompareTwoIpAddresses(myInfo.PublicIpAddress, otherInfo.PublicIpAddress);
-            var bothPortsMatch = myInfo.Port == otherInfo.Port;
+            var bothPortsMatch = myInfo.PortNumber == otherInfo.PortNumber;
 
             if (sessionIpSimilarity == IpAddressSimilarity.AllBytesMatch && bothPortsMatch)
             {

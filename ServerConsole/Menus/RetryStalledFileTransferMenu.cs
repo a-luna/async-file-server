@@ -6,24 +6,24 @@
     using AaronLuna.Common.Console.Menu;
     using AaronLuna.Common.Result;
 
-    using ViewEventLogsMenuItems;
+    using RetryStalledFileTransferMenuItems;
 
-    class ViewEventLogsMenu : IMenu
+    class RetryStalledFileTransferMenu : IMenu
     {
         readonly AppState _state;
 
-        public ViewEventLogsMenu(AppState state)
+        public RetryStalledFileTransferMenu(AppState state)
         {
             _state = state;
 
             ReturnToParent = false;
-            ItemText = "View event logs for processed requests";
-            MenuText = "Select a processed request from the list below:";
+            ItemText = $"Retry stalled file transfers";
+            MenuText = "Choose a stalled file transfer below to attempt downloading:";
             MenuItems = new List<IMenuItem>();
         }
 
-        public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
+        public string ItemText { get; set; }
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
 
@@ -40,41 +40,30 @@
 
             return Result.Ok();
         }
-        
+
         public async Task<Result> ExecuteAsync()
         {
-            if (_state.LocalServer.Archive.Count == 0)
+            if (_state.LocalServer.StalledTransfers.Count == 0)
             {
-                return Result.Fail("There are curently no logs to view");
+                return Result.Fail("There are no stalled file transfers");
             }
 
             _state.DoNotRefreshMainMenu = true;
-            var exit = false;
-            Result result = null;
+            _state.DisplayCurrentStatus();
+            PopulateMenu();
 
-            while (!exit)
-            {
-                _state.DisplayCurrentStatus();
-                PopulateMenu();
-
-                var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);
-                exit = menuItem.ReturnToParent;
-                result = await menuItem.ExecuteAsync();                
-            }
-
-            return result;
+            var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);
+            return await menuItem.ExecuteAsync();
         }
 
         void PopulateMenu()
         {
             MenuItems.Clear();
-
-            foreach (var message in _state.LocalServer.Archive)
+            foreach (var fileTransfer in _state.LocalServer.StalledTransfers)
             {
-                MenuItems.Add(new GetEventLogsForArchivedRequestMenuItem(message));
+                MenuItems.Add(new RetryStalledFileTransferMenuItem(_state, fileTransfer));
             }
 
-            MenuItems.Add(new ClearEventLogsMenuItem(_state));
             MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));
         }
     }

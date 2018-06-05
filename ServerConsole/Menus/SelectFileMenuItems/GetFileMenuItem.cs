@@ -29,7 +29,7 @@
         public async Task<Result> ExecuteAsync()
         {
             var remoteIp = _state.SelectedServer.SessionIpString;
-            var remotePort = _state.SelectedServer.Port;
+            var remotePort = _state.SelectedServer.PortNumber;
 
             var getFileResult =
                 await _state.LocalServer.GetFileAsync(

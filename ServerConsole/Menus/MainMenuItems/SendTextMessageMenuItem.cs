@@ -1,8 +1,7 @@
-﻿namespace ServerConsole.Menus.SelectServerActionMenuItems
+﻿namespace ServerConsole.Menus.MainMenuItems
 {
     using System;
     using System.Threading.Tasks;
-
     using AaronLuna.Common.Console.Menu;
     using AaronLuna.Common.Result;
 
@@ -15,7 +14,7 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = "Send text message";
+            ItemText = "Send text message to remote server";
         }
 
         public string ItemText { get; set; }
@@ -24,7 +23,7 @@
         public async Task<Result> ExecuteAsync()
         {
             var ipAddress = _state.SelectedServer.SessionIpAddress.ToString();
-            var port = _state.SelectedServer.Port;
+            var port = _state.SelectedServer.PortNumber;
 
             Console.WriteLine($"{Environment.NewLine}Please enter a text message to send to {ipAddress}:{port}");
             var message = Console.ReadLine();

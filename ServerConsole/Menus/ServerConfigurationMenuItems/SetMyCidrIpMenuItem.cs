@@ -1,5 +1,6 @@
 ﻿namespace ServerConsole.Menus.ServerConfigurationMenuItems
 {
+    using System;
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Console.Menu;
@@ -22,7 +23,7 @@
 
         public Task<Result> ExecuteAsync()
         {
-            return Task.Factory.StartNew(Execute);
+            return Task.Run((Func<Result>)Execute);
         }
 
         Result Execute()

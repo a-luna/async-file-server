@@ -1,4 +1,4 @@
-﻿namespace ServerConsole.Menus.ViewEventLogsMenuItems
+﻿namespace ServerConsole.Menus.ViewFileTransferEventLogsMenuItems
 {
     using System;
     using System.Threading.Tasks;
@@ -8,29 +8,29 @@
 
     using TplSockets;
 
-    class GetEventLogsForArchivedRequestMenuItem: IMenuItem
+    class GetFileTransferEventLogsMenuItem: IMenuItem
     {
-        readonly Message _message;
+        readonly FileTransfer _fileTransfer;
 
-        public GetEventLogsForArchivedRequestMenuItem(Message message)
+        public GetFileTransferEventLogsMenuItem(FileTransfer fileTransfer)
         {
-            _message = message;
+            _fileTransfer = fileTransfer;
 
             ReturnToParent = false;
-            ItemText = message.ToString();
+            ItemText = fileTransfer.ToString();
         }
 
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
         public Task<Result> ExecuteAsync()
         {
-            return Task.Factory.StartNew(Execute);
+            return Task.Run((Func<Result>) Execute);
         }
 
         Result Execute()
         {
             Console.WriteLine();
-            foreach (var serverEvent in _message.EventLog)
+            foreach (var serverEvent in _fileTransfer.EventLog)
             {
                 Console.WriteLine(serverEvent);
             }

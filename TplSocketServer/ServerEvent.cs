@@ -1,7 +1,6 @@
 ﻿namespace TplSockets
 {
     using System;
-    using System.Collections.Generic;
     using System.IO;
     using System.Net;
 
@@ -13,6 +12,13 @@
     {
 
         public EventType EventType { get; set; }
+
+        public IPAddress RemoteServerIpAddress { get; set; }
+        public int RemoteServerPortNumber { get; set; }
+        public IPAddress LocalIpAddress { get; set; }
+        public int LocalPortNumber { get; set; }
+        public IPAddress PublicIpAddress { get; set; }
+
         public int BytesReceived { get; set; }
         public int ExpectedByteCount { get; set; }
         public int UnreadByteCount { get; set; }
@@ -22,26 +28,28 @@
         public int TotalMessageBytesReceived { get; set; }
         public int MessageBytesRemaining { get; set; }
         public byte[] MessageData { get; set; }
-        public MessageType MessageType { get; set; }
-        public Message Message { get; set; }
-        public int MessageId { get; set; }
+        public RequestType RequestType { get; set; }
+        public int RequestId { get; set; }
+
         public string TextMessage { get; set; }
-        public IPAddress RemoteServerIpAddress { get; set; }
-        public int RemoteServerPortNumber { get; set; }
-        public IPAddress LocalIpAddress { get; set; }
-        public int LocalPortNumber { get; set; }
-        public IPAddress PublicIpAddress { get; set; }
+
+        public FileInfoList RemoteServerFileList { get; set; }
+
+        public int FileTransferId { get; set; }
+        public int RetryCounter { get; set; }
+        public int RetryLimit { get; set; }
+        public bool RetryLimitExceeded { get; set; }
         public string LocalFolder { get; set; }
         public string RemoteFolder { get; set; }
         public string FileName { get; set; }
         public long FileSizeInBytes { get; set; }
         public string FileSizeString => FileHelper.FileSizeToString(FileSizeInBytes);
-        public List<(string, long)> RemoteServerFileList { get; set; }
         public DateTime FileTransferStartTime { get; set; }
         public DateTime FileTransferCompleteTime { get; set; }
+        public DateTime RetryLockoutExpireTime { get; set; }
         public TimeSpan FileTransferTimeSpan => FileTransferCompleteTime - FileTransferStartTime;
         public string FileTransferElapsedTimeString => FileTransferTimeSpan.ToFormattedString();
-        public string FileTransferRate => FileHelper.GetTransferRate(FileTransferTimeSpan, FileSizeInBytes);
+        public string FileTransferRate => FileTransfer.GetTransferRate(FileTransferTimeSpan, FileSizeInBytes);
         public int CurrentFileBytesReceived { get; set; }
         public long TotalFileBytesReceived { get; set; }
         public int CurrentFileBytesSent { get; set; }
@@ -94,11 +102,11 @@
                     break;
 
                 case EventType.DetermineMessageLengthStarted:
-                    report += "Step 1: Determine message length from first 4 bytes received";
+                    report += "Step 1: Determine request length from first 4 bytes received";
                     break;
 
                 case EventType.DetermineMessageLengthComplete:
-                    report += $"Incoming message length: {MessageLengthInBytes:N0} bytes ({MessageLengthData.ToHexString()})";
+                    report += $"Incoming request length: {MessageLengthInBytes:N0} bytes ({MessageLengthData.ToHexString()})";
                     break;
 
                 case EventType.ReceivedMessageLengthFromSocket:
@@ -117,9 +125,9 @@
 
                 case EventType.CopySavedBytesToMessageData:
                     report +=
-                        $"Processed unread bytes as message data:{Environment.NewLine}{Environment.NewLine}" +
+                        $"Processed unread bytes as request data:{Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}Unread Bytes:\t\t{UnreadByteCount:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Message Length:\t\t{MessageLengthInBytes:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}ServerRequest Length:\t\t{MessageLengthInBytes:N0}{Environment.NewLine}" +
                         $"{indentLevel1}Bytes Remaining:\t{MessageBytesRemaining:N0}{Environment.NewLine}";
                     break;
 
@@ -128,27 +136,27 @@
                         $"Received data from socket:{Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}Socket Read Count:\t\t\t{SocketReadCount:N0}{Environment.NewLine}" +
                         $"{indentLevel1}Bytes Received:\t\t\t\t{BytesReceived:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Message Bytes (Current):\t{CurrentMessageBytesReceived:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Message Bytes (Total):\t\t{TotalMessageBytesReceived:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Message Length:\t\t\t\t{MessageLengthInBytes:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}ServerRequest Bytes (Current):\t{CurrentMessageBytesReceived:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}ServerRequest Bytes (Total):\t\t{TotalMessageBytesReceived:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}ServerRequest Length:\t\t\t\t{MessageLengthInBytes:N0}{Environment.NewLine}" +
                         $"{indentLevel1}Bytes Remaining:\t\t\t{MessageBytesRemaining:N0}{Environment.NewLine}" +
                         $"{indentLevel1}Unread Bytes:\t\t\t\t{UnreadByteCount:N0}{Environment.NewLine}";
                     break;
 
                 case EventType.ReceiveMessageBytesStarted:
-                    report += "Step 2: Receive message bytes";
+                    report += "Step 2: Receive request bytes";
                     break;
 
                 case EventType.ReceiveMessageBytesComplete:
-                    report += "Successfully received all message bytes";
+                    report += "Successfully received all request bytes";
                     break;
 
                 case EventType.ProcessRequestStarted:
-                    report += $"START PROCESS: {MessageType.Name()}";
+                    report += $"START PROCESS: {RequestType.Name()}";
                     break;
 
                 case EventType.ProcessRequestComplete:
-                    report += $"PROCESS COMPLETE: {MessageType.Name()}";
+                    report += $"PROCESS COMPLETE: {RequestType.Name()}";
                     break;
 
                 case EventType.ShutdownListenSocketStarted:
@@ -284,7 +292,7 @@
                     report += "Notification was successfully sent";
                     break;
 
-                case EventType.ClientAcceptedFileTransfer:
+                case EventType.RemoteServerAcceptedFileTransfer:
                     report += $"Outbound file transfer accepted by {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 
@@ -294,7 +302,7 @@
                         $"file with same name already exists at location {LocalFolder}{Path.DirectorySeparatorChar}{FileName}";
                     break;
 
-                case EventType.ClientRejectedFileTransfer:
+                case EventType.RemoteServerRejectedFileTransfer:
                     report += $"Outbound file transfer rejected by {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 

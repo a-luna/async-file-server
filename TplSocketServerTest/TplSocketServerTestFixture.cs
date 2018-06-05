@@ -126,7 +126,8 @@ namespace TplSocketServerTest
                 File.Copy(_restoreFilePath, _remoteFilePath);
             }
 
-            _cidrIp = "172.20.10.1/24";
+            _cidrIp = "192.168.3.1/24";
+            //_cidrIp = "172.20.10.1/24";
             _localIp = IPAddress.Loopback;
             _publicIp = IPAddress.None;
 
@@ -978,7 +979,7 @@ namespace TplSocketServerTest
                     _clientReceivedAllFileBytes = true;
                     break;
 
-                case EventType.ClientRejectedFileTransfer:
+                case EventType.RemoteServerRejectedFileTransfer:
                     _serverRejectedFileTransfer = true;
                     break;
 
@@ -1019,7 +1020,7 @@ namespace TplSocketServerTest
                     _serverReceivedAllFileBytes = true;
                     break;
 
-                case EventType.ClientRejectedFileTransfer:
+                case EventType.RemoteServerRejectedFileTransfer:
                     _clientRejectedFileTransfer = true;
                     break;
 

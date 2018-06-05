@@ -8,18 +8,24 @@
 
     using TplSockets;
 
-    class ProcessSelectedMessageMenuItem : IMenuItem
+    class ProcessSelectedRequestMenuItem : IMenuItem
     {
         readonly AppState _state;
-        readonly Message _message;
+        readonly ServerRequest _request;
 
-        public ProcessSelectedMessageMenuItem(AppState state, Message message)
+        public ProcessSelectedRequestMenuItem(AppState state, ServerRequest request, bool inMainMenu)
         {
             _state = state;
-            _message = message;
+            _request = request;
 
             ReturnToParent = false;
-            ItemText = message.ToString();
+
+            var mainMenuItemText = "Process request:" +
+                                   $"{Environment.NewLine}{Environment.NewLine}{request}{Environment.NewLine}";
+
+            ItemText = inMainMenu
+                ? mainMenuItemText
+                : request.ToString();
         }
 
         public string ItemText { get; set; }
@@ -32,7 +38,7 @@
                 return Result.Ok();
             }
             
-            var result = await _state.LocalServer.ProcessMessageFromQueueAsync(_message.Id);
+            var result = await _state.LocalServer.ProcessRequestAsync(_request.Id);
             if (result.Failure)
             {
                 return result;

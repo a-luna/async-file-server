@@ -36,8 +36,6 @@
                 }
 
                 exit = true;
-                Console.WriteLine($"{Environment.NewLine}Press enter to exit.");
-                Console.ReadLine();
             }
 
             logger.Info("Application shutdown");
