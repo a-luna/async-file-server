@@ -114,13 +114,13 @@ namespace TplSocketServerTest
             _remoteFilePath = _remoteFolder + FileName;
             _restoreFilePath = _testFilesFolder + FileName;
 
-            FileHelper.DeleteFileIfAlreadyExists(_localFilePath);
+            FileHelper.DeleteFileIfAlreadyExists(_localFilePath, 3);
             if (File.Exists(_restoreFilePath))
             {
                 File.Copy(_restoreFilePath, _localFilePath);
             }
 
-            FileHelper.DeleteFileIfAlreadyExists(_remoteFilePath);
+            FileHelper.DeleteFileIfAlreadyExists(_remoteFilePath, 3);
             if (File.Exists(_restoreFilePath))
             {
                 File.Copy(_restoreFilePath, _remoteFilePath);
@@ -149,9 +149,7 @@ namespace TplSocketServerTest
             {
                 ListenBacklogSize = 1,
                 BufferSize = 1024,
-                ConnectTimeoutMs = 5000,
-                ReceiveTimeoutMs = 5000,
-                SendTimeoutMs = 5000
+                SocketTimeoutInMilliseconds = 5000
             };
 
             _server = new TplSocketServer();
@@ -166,13 +164,13 @@ namespace TplSocketServerTest
                 var runClientResult = Result.Fail("Timeout");
                 var runServerResult = Result.Fail("Timeout");
 
-                var shutdownClientTask = await _client.ShutdownAsync();
+                await _client.ShutdownAsync();
                 if (_runClientTask == await Task.WhenAny(_runClientTask, Task.Delay(1000)))
                 {
                     runClientResult = await _runClientTask;
                 }
                 
-                var shutdownServerTask = await _server.ShutdownAsync();
+                await _server.ShutdownAsync();
                 if (_runServerTask == await Task.WhenAny(_runServerTask, Task.Delay(1000)))
                 {
                     runServerResult = await _runServerTask;
@@ -320,7 +318,7 @@ namespace TplSocketServerTest
             while (!_client.IsListening) { }
 
             var sizeOfFileToSend = new FileInfo(sendFilePath).Length;
-            FileHelper.DeleteFileIfAlreadyExists(receiveFilePath);
+            FileHelper.DeleteFileIfAlreadyExists(receiveFilePath, 3);
             Assert.IsFalse(File.Exists(receiveFilePath));
 
             var sendFileResult =
@@ -392,7 +390,7 @@ namespace TplSocketServerTest
             while (!_server.IsListening) { }
             while (!_client.IsListening) { }
 
-            FileHelper.DeleteFileIfAlreadyExists(receivedFilePath);
+            FileHelper.DeleteFileIfAlreadyExists(receivedFilePath, 3);
             Assert.IsFalse(File.Exists(receivedFilePath));
 
             var getFileResult =
@@ -625,7 +623,7 @@ namespace TplSocketServerTest
             }
 
             var sizeOfFileToSend = new FileInfo(sendFilePath).Length;
-            FileHelper.DeleteFileIfAlreadyExists(receiveFilePath);
+            FileHelper.DeleteFileIfAlreadyExists(receiveFilePath, 3);
             Assert.IsFalse(File.Exists(receiveFilePath));
 
             var sendFileResult =
@@ -717,7 +715,7 @@ namespace TplSocketServerTest
 
             while (!_clientRejectedFileTransfer) { }
 
-            FileHelper.DeleteFileIfAlreadyExists(receivedFilePath);
+            FileHelper.DeleteFileIfAlreadyExists(receivedFilePath, 3);
             Assert.IsFalse(File.Exists(receivedFilePath));
 
             var getFileResult2 =
@@ -951,11 +949,14 @@ namespace TplSocketServerTest
 
         void HandleClientEvent(object sender, ServerEvent serverEvent)
         {
-            var logMessage =
+            var logMessageForConsole =
                 $"(client)\t{DateTime.Now:MM/dd/yyyy HH:mm:ss.fff}\t{serverEvent}";
 
-            Console.WriteLine(logMessage);
-            _clientLogMessages.Add(logMessage);
+            var logMessageForFilee =
+                $"(client)\t{DateTime.Now:MM/dd/yyyy HH:mm:ss.fff}\t{serverEvent.GetLogFileEntry()}";
+
+            Console.WriteLine(logMessageForConsole);
+            _clientLogMessages.Add(logMessageForFilee);
 
             switch (serverEvent.EventType)
             {
@@ -991,7 +992,7 @@ namespace TplSocketServerTest
                     _serverTransferFolderDoesNotExist = true;
                     break;
 
-                case EventType.ReceiveConfirmationMessageComplete:
+                case EventType.RemoteServerConfirmedFileTransferCompleted:
                     _clientReceivedConfirmationMessage = true;
                     break;
 
@@ -1024,7 +1025,7 @@ namespace TplSocketServerTest
                     _clientRejectedFileTransfer = true;
                     break;
 
-                case EventType.ReceiveConfirmationMessageComplete:
+                case EventType.RemoteServerConfirmedFileTransferCompleted:
                     _serverReceivedConfirmationMessage = true;
                     break;
 

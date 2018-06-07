@@ -1,4 +1,6 @@
-﻿namespace ServerConsole.Menus.ServerConfigurationMenuItems
+﻿using AaronLuna.Common.Network;
+
+namespace ServerConsole.Menus.ServerConfigurationMenuItems
 {
     using System;
     using System.Threading.Tasks;
@@ -15,7 +17,7 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"CIDR IP for this LAN * ({_state.Settings.LocalNetworkCidrIp})";
+            ItemText = $"Change CIDR IP for this LAN * ({_state.Settings.LocalNetworkCidrIp})";
         }
 
         public string ItemText { get; set; }
@@ -28,11 +30,9 @@
 
         Result Execute()
         {
-            var cidrIp = SharedFunctions.GetIpAddressFromUser(Resources.Prompt_SetLanCidrIp);
-            var cidrNetworkBitCount = SharedFunctions.GetCidrIpNetworkBitCountFromUser();
-            _state.UserEntryLocalNetworkCidrIp = $"{cidrIp}/{cidrNetworkBitCount}";
-            
+            _state.Settings.LocalNetworkCidrIp = SharedFunctions.InitializeLanCidrIp();
             _state.RestartRequired = true;
+
             return Result.Ok();
         }
     }

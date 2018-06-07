@@ -30,7 +30,7 @@ namespace ServerConsole.Menus.ViewFileTransferEventLogsMenuItems
 
         Result Execute()
         {
-            _state.LogViewerFileTransferId = _state.LocalServer.FileTransfers.Last().Id;
+            _state.LogViewerFileTransferId = _state.LocalServer.NewestTransferId;
 
             return Result.Ok();
         }

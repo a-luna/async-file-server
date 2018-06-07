@@ -21,7 +21,8 @@ namespace TplSockets
         FileTransferComplete                  = 14,
         RetryOutboundFileTransfer             = 15,
         RetryLimitExceeded                    = 16,
-        ShutdownServerCommand                 = 17
+        RetryLockoutExpired                   = 17,
+        ShutdownServerCommand                 = 18
     }
 
     public static class RequestTypeExtensions
@@ -78,6 +79,9 @@ namespace TplSockets
                 case RequestType.RetryLimitExceeded:
                     return "RETRY LIMIT EXCEEDED";
 
+                case RequestType.RetryLockoutExpired:
+                    return "RETRY LOCKOUT EXPIRED";
+
                 case RequestType.RequestedFileDoesNotExist:
                     return "REQUESTED FILE DOES NOT EXIST";
 
@@ -108,6 +112,7 @@ namespace TplSockets
                 case RequestType.RetryOutboundFileTransfer:
                 case RequestType.FileTransferComplete:
                 case RequestType.RetryLimitExceeded:
+                case RequestType.RetryLockoutExpired:
                 case RequestType.RequestedFileDoesNotExist:
                 case RequestType.ShutdownServerCommand:
                     return true;

@@ -5,6 +5,7 @@
     using System.Globalization;
     using System.IO;
     using System.Net;
+    using System.Xml;
     using System.Xml.Serialization;
 
     using AaronLuna.Common.Network;
@@ -13,7 +14,6 @@
     public class ServerSettings
     {
         float _transferUpdateInterval;
-        TimeSpan _retryLimitLockout;
 
         public ServerSettings()
         {
@@ -31,11 +31,10 @@
         }
 
         [XmlIgnore]
-        public TimeSpan RetryLimitLockout
-        {
-            get => _retryLimitLockout;
-            set => _retryLimitLockout = value;
-        }
+        public TimeSpan RetryLimitLockout { get; set; }
+
+        [XmlIgnore]
+        public TimeSpan FileTransferStalledTimeout { get; set; }
 
         [XmlElement("TransferUpdateInterval")]
         public string CustomFileTransferUpdateInterval
@@ -44,11 +43,22 @@
             set => float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _transferUpdateInterval);
         }
 
-        [XmlElement("RetryLimitLockout")]
-        public double CUstomRetryLimitLockout
+        [XmlElement(DataType = "duration", ElementName = "RetryLimitLockoutInMinutes")]
+        public string CustomRetryLimitLockout
         {
-            get => RetryLimitLockout.TotalMinutes;
-            set => _retryLimitLockout = TimeSpan.FromMinutes(value);
+            get => XmlConvert.ToString(RetryLimitLockout);
+            set => RetryLimitLockout = string.IsNullOrEmpty(value)
+                ? TimeSpan.FromMinutes(10)
+                : XmlConvert.ToTimeSpan(value);
+        }
+
+        [XmlElement(DataType = "duration", ElementName = "FileTransferStalledTimeoutInSeconds")]
+        public string CustomFileTransferStalledTimeout
+        {
+            get => XmlConvert.ToString(FileTransferStalledTimeout);
+            set => FileTransferStalledTimeout = string.IsNullOrEmpty(value)
+                ? TimeSpan.FromSeconds(5)
+                : XmlConvert.ToTimeSpan(value);
         }
 
         public int TransferRetryLimit { get; set; }

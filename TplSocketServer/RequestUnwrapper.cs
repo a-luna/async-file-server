@@ -32,8 +32,9 @@
 
         public static (
             long responseCode,
-            FileTransferInitiator initiator,
             int transferid,
+            int retryCounter,
+            int retryLimit,
             string filePath,
             long fileSizeInBytes,
             string remoteIpAddress,
@@ -42,32 +43,42 @@
         {
             var responseCodeLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes);
             var responseCode = BitConverter.ToInt64(requestData, SizeOfInt32InBytes * 2);
+
+            var transferIdLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 2 + responseCodeLen);
+            var transferId = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 3 + responseCodeLen);
+
+            var retryCounterLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 3 + responseCodeLen + transferIdLen);
+            var retryCounter = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 4 + responseCodeLen + transferIdLen);
+
+            var retryLimitLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 4 + responseCodeLen + transferIdLen + retryCounterLen);
+            var retryLimit = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 5 + responseCodeLen + transferIdLen + retryCounterLen);
             
-            var transferInitiatorLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 2 + responseCodeLen);
-            var transferInitiatorData = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 3 + responseCodeLen).ToString();
-            var transferInitiator = (FileTransferInitiator)Enum.Parse(typeof(FileTransferInitiator), transferInitiatorData);
+            var fileNameLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 5 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen);
+            var fileName = Encoding.UTF8.GetString(requestData, SizeOfInt32InBytes * 6 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen, fileNameLen);
 
-            var transferIdLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 3 + responseCodeLen + transferInitiatorLen);
-            var transferId = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 4 + responseCodeLen + transferInitiatorLen);
+            var fileSizeLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 6 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen);
+            var fileSize = BitConverter.ToInt64(requestData, SizeOfInt32InBytes * 7 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen);
 
-            var fileNameLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 4 + responseCodeLen + transferInitiatorLen + transferIdLen);
-            var fileName = Encoding.UTF8.GetString(requestData, SizeOfInt32InBytes * 5 + responseCodeLen + transferInitiatorLen + transferIdLen, fileNameLen);
+            var remoteIpLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 7 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen);
+            var remoteIpAddress = Encoding.UTF8.GetString(requestData, SizeOfInt32InBytes * 8 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen, remoteIpLen);
 
-            var fileSizeLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 5 + responseCodeLen + transferInitiatorLen + transferIdLen + fileNameLen);
-            var fileSize = BitConverter.ToInt64(requestData, SizeOfInt32InBytes * 6 + responseCodeLen + transferInitiatorLen + transferIdLen + fileNameLen);
+            var remotePortLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 8 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen + remoteIpLen);
+            var remotePort = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 9 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen + remoteIpLen);
 
-            var remoteIpLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 6 + responseCodeLen + transferInitiatorLen + transferIdLen + fileNameLen + fileSizeLen);
-            var remoteIpAddress = Encoding.UTF8.GetString(requestData, SizeOfInt32InBytes * 7 + responseCodeLen + transferInitiatorLen + transferIdLen + fileNameLen + fileSizeLen, remoteIpLen);
-
-            var remotePortLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 7 + responseCodeLen + transferInitiatorLen + transferIdLen + fileNameLen + fileSizeLen + remoteIpLen);
-            var remotePort = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 8 + responseCodeLen + transferInitiatorLen + transferIdLen + fileNameLen + fileSizeLen + remoteIpLen);
-
-            var targetFolderLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 8 + responseCodeLen + transferInitiatorLen + transferIdLen + fileNameLen + fileSizeLen + remoteIpLen + remotePortLen);
-            var targerFolder = Encoding.UTF8.GetString( requestData, SizeOfInt32InBytes * 9 + responseCodeLen + transferInitiatorLen + transferIdLen + fileNameLen + fileSizeLen + remoteIpLen + remotePortLen, targetFolderLen);
+            var targetFolderLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 9 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen + remoteIpLen + remotePortLen);
+            var targerFolder = Encoding.UTF8.GetString( requestData, SizeOfInt32InBytes * 10 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen + remoteIpLen + remotePortLen, targetFolderLen);
 
             var localFilePath = Path.Combine(targerFolder, fileName);
 
-            return (responseCode, transferInitiator, transferId, localFilePath, fileSize, remoteIpAddress, remotePort);
+            return (
+                responseCode,
+                transferId,
+                retryCounter,
+                retryLimit,
+                localFilePath,
+                fileSize,
+                remoteIpAddress,
+                remotePort);
         }
 
         public static (
@@ -164,19 +175,7 @@
 
             return (remoteIp, remotePort);
         }
-
-        public static (string remoteIpAddress, int remotePortNumber, int remoteServerTransferId, long responseCode)
-            ReadRetryFileTransferRequest(byte[] requestData)
-        {
-            var remoteIpAddressLen = BitConverter.ToInt32(requestData, SizeOfInt32InBytes);
-            var remoteIp = Encoding.UTF8.GetString(requestData, SizeOfInt32InBytes * 2, remoteIpAddressLen);
-            var remotePort = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 3 + remoteIpAddressLen);
-            var remoteServerTransferId = BitConverter.ToInt32(requestData, SizeOfInt32InBytes * 5 + remoteIpAddressLen);
-            var responseCode = BitConverter.ToInt64(requestData, SizeOfInt32InBytes * 7 + remoteIpAddressLen);
-
-            return (remoteIp, remotePort, remoteServerTransferId, responseCode);
-        }
-
+        
         public static (
             string remoteIpAddress,
             int remotePortNumber,

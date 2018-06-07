@@ -15,7 +15,7 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Local server port number * ({_state.Settings.LocalServerPortNumber})";
+            ItemText = $"Change local server port number * ({_state.Settings.LocalServerPortNumber})";
         }
 
         public string ItemText { get; set; }

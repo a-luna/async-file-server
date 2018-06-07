@@ -36,6 +36,8 @@
         SendTextMessageComplete,
         ReceivedTextMessage,
 
+        FileTransferStatusChange,
+
         RequestOutboundFileTransferStarted,
         RequestOutboundFileTransferComplete,
         ReceivedOutboundFileTransferRequest,
@@ -43,6 +45,8 @@
         SendFileBytesStarted,
         SentFileChunkToClient,
         SendFileBytesComplete,
+
+        MultipleFileWriteAttemptsNeeded,
 
         RequestInboundFileTransferStarted,
         RequestInboundFileTransferComplete,
@@ -76,11 +80,6 @@
         SendRetryLimitExceededStarted,
         SendRetryLimitExceededCompleted,
         ReceiveRetryLimitExceeded,
-
-        SendConfirmationMessageStarted,
-        SendConfirmationMessageComplete,
-        ReceiveConfirmationMessageStarted,
-        ReceiveConfirmationMessageComplete,
         
         RequestFileListStarted,
         RequestFileListComplete,
@@ -105,8 +104,6 @@
         ShutdownListenSocketStarted,
         ShutdownListenSocketCompletedWithoutError,
         ShutdownListenSocketCompletedWithError,
-        ShutdownTransferSocketStarted,
-        ShutdownTransferSocketComplete,
 
         SendShutdownServerCommandStarted,
         SendShutdownServerCommandComplete,

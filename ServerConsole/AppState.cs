@@ -55,6 +55,7 @@
         public TplSocketServer LocalServer { get; set; }
         public string IncomingFileName => Path.GetFileName(LocalServer.IncomingFilePath);
         public List<(string filePath, long fileSize)> RemoteServerFileList => LocalServer.RemoteServerFileList;
+        public string ErrorMessage { get; set; }
 
         public FileTransferProgressBar ProgressBar { get; set; }
         public int RetryCounter { get; set; }
@@ -79,8 +80,7 @@
 
         public string ReportItemsInQueue()
         {
-            return $"Requests in queue: {LocalServer.RequestQueue.Count}{Environment.NewLine}" +
-                   $"Total requests processed: {LocalServer.RequestArchive.Count}{Environment.NewLine}";
+            return $"Requests in queue: {LocalServer.RequestsInQueue}{Environment.NewLine}";
         }
 
         public string ReportRemoteServerConnectionInfo()

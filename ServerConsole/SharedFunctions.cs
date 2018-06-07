@@ -40,6 +40,28 @@
             return menuItems[userSelection - 1];
         }
 
+        public static string InitializeLanCidrIp()
+        {
+            var cidrIpResult = NetworkUtilities.AttemptToDetermineLanCidrIp();
+            if (cidrIpResult.Failure)
+            {
+                return GetCidrIpFromUser();
+            }
+
+            var cidrIp = cidrIpResult.Value;
+            var prompt = "Found a single IPv4 address assiciated with the only ethernet adapter " +
+                         $"on this machine, is it ok to use {cidrIp} as the CIDR IP?";
+
+            return PromptUserYesOrNo(prompt) ? cidrIp : GetCidrIpFromUser();
+        }
+
+        public static string GetCidrIpFromUser()
+        {
+            var cidrIp = SharedFunctions.GetIpAddressFromUser(Resources.Prompt_SetLanCidrIp);
+            var cidrNetworkBitCount = SharedFunctions.GetCidrIpNetworkBitCountFromUser();
+            return $"{cidrIp}/{cidrNetworkBitCount}";
+        }
+
         public static int GetCidrIpNetworkBitCountFromUser()
         {
             const string prompt = "Enter the number of bits used to identify the network portion " +

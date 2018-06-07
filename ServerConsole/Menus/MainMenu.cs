@@ -1,7 +1,4 @@
-﻿using System.Linq;
-using ServerConsole.Menus.ViewRequestQueueMenuItems;
-
-namespace ServerConsole.Menus
+﻿namespace ServerConsole.Menus
 {
     using System;
     using System.Collections.Generic;
@@ -66,22 +63,6 @@ namespace ServerConsole.Menus
                     continue;
                 }
 
-                if (_state.ErrorOccurred)
-                {
-                    var shutdown = SharedFunctions.PromptUserYesOrNo("Shutdown server?");
-                    if (shutdown)
-                    {
-                        await _shutdownServer.ExecuteAsync();
-                        exit = true;
-                    }
-                    else
-                    {
-                        _state.ErrorOccurred = false;
-                    }
-
-                    continue;
-                }
-
                 _state.DisplayCurrentStatus();
                 PopulateMenu();
                 
@@ -90,14 +71,11 @@ namespace ServerConsole.Menus
                 exit = menuItem.ReturnToParent;
 
                 if (result.Success) continue;
-                _log.Error($"Error: {result.Error}");
-                Console.WriteLine($"{Environment.NewLine}Error: {result.Error}");
-                await Task.Delay(_state.MessageDisplayTime);
-            }
 
-            if (!_state.ProgressBarInstantiated) return result;
-            _state.ProgressBar.Dispose();
-            _state.ProgressBarInstantiated = false;
+                Console.WriteLine($"{Environment.NewLine}Error: {result.Error}");
+                Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
+                Console.ReadLine();
+            }
 
             return result;
         }
@@ -105,9 +83,9 @@ namespace ServerConsole.Menus
         public void PopulateMenu()
         {
             MenuItems.Clear();
-            if (_state.LocalServer.RequestQueue.Count > 0)
+            if (!_state.LocalServer.QueueIsEmpty)
             {
-                var oldestRequest = _state.LocalServer.RequestQueue.First();
+                var oldestRequest = _state.LocalServer.OldestRequestInQueue;
                 MenuItems.Add(new ProcessSelectedRequestMenuItem(_state, oldestRequest, true));
             }
             
@@ -118,17 +96,12 @@ namespace ServerConsole.Menus
                 MenuItems.Add(new SelectFileMenu(_state, false));
             }
 
-            if (_state.LocalServer.StalledTransfers.Count > 0)
+            if (_state.LocalServer.StalledTransfersIds.Count > 0)
             {
                 MenuItems.Add(new RetryStalledFileTransferMenu(_state));
             }
 
-            if (_state.LocalServer.RequestQueue.Count > 1)
-            {
-                MenuItems.Add(new ViewRequestQueueMenu(_state));
-            }
-
-            if (_state.LocalServer.FileTransfers.Count > 0)
+            if (!_state.LocalServer.NoFileTransfers)
             {
                 MenuItems.Add(new ViewFileTransferEventLogsMenu(_state));
             }

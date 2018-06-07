@@ -17,6 +17,7 @@
     {
         readonly AppState _state;
         readonly bool _sendFile;
+        bool _fileListResponseTimeout;
 
         public SelectFileMenu(AppState state, bool sendFile)
         {
@@ -143,6 +144,7 @@
             _state.WaitingForFileListResponse = true;
             _state.NoFilesAvailableForDownload = false;
             _state.RequestedFolderDoesNotExist = false;
+            _fileListResponseTimeout = false;
 
             var requestFileListResult =
                 await _state.LocalServer.RequestFileListAsync(
@@ -156,7 +158,11 @@
                 return Result.Fail<FileInfoList>(requestFileListResult.Error);
             }
 
-            while (_state.WaitingForFileListResponse) { }
+            var timeoutTask = Task.Run(FileListResponseTimeoutTask);
+            while (_state.WaitingForFileListResponse)
+            {
+                if (_fileListResponseTimeout) break;
+            }
 
             if (_state.NoFilesAvailableForDownload)
             {
@@ -169,6 +175,12 @@
             }
 
             return Result.Ok(_state.LocalServer.RemoteServerFileList);
+        }
+
+        async Task FileListResponseTimeoutTask()
+        {
+            await Task.Delay(Constants.OneSecondInMilliseconds);
+            _fileListResponseTimeout = true;
         }
     }
 }

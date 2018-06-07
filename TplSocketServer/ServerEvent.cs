@@ -36,9 +36,10 @@
         public FileInfoList RemoteServerFileList { get; set; }
 
         public int FileTransferId { get; set; }
+        public FileTransferStatus FileTransferStatusCurrent { get; set; }
+        public FileTransferStatus FileTransferStatusPrevious { get; set; }
         public int RetryCounter { get; set; }
-        public int RetryLimit { get; set; }
-        public bool RetryLimitExceeded { get; set; }
+        public int RemoteServerRetryLimit { get; set; }
         public string LocalFolder { get; set; }
         public string RemoteFolder { get; set; }
         public string FileName { get; set; }
@@ -47,6 +48,7 @@
         public DateTime FileTransferStartTime { get; set; }
         public DateTime FileTransferCompleteTime { get; set; }
         public DateTime RetryLockoutExpireTime { get; set; }
+        public string RetryLockoutTimeRemianing => (RetryLockoutExpireTime - DateTime.Now).ToFormattedString();
         public TimeSpan FileTransferTimeSpan => FileTransferCompleteTime - FileTransferStartTime;
         public string FileTransferElapsedTimeString => FileTransferTimeSpan.ToFormattedString();
         public string FileTransferRate => FileTransfer.GetTransferRate(FileTransferTimeSpan, FileSizeInBytes);
@@ -57,18 +59,27 @@
         public int SocketReadCount { get;set; }
         public int SocketSendCount { get; set; }
         public int FileChunkSentCount { get; set; }
+        public int FileWriteAttempts { get; set; }
         public float PercentComplete { get; set; }
         public string ConfirmationMessage { get; set; }
         public string ErrorMessage { get; set; }
 
-        public override string ToString()
+        public string GetLogFileEntry()
         {
-            return Report();
+            return Report(false);
         }
 
-        string Report()
+        public override string ToString()
         {
-            const string indentLevel1 = "\t\t\t\t\t\t\t\t\t\t";
+            return Report(true);
+        }
+
+        string Report(bool logToScreen)
+        {
+            var indentLevel1 = logToScreen
+                ? string.Empty
+                : "\t\t\t\t\t\t\t\t\t\t";
+
             var report = string.Empty;
             switch (EventType)
             {
@@ -190,8 +201,7 @@
                     break;
 
                 case EventType.RequestServerInfoStarted:
-                    report +=
-                        $"Sending request for server connection info to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+                    report += $"Sending request for server connection info to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 
                 case EventType.RequestServerInfoComplete:
@@ -208,14 +218,17 @@
                     break;
 
                 case EventType.SendServerInfoStarted:
-                    report +=
-                        $"Sending server connection info to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}";
+                    report += $"Sending server connection info to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}";
                     break;
 
                 case EventType.SendServerInfoComplete:
                     report += "Server connection info was successfully sent";
                     break;
-                    
+
+                case EventType.ReceivedServerInfo:
+                    report += $"Received server connection info from {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}";
+                    break;
+
                 case EventType.RequestFileListStarted:
                     report +=
                         $"Sending request for available file information to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
@@ -256,8 +269,8 @@
                     report +=
                         $"File transfer request details{Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}File Sender:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
-                        $"{indentLevel1}File Name:\t\t{FileName}{Environment.NewLine}" +
-                        $"{indentLevel1}File Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
+                        $"{indentLevel1}File Name:\t{FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size:\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
                         $"{indentLevel1}Target Folder:\t{LocalFolder}{Environment.NewLine}";
                     break;
 
@@ -287,13 +300,16 @@
                 case EventType.SendFileTransferAcceptedComplete:
                 case EventType.SendFileTransferRejectedComplete:
                 case EventType.SendFileTransferStalledComplete:
+                case EventType.SendFileTransferCompletedCompleted:
+                case EventType.SendRetryLimitExceededCompleted:
                 case EventType.SendNotificationNoFilesToDownloadComplete:
                 case EventType.SendNotificationFolderDoesNotExistComplete:
-                    report += "Notification was successfully sent";
+                case EventType.SendNotificationFileDoesNotExistComplete:
+                    report += $"Notification was successfully sent{Environment.NewLine}";
                     break;
 
                 case EventType.RemoteServerAcceptedFileTransfer:
-                    report += $"Outbound file transfer accepted by {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+                    report += $"File transfer accepted by {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 
                 case EventType.SendFileTransferRejectedStarted:
@@ -303,7 +319,7 @@
                     break;
 
                 case EventType.RemoteServerRejectedFileTransfer:
-                    report += $"Outbound file transfer rejected by {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+                    report += $"File transfer rejected by {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 
                 case EventType.SendFileBytesStarted:
@@ -345,6 +361,11 @@
                         $"{indentLevel1}Bytes Remaining:\t\t{FileBytesRemaining:N0}{Environment.NewLine}";
                     break;
 
+                case EventType.MultipleFileWriteAttemptsNeeded:
+                    report += 
+                        $"Last file chunk needed {FileWriteAttempts} attempts to write to disk successfully ({PercentComplete:P2} Complete)";
+                    break;
+
                 case EventType.UpdateFileTransferProgress:
                     report += $"File Transfer Progress Update: {PercentComplete:P2} Complete";
                     break;
@@ -352,26 +373,10 @@
                 case EventType.ReceiveFileBytesComplete:
                     report +=
                         $"Successfully received file from {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}Download Started:\t{FileTransferStartTime:MM/dd/yyyy HH:mm:ss.fff}{Environment.NewLine}" +
-                        $"{indentLevel1}Download Finished:\t{FileTransferCompleteTime:MM/dd/yyyy HH:mm:ss.fff}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Started:\t{FileTransferStartTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Finished:\t{FileTransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
                         $"{indentLevel1}Elapsed Time:\t\t{FileTransferElapsedTimeString}{Environment.NewLine}" +
                         $"{indentLevel1}Transfer Rate:\t\t{FileTransferRate}{Environment.NewLine}";
-                    break;
-
-                case EventType.SendConfirmationMessageStarted:
-                    report += $"Sending confirmation message to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
-                    break;
-
-                case EventType.SendConfirmationMessageComplete:
-                    report += "Confirmation message was successfully sent";
-                    break;
-
-                case EventType.ReceiveConfirmationMessageStarted:
-                    report += $"Waiting for {RemoteServerIpAddress}:{RemoteServerPortNumber} to confirm file transfer was successful";
-                    break;
-
-                case EventType.ReceiveConfirmationMessageComplete:
-                    report += $"{RemoteServerIpAddress}:{RemoteServerPortNumber} confirmed file transfer was successful";
                     break;
 
                 case EventType.SendFileTransferStalledStarted:
@@ -417,6 +422,50 @@
                 case EventType.ErrorOccurred:
                     report += $"Error Occurred!{Environment.NewLine}{Environment.NewLine}\t{ErrorMessage}{Environment.NewLine}";
                     break;
+
+                case EventType.FileTransferStatusChange:
+                    report += $"File transfer status is now {FileTransferStatusCurrent} (previous status was {FileTransferStatusPrevious})";
+                    break;
+
+                case EventType.SendFileTransferCompletedStarted:
+                    report += $"Notifying {RemoteServerIpAddress}:{RemoteServerPortNumber} that the file transfer was received successfully";
+                    break;
+
+                case EventType.RemoteServerConfirmedFileTransferCompleted:
+                    report += 
+                        $"{RemoteServerIpAddress}:{RemoteServerPortNumber} confirmed that the file transfer was received successfully";
+                    break;
+
+                case EventType.SendRetryLimitExceededStarted:
+                    report +=
+                        $"Notifying {RemoteServerIpAddress}:{RemoteServerPortNumber} that \"{FileName}\" cannot be downloaded due to repeated failed attempts:{Environment.NewLine}{Environment.NewLine}" +
+                        $"{indentLevel1}File Name: {FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Attempts: {RetryCounter}{Environment.NewLine}" +
+                        $"{indentLevel1}Max Attempts Allowed: {RemoteServerRetryLimit}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Lockout Expires: {FileTransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                        $"{indentLevel1}Remaining Lockout Time: {RetryLockoutTimeRemianing}{Environment.NewLine}";
+                    break;
+
+                case EventType.ReceiveRetryLimitExceeded:
+                    report +=
+                        "Maximum # of attempts to complete stalled file transfer reached or exceeded: " +
+                        $"{indentLevel1}File Name: {FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Attempts: {RetryCounter}{Environment.NewLine}" +
+                        $"{indentLevel1}Max Attempts Allowed: {RemoteServerRetryLimit}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Lockout Expires: {FileTransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                        $"{indentLevel1}Remaining Lockout Time: {RetryLockoutTimeRemianing}{Environment.NewLine}";
+                    break;
+
+                case EventType.SendNotificationFileDoesNotExistStarted:
+                    report += $"Notifying {RemoteServerIpAddress}:{RemoteServerPortNumber} that the requested file does not exist";
+                    break;
+
+                case EventType.ReceivedNotificationFileDoesNotExist:
+                    report += $"Received notification from {RemoteServerIpAddress}:{RemoteServerPortNumber} that the requested file does not exist";
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
 
             return report;

@@ -1,4 +1,4 @@
-﻿namespace ServerConsole.Menus.ViewRequestQueueMenuItems
+﻿namespace ServerConsole.Menus.MainMenuItems
 {
     using System;
     using System.Threading.Tasks;

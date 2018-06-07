@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Threading.Tasks;
 
     using AaronLuna.Common.Console.Menu;
@@ -70,7 +69,7 @@
 
         bool RestoreEventLogsIfPreviouslyCleared()
         {
-            if (_state.LocalServer.FileTransfers.Count == 0)
+            if (_state.LocalServer.NoFileTransfers)
             {
                 Console.WriteLine("There are no file transfer event logs available");
                 Console.WriteLine($"{Environment.NewLine}Press enter to return to the previous menu.");
@@ -79,7 +78,7 @@
                 return false;
             }
 
-            var lastTransferId = _state.LocalServer.FileTransfers.Last().Id;
+            var lastTransferId = _state.LocalServer.NewestTransferId;
             if (lastTransferId > _state.LogViewerFileTransferId) return true;
 
             const string prompt =
@@ -100,9 +99,11 @@
         {
             MenuItems.Clear();
 
-            foreach (var fileTransfer in _state.LocalServer.FileTransfers)
+            foreach (var id in _state.LocalServer.FileTransferIds)
             {
-                if (fileTransfer.Id <= _state.LogViewerFileTransferId) continue;
+                if (id <= _state.LogViewerFileTransferId) continue;
+
+                var fileTransfer = _state.LocalServer.GetFileTransferById(id).Value;
                 MenuItems.Add(new GetFileTransferEventLogsMenuItem(fileTransfer));
             }
 
