@@ -1,4 +1,6 @@
-﻿namespace TplSockets
+﻿using System.Net.Sockets;
+
+namespace TplSockets
 {
     using System;
     using System.Collections.Generic;
@@ -36,7 +38,10 @@
             RemoteServerTransferId = 0;
             TransferResponseCode = 0;
         }
-        
+
+        public Socket ReceiveSocket { get; set; }
+        public Socket SendSocket { get; set; }
+
         public int Id { get; set; }
         public int RemoteServerTransferId { get; set; }
         public long TransferResponseCode { get; set; }
@@ -161,7 +166,7 @@
                 ? $"   Lockout expires:   {RetryLockoutExpireTime:MM/dd/yyyy hh:mm:ss.fff tt}"
                 : transferTime;
 
-            var summaryNotStarted = fileName + Environment.NewLine + fileSize + Environment.NewLine + remoteServerInfo + Environment.NewLine + requestTime + Environment.NewLine + lockoutExpireTime + Environment.NewLine;
+            var summaryNotStarted = fileName + Environment.NewLine + fileSize + Environment.NewLine + Environment.NewLine + remoteServerInfo + Environment.NewLine + requestTime + Environment.NewLine + lockoutExpireTime + Environment.NewLine;
             var summaryStarted = transferStatus + Environment.NewLine + "   " + summaryNotStarted;
 
             return Status == FileTransferStatus.AwaitingResponse
@@ -200,51 +205,51 @@
                 : string.Empty;
 
             var retryLockout = string.Empty;
-            retryLockout += $"Retry Limit Exceeded:\t{transferLimitExceeded}{Environment.NewLine}";
-            retryLockout += $"Retry Lockout Expires:\t{lockoutExpireTime}{Environment.NewLine}{Environment.NewLine}";
+            retryLockout += $" Retry Limit Exceeded...: {transferLimitExceeded}{Environment.NewLine}";
+            retryLockout += $" Retry Lockout Expires..: {lockoutExpireTime}{Environment.NewLine}";
 
             var details = string.Empty;
-            details += $"ID:\t\t\t{Id}{Environment.NewLine}";
-            details += $"Remote Server ID:\t{RemoteServerTransferId}{Environment.NewLine}";
-            details += $"Response Code:\t\t{TransferResponseCode}{Environment.NewLine}";
-            details += $"Initiator:\t\t{Initiator}{Environment.NewLine}";
-            details += $"Direction:\t\t{TransferDirection}{Environment.NewLine}";
-            details += $"Status:\t\t\t{Status}{Environment.NewLine}{Environment.NewLine}";
-            
-            details += $"File Name:\t\t{FileName}{Environment.NewLine}";
-            details += $"File Size:\t\t{FileSizeString} ({FileSizeInBytes:N0} bytes){Environment.NewLine}";
-            details += $"Local Folder:\t\t{LocalFolderPath}{Environment.NewLine}";
-            details += $"Remote Folder:\t\t{RemoteFolderPath}{Environment.NewLine}{Environment.NewLine}";
-            
-            details += $"Request Initiated:\t{requestInitiated}{Environment.NewLine}";
-            details += $"Transfer Started:\t{transferStarted}{Environment.NewLine}";
-            details += $"Transfer Completed:\t{transferComplete}{Environment.NewLine}";
-            details += $"Transfer Time Elapsed:\t{timeElapsed}{Environment.NewLine}";
-            details += $"Transfer Rate:\t\t{TransferRate}{Environment.NewLine}{Environment.NewLine}";
+            details += $" ID.....................: {Id}{Environment.NewLine}";
+            details += $" Remote Server ID.......: {RemoteServerTransferId}{Environment.NewLine}";
+            details += $" Response Code..........: {TransferResponseCode}{Environment.NewLine}";
+            details += $" Initiator..............: {Initiator}{Environment.NewLine}";
+            details += $" Direction..............: {TransferDirection}{Environment.NewLine}";
+            details += $" Status.................: {Status}{Environment.NewLine}{Environment.NewLine}";
 
-            details += $"Percent Complete:\t{PercentComplete:P2}{Environment.NewLine}";
+            details += $" File Name..............: {FileName}{Environment.NewLine}";
+            details += $" File Size..............: {FileSizeString} ({FileSizeInBytes:N0} bytes){Environment.NewLine}";
+            details += $" Local Folder...........: {LocalFolderPath}{Environment.NewLine}";
+            details += $" Remote Folder..........: {RemoteFolderPath}{Environment.NewLine}{Environment.NewLine}";
+            
+            details += $" Request Initiated......: {requestInitiated}{Environment.NewLine}";
+            details += $" Transfer Started.......: {transferStarted}{Environment.NewLine}";
+            details += $" Transfer Completed.....: {transferComplete}{Environment.NewLine}";
+            details += $" Transfer Time Elapsed..: {timeElapsed}{Environment.NewLine}";
+            details += $" Transfer Rate..........: {TransferRate}{Environment.NewLine}{Environment.NewLine}";
+
+            details += $" Percent Complete.......: {PercentComplete:P2}{Environment.NewLine}";
 
             var bytesReceived = string.Empty;
-            bytesReceived += $"Total Bytes Received:\t{TotalBytesReceived}{Environment.NewLine}";
-            bytesReceived += $"Current Bytes Received:\t{CurrentBytesReceived}{Environment.NewLine}";
-            bytesReceived += $"Bytes Remaining:\t{BytesRemaining}{Environment.NewLine}{Environment.NewLine}";
+            bytesReceived += $" Total Bytes Received...: {TotalBytesReceived:N0}{Environment.NewLine}";
+            bytesReceived += $" Current Bytes Received : {CurrentBytesReceived:N0}{Environment.NewLine}";
+            bytesReceived += $" Bytes Remaining........: {BytesRemaining:N0}{Environment.NewLine}{Environment.NewLine}";
 
             var bytesSent = string.Empty;
-            bytesSent += $"File Chunks Sent:\t{FileChunkSentCount}{Environment.NewLine}";
-            bytesSent += $"Current Bytes Sent:\t{CurrentBytesSent}{Environment.NewLine}";
-            bytesSent += $"Bytes Remaining:\t{BytesRemaining}{Environment.NewLine}{Environment.NewLine}";
+            bytesSent += $" File Chunks Sent.......: {FileChunkSentCount:N0}{Environment.NewLine}";
+            bytesSent += $" Current Bytes Sent.....: {CurrentBytesSent:N0}{Environment.NewLine}";
+            bytesSent += $" Bytes Remaining........: {BytesRemaining:N0}{Environment.NewLine}{Environment.NewLine}";
 
             details += TransferDirection == FileTransferDirection.Inbound
                 ? bytesReceived
                 : bytesSent;
 
-            details += $"Transfer Attempt #:\t{RetryCounter}{Environment.NewLine}";
+            details += $" Transfer Attempt #.....: {RetryCounter}{Environment.NewLine}";
 
             details += string.IsNullOrEmpty(ErrorMessage)
                 ? string.Empty
-                : $"Error Message:\t{ErrorMessage}{Environment.NewLine}";
+                : $" Error Message..........: {ErrorMessage}{Environment.NewLine}";
 
-            details += $"Max Download Attempts:\t{RemoteServerRetryLimit}{Environment.NewLine}";
+            details += $" Max Download Attempts..: {RemoteServerRetryLimit}{Environment.NewLine}";
 
             details += RetryLockoutExpireTime != DateTime.MinValue
                 ? retryLockout

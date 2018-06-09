@@ -1,4 +1,6 @@
-﻿namespace ServerConsole.Menus
+﻿using ServerConsole.Menus.ServerConfigurationMenus;
+
+namespace ServerConsole.Menus
 {
     using System.Collections.Generic;
     using System.Threading.Tasks;
@@ -21,32 +23,26 @@
             ReturnToParent = false;
             ItemText = "Server configuration";
             MenuText = Resources.Menu_ChangeSettings;
-            MenuItems = new List<IMenuItem>();
 
-            MenuItems.Add(new SetMyPortNumberMenuItem(state));
-            MenuItems.Add(new SetMyCidrIpMenuItem(state));
-            MenuItems.Add(new DisplayLocalIPv4AddressesMenuItemcs());
-            MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));
+            MenuItems = new List<IMenuItem>
+            {
+                new SetMyPortNumberMenuItem(state),
+                new SetMyCidrIpMenuItem(state),
+                new DisplayLocalIPv4AddressesMenuItemcs(),
+
+                new SetSocketBufferSizeMenu(state),
+                new SetSocketListenBacklogSize(state),
+                new SetSocketTimeoutMenu(state),
+
+                new ReturnToParentMenuItem("Return to main menu")
+            };
         }
 
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
-
-        public Task<Result> DisplayMenuAsync()
-        {
-            return Task.Run(() => DisplayMenu());
-        }
-
-        public Result DisplayMenu()
-        {
-            _state.DisplayCurrentStatus();
-            Menu.DisplayMenu(MenuText, MenuItems);
-
-            return Result.Ok();
-        }
-
+        
         public async Task<Result> ExecuteAsync()
         {
             _state.DoNotRefreshMainMenu = true;
@@ -81,6 +77,11 @@
             _state.Settings.LocalNetworkCidrIp = _state.UserEntryLocalNetworkCidrIp;
 
             ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
+        }
+
+        void CreateSocketSettingsMenuItems()
+        {
+
         }
     }
 }

@@ -80,7 +80,7 @@
 
         public string ReportItemsInQueue()
         {
-            return $"Requests in queue: {LocalServer.RequestsInQueue}{Environment.NewLine}";
+            return $"Requests in queue: {LocalServer.RequestsInQueue}";
         }
 
         public string ReportRemoteServerConnectionInfo()

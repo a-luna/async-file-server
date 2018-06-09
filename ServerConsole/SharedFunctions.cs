@@ -13,7 +13,7 @@
 
     static class SharedFunctions
     {
-        public static async Task<IMenuItem> GetUserSelectionAsync(
+        public static async Task<int> GetUserSelectionIndexAsync(
             string menuText,
             List<IMenuItem> menuItems,
             AppState state)
@@ -37,6 +37,15 @@
                 userSelection = validationResult.Value;
             }
 
+            return userSelection;
+        }
+
+        public static async Task<IMenuItem> GetUserSelectionAsync(
+            string menuText,
+            List<IMenuItem> menuItems,
+            AppState state)
+        {
+            var userSelection = await GetUserSelectionIndexAsync(menuText, menuItems, state);
             return menuItems[userSelection - 1];
         }
 

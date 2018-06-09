@@ -31,13 +31,8 @@
         public bool ReturnToParent { get; set; }
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
-
-        public Task<Result> DisplayMenuAsync()
-        {
-            return Task.Run((Func<Result>) DisplayMenu);
-        }
-
-        Result DisplayMenu()
+        
+        public Result DisplayMenu()
         {
             if (_state.DoNotRefreshMainMenu) return Result.Ok();
             _state.DisplayCurrentStatus();

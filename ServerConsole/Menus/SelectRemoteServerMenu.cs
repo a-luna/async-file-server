@@ -26,21 +26,7 @@
         public bool ReturnToParent { get; set; }
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
-
-        public Task<Result> DisplayMenuAsync()
-        {
-            return Task.Run(() => DisplayMenu());
-        }
-
-        public Result DisplayMenu()
-        {
-            _state.DisplayCurrentStatus();
-            PopulateMenu();
-
-            Menu.DisplayMenu(MenuText, MenuItems);
-            return Result.Ok();
-        }
-
+        
         public async Task<Result> ExecuteAsync()
         {
             _state.DoNotRefreshMainMenu = true;

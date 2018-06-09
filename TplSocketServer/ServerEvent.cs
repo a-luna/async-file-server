@@ -277,8 +277,8 @@
                 case EventType.RequestOutboundFileTransferStarted:
                     report +=
                         $"Sending outbound file transfer request to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}File Name:\t\t{FileName}{Environment.NewLine}" +
-                        $"{indentLevel1}File Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
+                        $"{indentLevel1}File Name:\t{FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size:\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
                         $"{indentLevel1}File Location:\t{LocalFolder}{Environment.NewLine}" +
                         $"{indentLevel1}Target Folder:\t{RemoteFolder}{Environment.NewLine}";
                     break;
@@ -287,8 +287,8 @@
                     report +=
                         $"File transfer request details{Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}Send File To:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
-                        $"{indentLevel1}File Name:\t\t{FileName}{Environment.NewLine}" +
-                        $"{indentLevel1}File Size:\t\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
+                        $"{indentLevel1}File Name:\t{FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size:\t{FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
                         $"{indentLevel1}File Location:\t{LocalFolder}{Environment.NewLine}" +
                         $"{indentLevel1}Target Folder:\t{RemoteFolder}{Environment.NewLine}";
                     break;
@@ -309,7 +309,7 @@
                     break;
 
                 case EventType.RemoteServerAcceptedFileTransfer:
-                    report += $"File transfer accepted by {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+                    report += $"File transfer accepted by {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}";
                     break;
 
                 case EventType.SendFileTransferRejectedStarted:
@@ -335,7 +335,7 @@
                     break;
 
                 case EventType.SendFileBytesComplete:
-                    report += $"Successfully sent file to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+                    report += $"Successfully sent file to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}";
                     break;
 
                 case EventType.CopySavedBytesToIncomingFile:

@@ -1,5 +1,4 @@
-﻿// TODO: Expose socket settings in config menu: buffer size, listen backlog size and socket timeout length
-// TODO: Expose file transfer settings in config menu: update interval length, file stalled timeout, max retries
+﻿// TODO: Expose file transfer settings in config menu: update interval length, file stalled timeout, max retries
 // TODO: Investigate bug where if 2 file requests are in queue, all file transfers fail after the first transfer is processed. This does not occur when processing one file request at a time.
 
 using AaronLuna.Common.IO;
@@ -200,11 +199,11 @@ namespace ServerConsole
             switch (serverEvent.EventType)
             {
                 case EventType.ReceiveMessageFromClientComplete:
-                    await ReceiveMessageFromClientCompleteAsync(serverEvent);
+                    ReceiveMessageFromClientComplete(serverEvent);
                     break;
 
                 case EventType.ProcessRequestComplete:
-                    await ProcessRequestCompleteAsync(serverEvent);
+                    ProcessRequestComplete(serverEvent);
                     break;
 
                 case EventType.ReceivedTextMessage:
@@ -232,13 +231,13 @@ namespace ServerConsole
 
                 case EventType.SendFileBytesStarted:
                     _state.FileTransferInProgress = true;
-                    await _mainMenu.DisplayMenuAsync();
+                    _mainMenu.DisplayMenu();
                     break;
 
                 case EventType.FileTransferStalled:
                 case EventType.SendFileBytesComplete:
                     _state.FileTransferInProgress = false;
-                    await _mainMenu.DisplayMenuAsync();
+                    _mainMenu.DisplayMenu();
                     break;
 
                 case EventType.ReceivedInboundFileTransferRequest:
@@ -281,23 +280,23 @@ namespace ServerConsole
             }
         }
         
-        async Task ReceiveMessageFromClientCompleteAsync(ServerEvent serverEvent)
+        void ReceiveMessageFromClientComplete(ServerEvent serverEvent)
         {
             if (_state.FileTransferInProgress) return;
             if (serverEvent.RequestType == RequestType.ShutdownServerCommand) return;
             if (serverEvent.RequestType.ProcessRequestImmediately()) return;
 
             Thread.Sleep(Constants.OneHalfSecondInMilliseconds);
-            await _mainMenu.DisplayMenuAsync();
+            _mainMenu.DisplayMenu();
         }
 
-        async Task ProcessRequestCompleteAsync(ServerEvent serverEvent)
+        void ProcessRequestComplete(ServerEvent serverEvent)
         {
             if (_state.FileTransferInProgress) return;
             if (DoNotDisplayRequestProcessedMessage(serverEvent.RequestType)) return;
             
             Thread.Sleep(Constants.OneHalfSecondInMilliseconds);
-            await _mainMenu.DisplayMenuAsync();
+            _mainMenu.DisplayMenu();
         }
 
         bool DoNotDisplayRequestProcessedMessage(RequestType messageType)
@@ -400,7 +399,7 @@ namespace ServerConsole
                 new FileTransferProgressBar(fileSize, _transferTimeout)
                 {
                     NumberOfBlocks = 20,
-                    StartBracket = "|",
+                    StartBracket = " |",
                     EndBracket = "|",
                     CompletedBlock = "|",
                     IncompleteBlock = "\u00a0",
@@ -527,7 +526,7 @@ namespace ServerConsole
             _state.SignalReturnToMainMenu.Set();
             
             await Task.Delay(Constants.OneHalfSecondInMilliseconds);
-            await _mainMenu.DisplayMenuAsync();
+            _mainMenu.DisplayMenu();
         }
     }
 }

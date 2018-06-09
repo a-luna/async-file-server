@@ -20,7 +20,7 @@
             "Server is unitialized and cannot handle incoming connections";
 
         int _initialized;
-        int _idle;        
+        int _idle;
         int _remoteServerAcceptedFileTransfer;
         int _remoteServerRejectedFileTransfer;
         int _transferInProgress;
@@ -38,8 +38,8 @@
         readonly List<FileTransfer> _fileTransfers;
         readonly ServerState _state;
         readonly Socket _listenSocket;
-        Socket _transferSocket;
-        Socket _clientSocket;
+        //Socket _transferSocket;
+        //Socket _clientSocket;
         IPAddress _ipAddressLastConnection;
         CancellationToken _token;
         static readonly object FileLock = new object();
@@ -162,8 +162,8 @@
             _requestId = 1;
             _fileTransferId = 1;
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            _transferSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            _clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            //_transferSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            //_clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _eventLog = new List<ServerEvent>();
             _requestQueue = new List<ServerRequest>();
             _requestArchive = new List<ServerRequest>();
@@ -406,8 +406,8 @@
                     return acceptResult;
                 }
 
-                _clientSocket = acceptResult.Value;
-                if (!(_clientSocket.RemoteEndPoint is IPEndPoint clientEndPoint))
+                var clientSocket = acceptResult.Value;
+                if (!(clientSocket.RemoteEndPoint is IPEndPoint clientEndPoint))
                 {
                     return Result.Fail("Error occurred casting _state._clientSocket.RemoteEndPoint as IPEndPoint");
                 }
@@ -420,7 +420,7 @@
                         RemoteServerIpAddress = _ipAddressLastConnection
                     });
 
-                var receivedMessage = await ReceiveMessageFromClientAsync().ConfigureAwait(false);
+                var receivedMessage = await ReceiveRequestFromClientAsync(clientSocket).ConfigureAwait(false);
                 if (_token.IsCancellationRequested || ShutdownInitiated)
                 {
                     return Result.Ok();
@@ -433,7 +433,7 @@
             }
         }
 
-        async Task<Result> ReceiveMessageFromClientAsync()
+        async Task<Result> ReceiveRequestFromClientAsync(Socket socket)
         {
             _state.Buffer = new byte[BufferSize];
             _state.UnreadBytes = new List<byte>();
@@ -445,7 +445,7 @@
                     RemoteServerIpAddress = _ipAddressLastConnection
                 });
 
-            var messageLengthResult = await DetermineMessageLengthAsync().ConfigureAwait(false);
+            var messageLengthResult = await DetermineMessageLengthAsync(socket).ConfigureAwait(false);
             if (messageLengthResult.Failure)
             {
                 return Result.Fail<ServerRequest>(messageLengthResult.Error);
@@ -453,54 +453,55 @@
 
             var messageLength = messageLengthResult.Value;
 
-            var receiveMessageResult = await ReceiveAllMessageBytesAsync(messageLength).ConfigureAwait(false);
+            var receiveMessageResult = await ReceiveAllMessageBytesAsync(socket, messageLength).ConfigureAwait(false);
             if (receiveMessageResult.Failure)
             {
                 return Result.Fail<ServerRequest>(receiveMessageResult.Error);
             }
 
-            var messageData = receiveMessageResult.Value;
-            var messageTypeData = RequestUnwrapper.ReadInt32(messageData).ToString();
-            var messageType = (RequestType)Enum.Parse(typeof(RequestType), messageTypeData);
-            var message = new ServerRequest
+            var requestData = receiveMessageResult.Value;
+            var requestTypeData = RequestUnwrapper.ReadInt32(requestData).ToString();
+            var requestType = (RequestType)Enum.Parse(typeof(RequestType), requestTypeData);
+            var request = new ServerRequest
             {
-                Data = messageData,
-                Type = messageType,
+                Data = requestData,
+                Type = requestType,
                 RemoteServerIp = _ipAddressLastConnection,
+                Socket = socket,
                 Id = _requestId,
                 Timestamp = DateTime.Now
             };
 
-            _requestQueue.Add(message);
+            _requestQueue.Add(request);
             _requestId++;
 
             var messageReceivedEvent = new ServerEvent
             {
                 EventType = EventType.ReceiveMessageFromClientComplete,
                 RemoteServerIpAddress = _ipAddressLastConnection,
-                RequestType = message.Type
+                RequestType = request.Type
             };
 
             EventOccurred?.Invoke(this, messageReceivedEvent);
-            if (!message.ProcessRequestImmediately()) return Result.Ok();
+            if (!request.ProcessRequestImmediately()) return Result.Ok();
             if (!IsIdle) return Result.Ok();
             
-            _requestQueue.Remove(message);
-            var result = await ProcessRequestAsync(message);
+            _requestQueue.Remove(request);
+            var result = await ProcessRequestAsync(request);
 
-            message.EventLog = _eventLog.Select(e => e).Where(e => e.RequestId == message.Id).ToList();
-            _requestArchive.Add(message);
+            request.EventLog = _eventLog.Select(e => e).Where(e => e.RequestId == request.Id).ToList();
+            _requestArchive.Add(request);
             
             return result;
         }
 
-        async Task<Result<int>> ReadFromSocketAsync()
+        async Task<Result<int>> ReadFromSocketAsync(Socket socket)
         {
             Result<int> receiveResult;
             try
             {
                 receiveResult =
-                    await _clientSocket.ReceiveWithTimeoutAsync(
+                    await socket.ReceiveWithTimeoutAsync(
                         _state.Buffer,
                         0,
                         BufferSize,
@@ -524,13 +525,13 @@
             return receiveResult;
         }
 
-        async Task<Result<int>> DetermineMessageLengthAsync()
+        async Task<Result<int>> DetermineMessageLengthAsync(Socket socket)
         {
             EventOccurred?.Invoke(this,
                 new ServerEvent
                     {EventType = EventType.DetermineMessageLengthStarted});
 
-            var readFromSocketResult = await ReadFromSocketAsync().ConfigureAwait(false);
+            var readFromSocketResult = await ReadFromSocketAsync(socket).ConfigureAwait(false);
             if (readFromSocketResult.Failure)
             {
                 return readFromSocketResult;
@@ -577,7 +578,7 @@
             return Result.Ok(messageLength);
         }
 
-        async Task<Result<byte[]>> ReceiveAllMessageBytesAsync(int messageLength)
+        async Task<Result<byte[]>> ReceiveAllMessageBytesAsync(Socket socket, int messageLength)
         {
             EventOccurred?.Invoke(this,
                 new ServerEvent {EventType = EventType.ReceiveMessageBytesStarted});
@@ -626,7 +627,7 @@
             messageByteCount = 0;
             while (bytesRemaining > 0)
             {
-                var readFromSocketResult = await ReadFromSocketAsync().ConfigureAwait(false);
+                var readFromSocketResult = await ReadFromSocketAsync(socket).ConfigureAwait(false);
                 if (readFromSocketResult.Failure)
                 {
                     return Result.Fail<byte[]>(readFromSocketResult.Error);
@@ -817,7 +818,18 @@
                     var error = $"Unable to determine transfer type, value of '{request.Type}' is invalid.";
                     return Result.Fail(error);
             }
-            
+
+            try
+            {
+                request.Socket.Shutdown(SocketShutdown.Both);
+                request.Socket.Close();
+            }
+            catch (SocketException ex)
+            {
+                var errorMessage = $"{ex.Message} ({ex.GetType()} raised in method TplSocketServer.ProcessRequestAsync)";
+                result = Result.Fail(errorMessage);
+            }
+
             if (result.Failure)
             {
                 EventOccurred?.Invoke(this, new ServerEvent
@@ -889,6 +901,7 @@
                 return connectResult;
             }
 
+            var socket = connectResult.Value;
             var messageData =
                 RequestWrapper.ConstructRequestWithStringValue(
                     RequestType.TextMessage,
@@ -896,13 +909,13 @@
                     MyServerPortNumber,
                     message);
 
-            var sendMessageDataResult = await SendMessageData(messageData).ConfigureAwait(false);
+            var sendMessageDataResult = await SendMessageData(socket, messageData).ConfigureAwait(false);
             if (sendMessageDataResult.Failure)
             {
                 return sendMessageDataResult;
             }
 
-            CloseServerSocket();
+            CloseSocket(socket);
 
             EventOccurred?.Invoke(this,
                 new ServerEvent
@@ -1083,8 +1096,9 @@
             {
                 return connectResult;
             }
-            
-            var sendMessageDataResult = await SendMessageData(messageData).ConfigureAwait(false);
+
+            outboundFileTransfer.SendSocket = connectResult.Value;
+            var sendMessageDataResult = await SendMessageData(outboundFileTransfer.SendSocket, messageData).ConfigureAwait(false);
             if (sendMessageDataResult.Failure)
             {
                 return sendMessageDataResult;
@@ -1145,6 +1159,8 @@
             EventOccurred?.Invoke(this, _eventLog.Last());
             TransferInProgress = false;
 
+            CloseSocket(outboundFileTransfer.SendSocket);
+
             return Result.Ok();
         }
 
@@ -1185,6 +1201,7 @@
             outboundFileTransfer.ErrorMessage = sendFileBytesResult.Error;
             outboundFileTransfer.TransferCompleteTime = DateTime.Now;
 
+            CloseSocket(outboundFileTransfer.SendSocket);
             TransferInProgress = false;
 
             return sendFileBytesResult;
@@ -1237,7 +1254,7 @@
                     while (numberOfBytesToSend > 0)
                     {
                         var sendFileChunkResult =
-                            await _transferSocket.SendWithTimeoutAsync(
+                            await fileTransfer.SendSocket.SendWithTimeoutAsync(
                                 _state.Buffer,
                                 offset,
                                 fileChunkSize,
@@ -1304,9 +1321,7 @@
 
                 EventOccurred?.Invoke(this, _eventLog.Last());
 
-                _transferSocket.Shutdown(SocketShutdown.Both);
-                _transferSocket.Close();
-
+                CloseSocket(fileTransfer.SendSocket);
                 TransferInProgress = false;
 
                 return Result.Ok();
@@ -1405,7 +1420,8 @@
                 return connectResult;
             }
 
-            var sendMessageDataResult = await SendMessageData(messageData).ConfigureAwait(false);
+            var socket = connectResult.Value;
+            var sendMessageDataResult = await SendMessageData(socket, messageData).ConfigureAwait(false);
             if (sendMessageDataResult.Failure)
             {
                 inboundFileTransfer.Status = FileTransferStatus.Error;
@@ -1414,7 +1430,7 @@
                 return sendMessageDataResult;
             }
 
-            CloseServerSocket();
+            CloseSocket(socket);
 
             EventOccurred?.Invoke(this,
                 new ServerEvent
@@ -1474,6 +1490,7 @@
 
             var getFileTransferResult =
                 GetFileTransfer(
+                    request.Socket,
                     transferId,
                     responseCode,
                     retryCounter,
@@ -1548,6 +1565,7 @@
         }
 
         Result<FileTransfer> GetFileTransfer(
+            Socket socket,
             int fileTransferId,
             long responseCode,
             int retryCounter,
@@ -1577,7 +1595,8 @@
                     LocalFilePath = localFilePath,
                     LocalFolderPath = Path.GetDirectoryName(localFilePath),
                     FileSizeInBytes = fileSizeInBytes,
-                    RequestInitiatedTime = DateTime.Now
+                    RequestInitiatedTime = DateTime.Now,
+                    ReceiveSocket = socket
                 };
 
                 _fileTransfers.Add(newInboundFileTransfer);
@@ -1587,6 +1606,7 @@
             }
 
             var inboundFileTransfer = getFileTransferResult.Value;
+            inboundFileTransfer.ReceiveSocket = socket;
             inboundFileTransfer.TransferResponseCode = responseCode;
             inboundFileTransfer.FileSizeInBytes = fileSizeInBytes;
             inboundFileTransfer.RemoteServerRetryLimit = retryLimit;
@@ -1609,7 +1629,8 @@
             return Result.Ok(inboundFileTransfer);
         }
 
-        async Task<Result> ReceiveFileAsync(ServerRequest request,
+        async Task<Result> ReceiveFileAsync(
+            ServerRequest request,
             FileTransfer fileTransfer,
             CancellationToken token)
         {
@@ -1682,7 +1703,7 @@
                     return Result.Ok();
                 }
 
-                var readFromSocketResult = await ReadFromSocketAsync().ConfigureAwait(false);
+                var readFromSocketResult = await ReadFromSocketAsync(fileTransfer.ReceiveSocket).ConfigureAwait(false);
                 if (readFromSocketResult.Failure)
                 {
                     return Result.Fail(readFromSocketResult.Error);
@@ -1982,6 +2003,7 @@
                 return connectResult;
             }
 
+            var socket = connectResult.Value;
             var messageData =
                 RequestWrapper.ConstructRetryLimitExceededRequest(
                     MyLocalIpAddress.ToString(),
@@ -1990,13 +2012,13 @@
                     TransferRetryLimit,
                     outboundFileTransfer.RetryLockoutExpireTime.Ticks);
 
-            var sendMessageDataResult = await SendMessageData(messageData).ConfigureAwait(false);
+            var sendMessageDataResult = await SendMessageData(socket, messageData).ConfigureAwait(false);
             if (sendMessageDataResult.Failure)
             {
                 return sendMessageDataResult;
             }
 
-            CloseServerSocket();
+            CloseSocket(socket);
 
             _eventLog.Add(new ServerEvent
             {
@@ -2079,6 +2101,7 @@
                 return connectResult;
             }
 
+            var socket = connectResult.Value;
             var messageData =
                 RequestWrapper.ConstructRequestWithInt64Value(
                     requestType,
@@ -2086,13 +2109,13 @@
                     MyServerPortNumber,
                     responseCode);
 
-            var sendMessageDataResult = await SendMessageData(messageData).ConfigureAwait(false);
+            var sendMessageDataResult = await SendMessageData(socket, messageData).ConfigureAwait(false);
             if (sendMessageDataResult.Failure)
             {
                 return sendMessageDataResult;
             }
 
-            CloseServerSocket();
+            CloseSocket(socket);
 
             _eventLog.Add(new ServerEvent
             {
@@ -2131,19 +2154,20 @@
                 return connectResult;
             }
 
+            var socket = connectResult.Value;
             var messageData =
                 RequestWrapper.ConstructBasicRequest(
                     requestType,
                     MyLocalIpAddress.ToString(),
                     MyServerPortNumber);
 
-            var sendMessageDataResult = await SendMessageData(messageData).ConfigureAwait(false);
+            var sendMessageDataResult = await SendMessageData(socket, messageData).ConfigureAwait(false);
             if (sendMessageDataResult.Failure)
             {
                 return sendMessageDataResult;
             }
 
-            CloseServerSocket();
+            CloseSocket(socket);
 
             _eventLog.Add(new ServerEvent
             {
@@ -2159,9 +2183,9 @@
             return Result.Ok();
         }
 
-        async Task<Result> ConnectToServerAsync()
+        async Task<Result<Socket>> ConnectToServerAsync()
         {
-            _transferSocket =
+            var socket =
                 new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
             EventOccurred?.Invoke(this,
@@ -2173,29 +2197,29 @@
                 });
 
             var connectResult =
-                await _transferSocket.ConnectWithTimeoutAsync(
+                await socket.ConnectWithTimeoutAsync(
                     RemoteServerSessionIpAddress,
                     RemoteServerPortNumber,
                     SocketTimeoutInMilliseconds).ConfigureAwait(false);
 
             if (connectResult.Failure)
             {
-                return connectResult;
+                return Result.Fail<Socket>(connectResult.Error);
             }
 
             EventOccurred?.Invoke(this,
                 new ServerEvent
                     {EventType = EventType.ConnectToRemoteServerComplete});
 
-            return Result.Ok();
+            return Result.Ok(socket);
         }
 
-        async Task<Result> SendMessageData(byte[] messageData)
+        async Task<Result> SendMessageData(Socket socket, byte[] messageData)
         {
             var messageLength = BitConverter.GetBytes(messageData.Length);
 
             var sendMessageLengthResult =
-                await _transferSocket.SendWithTimeoutAsync(
+                await socket.SendWithTimeoutAsync(
                     messageLength,
                     0,
                     messageLength.Length,
@@ -2208,7 +2232,7 @@
             }
 
             var sendMessageResult =
-                await _transferSocket.SendWithTimeoutAsync(
+                await socket.SendWithTimeoutAsync(
                     messageData,
                     0,
                     messageData.Length,
@@ -2220,10 +2244,10 @@
                 : sendMessageResult;
         }
 
-        void CloseServerSocket()
+        void CloseSocket(Socket socket)
         {
-            _transferSocket.Shutdown(SocketShutdown.Both);
-            _transferSocket.Close();
+            socket.Shutdown(SocketShutdown.Both);
+            socket.Close();
         }
 
         public async Task<Result> RequestFileListAsync(
@@ -2258,13 +2282,14 @@
                     MyServerPortNumber,
                     RemoteServerTransferFolderPath);
 
-            var sendMessageDataResult = await SendMessageData(messageData).ConfigureAwait(false);
+            var socket = connectResult.Value;
+            var sendMessageDataResult = await SendMessageData(socket, messageData).ConfigureAwait(false);
             if (sendMessageDataResult.Failure)
             {
                 return sendMessageDataResult;
             }
 
-            CloseServerSocket();
+            CloseSocket(socket);
 
             EventOccurred?.Invoke(this,
             new ServerEvent {EventType = EventType.RequestFileListComplete});
@@ -2330,6 +2355,7 @@
                 return connectResult;
             }
 
+            var socket = connectResult.Value;
             var responseData =
                 RequestWrapper.ConstructFileListResponse(
                     fileInfoList,
@@ -2339,13 +2365,13 @@
                     MyServerPortNumber,
                     MyTransferFolderPath);
 
-            var sendMessageDataResult = await SendMessageData(responseData).ConfigureAwait(false);
+            var sendMessageDataResult = await SendMessageData(socket, responseData).ConfigureAwait(false);
             if (sendMessageDataResult.Failure)
             {
                 return sendMessageDataResult;
             }
 
-            CloseServerSocket();
+            CloseSocket(socket);
 
             _eventLog.Add(new ServerEvent
             {
@@ -2471,6 +2497,7 @@
                 return connectResult;
             }
 
+            var socket = connectResult.Value;
             var responseData =
                 RequestWrapper.ConstructServerInfoResponse(
                     MyLocalIpAddress.ToString(),
@@ -2478,13 +2505,13 @@
                     MyPublicIpAddress.ToString(),
                     MyTransferFolderPath);
 
-            var sendMessageDataResult = await SendMessageData(responseData).ConfigureAwait(false);
+            var sendMessageDataResult = await SendMessageData(socket, responseData).ConfigureAwait(false);
             if (sendMessageDataResult.Failure)
             {
                 return sendMessageDataResult;
             }
 
-            CloseServerSocket();
+            CloseSocket(socket);
 
             _eventLog.Add(new ServerEvent
             {
