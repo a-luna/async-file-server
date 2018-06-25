@@ -156,6 +156,27 @@ namespace AaronLuna.AsyncFileServer.Console
                 _state.Settings.LocalNetworkCidrIp = SharedFunctions.InitializeLanCidrIp();
                 settingsChanged = true;
             }
+            else
+            {
+                var getCidrIp = NetworkUtilities.AttemptToDetermineLanCidrIp();
+                if (getCidrIp.Success)
+                {
+                    var newCidrIp = getCidrIp.Value;
+                    var cidrIpMatch = _state.Settings.LocalNetworkCidrIp == newCidrIp;
+                    if (!cidrIpMatch)
+                    {
+                        var prompt = $"The current value for CIDR IP is {_state.Settings.LocalNetworkCidrIp}, " +
+                                     $"however it appears that {newCidrIp} is the correct value for the current " +
+                                     "LAN, would you like to use this value?";
+                        var updateCidrIp = SharedFunctions.PromptUserYesOrNo(prompt);
+                        if (updateCidrIp)
+                        {
+                            _state.Settings.LocalNetworkCidrIp = newCidrIp;
+                            settingsChanged = true;
+                        }
+                    }
+                }
+            }
 
             await _state.LocalServer.InitializeAsync(_state.Settings.LocalNetworkCidrIp, _state.Settings.LocalServerPortNumber);
             _state.LocalServer.SocketSettings = _state.Settings.SocketSettings;

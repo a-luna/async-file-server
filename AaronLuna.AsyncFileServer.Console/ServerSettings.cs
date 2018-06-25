@@ -103,6 +103,10 @@
                     settings = (ServerSettings)deserializer.Deserialize(reader);
                 }
             }
+            catch (FileNotFoundException ex)
+            {
+                return Result.Fail<ServerSettings>($"{ex.Message} ({ex.GetType()})");
+            }
             catch (Exception ex)
             {
                 return Result.Fail<ServerSettings>($"{ex.Message} ({ex.GetType()})");
@@ -113,10 +117,21 @@
 
         public static void SaveToFile(ServerSettings settings, string filePath)
         {
-            var serializer = new XmlSerializer(typeof(ServerSettings));
-            using (var writer = new StreamWriter(filePath))
+            try
             {
-                serializer.Serialize(writer, settings);
+                var serializer = XmlSerializer.FromTypes(new[] { typeof(ServerSettings) })[0];
+                using (var writer = new StreamWriter(filePath))
+                {
+                    serializer.Serialize(writer, settings);
+                }
+            }
+            catch (FileNotFoundException ex)
+            {
+                //return Result.Fail<ServerSettings>($"{ex.Message} ({ex.GetType()})");
+            }
+            catch (Exception ex)
+            {
+                //return Result.Fail<ServerSettings>($"{ex.Message} ({ex.GetType()})");
             }
         }
 
@@ -124,13 +139,15 @@
         {
             foreach (var server in RemoteServers)
             {
-                var localIp = server.LocalIpString;
+                server.LocalIpAddress = IPAddress.None;
+                server.PublicIpAddress = IPAddress.None;
+                server.SessionIpAddress = IPAddress.None;
 
-                if (string.IsNullOrEmpty(localIp))
-                {
-                    server.LocalIpAddress = IPAddress.None;
-                }
-                else
+                var localIp = server.LocalIpString;
+                var publicIp = server.PublicIpString;
+                var sessionIp = server.SessionIpString;
+
+                if (!string.IsNullOrEmpty(localIp))
                 {
                     var parseLocalIpResult = NetworkUtilities.ParseSingleIPv4Address(localIp);
                     if (parseLocalIpResult.Success)
@@ -138,29 +155,17 @@
                         server.LocalIpAddress = parseLocalIpResult.Value;
                     }
                 }
-
-                var pubicIp = server.PublicIpString;
-
-                if (string.IsNullOrEmpty(pubicIp))
+                
+                if (!string.IsNullOrEmpty(publicIp))
                 {
-                    server.PublicIpAddress = IPAddress.None;
-                }
-                else
-                {
-                    var parsePublicIpResult = NetworkUtilities.ParseSingleIPv4Address(pubicIp);
+                    var parsePublicIpResult = NetworkUtilities.ParseSingleIPv4Address(publicIp);
                     if (parsePublicIpResult.Success)
                     {
                         server.PublicIpAddress = parsePublicIpResult.Value;
                     }
                 }
 
-                var sessionIp = server.SessionIpString;
-
-                if (string.IsNullOrEmpty(sessionIp))
-                {
-                    server.SessionIpAddress = IPAddress.None;
-                }
-                else
+                if (!string.IsNullOrEmpty(sessionIp))
                 {
                     var parseSessionIpResult = NetworkUtilities.ParseSingleIPv4Address(sessionIp);
                     if (parseSessionIpResult.Success)

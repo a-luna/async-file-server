@@ -50,13 +50,13 @@
 
         public static string InitializeLanCidrIp()
         {
-            var cidrIpResult = NetworkUtilities.AttemptToDetermineLanCidrIp();
-            if (cidrIpResult.Failure)
+            var getCidrIp = NetworkUtilities.AttemptToDetermineLanCidrIp();
+            if (getCidrIp.Failure)
             {
                 return GetCidrIpFromUser();
             }
 
-            var cidrIp = cidrIpResult.Value;
+            var cidrIp = getCidrIp.Value;
             var prompt = "Found a single IPv4 address assiciated with the only ethernet adapter " +
                          $"on this machine, is it ok to use {cidrIp} as the CIDR IP?";
 
