@@ -38,6 +38,7 @@ Temporary Items
 CodeGraphData/
 DevTracker*
 *.dt
+AaronLuna.AsyncFileServer.Tools/
 
 # Code coverage files
 coverage-html

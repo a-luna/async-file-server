@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AaronLuna.AsyncFileServer.Model\AaronLuna.AsyncFileServer.Model.csproj" />
+    <ProjectReference Include="..\AaronLuna.AsyncFileServer.Utilities\AaronLuna.AsyncFileServer.Utilities.csproj" />
+  </ItemGroup>
+
+</Project>
