@@ -87,39 +87,7 @@
                     return string.Empty;
             }
         }
-
-        public static bool ProcessRequestImmediately(this ServerRequestType responseType)
-        {
-            switch (responseType)
-            {
-                case ServerRequestType.None:
-                case ServerRequestType.TextMessage:
-                case ServerRequestType.InboundFileTransferRequest:
-                    return false;
-
-                case ServerRequestType.ServerInfoRequest:
-                case ServerRequestType.ServerInfoResponse:
-                case ServerRequestType.FileListRequest:
-                case ServerRequestType.FileListResponse:
-                case ServerRequestType.OutboundFileTransferRequest:
-                case ServerRequestType.NoFilesAvailableForDownload:
-                case ServerRequestType.RequestedFolderDoesNotExist:
-                case ServerRequestType.FileTransferAccepted:
-                case ServerRequestType.FileTransferRejected:
-                case ServerRequestType.FileTransferStalled:
-                case ServerRequestType.RetryOutboundFileTransfer:
-                case ServerRequestType.FileTransferComplete:
-                case ServerRequestType.RetryLimitExceeded:
-                case ServerRequestType.RetryLockoutExpired:
-                case ServerRequestType.RequestedFileDoesNotExist:
-                case ServerRequestType.ShutdownServerCommand:
-                    return true;
-                    
-                default:
-                    return false;
-            }
-        }
-
+        
         public static bool IsFileTransferResponse(this ServerRequestType responseType)
         {
             switch (responseType)

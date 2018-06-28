@@ -32,13 +32,4 @@
         internal static readonly string Error_FileTransferStalledErrorMessage =
             "Aborting file transfer, client says that data is no longer being received";
     }
-
-    static class Constants
-    {
-        public const int PortRangeMin = 49152;
-        public const int PortRangeMax = 65535;
-
-        public const int CidrPrefixBitsCountMin = 0;
-        public const int CidrPrefixBitsCountMax = 32;
-    }
 }

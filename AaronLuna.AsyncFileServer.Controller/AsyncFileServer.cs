@@ -1,4 +1,5 @@
 ﻿using AaronLuna.AsyncFileServer.Utilities;
+using AaronLuna.Common.Extensions;
 
 namespace AaronLuna.AsyncFileServer.Controller
 {
@@ -362,7 +363,7 @@ namespace AaronLuna.AsyncFileServer.Controller
         public async Task InitializeAsync(string cidrIp, int port)
         {
             if (ServerIsInitialized) return;
-
+            
             var getLocalIp = NetworkUtilities.GetLocalIPv4Address(cidrIp);
 
             var localIp = getLocalIp.Success
@@ -392,6 +393,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 Info.SessionIpAddress = publicIp;
             }
 
+            _myLanCidrIp = cidrIp;
             ServerIsInitialized = true;
         }
 
@@ -454,6 +456,16 @@ namespace AaronLuna.AsyncFileServer.Controller
             // or an error is encountered
             while (true)
             {
+                if (!QueueIsEmpty)
+                {
+                    EventOccurred?.Invoke(this,
+                        new ServerEvent
+                        {
+                            EventType = ServerEventType.QueueContainsUnhandledRequests,
+                            ItemsInQueueCount = RequestsInQueue
+                        });
+                }
+
                 var acceptConnection = await _listenSocket.AcceptTaskAsync(_token).ConfigureAwait(false);
                 if (acceptConnection.Failure)
                 {
@@ -672,7 +684,7 @@ namespace AaronLuna.AsyncFileServer.Controller
         {
             foreach (var request in _requestQueue)
             {
-                if (!request.ProcessRequestImmediately) continue;
+                if (!request.InboundFileTransferRequested) continue;
 
                 var result = await ProcessRequestAsync(request.RequestId);
                 if (result.Failure)
@@ -2315,7 +2327,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
         void DetermineRemoteServerSessionIpAddress()
         {
-            var checkLocalIp = NetworkUtilities.IpAddressIsInRange(RemoteServerLocalIpAddress, _myLanCidrIp);
+            var checkLocalIp = RemoteServerLocalIpAddress.IsInRange(_myLanCidrIp);
             if (checkLocalIp.Failure)
             {
                 RemoteServerInfo.SessionIpAddress = RemoteServerPublicIpAddress;

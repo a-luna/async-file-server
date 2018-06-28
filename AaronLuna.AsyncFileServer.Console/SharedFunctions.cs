@@ -12,6 +12,12 @@
 
     static class SharedFunctions
     {
+        public const int PortRangeMin = 49152;
+        public const int PortRangeMax = 65535;
+
+        public const int CidrPrefixBitsCountMin = 0;
+        public const int CidrPrefixBitsCountMax = 32;
+
         public static async Task<int> GetUserSelectionIndexAsync(
             string menuText,
             List<IMenuItem> menuItems,
@@ -80,10 +86,10 @@
             while (bitCount is 0)
             {
                 //Console.Clear();
-                System.Console.WriteLine($"{Environment.NewLine}{prompt} (range {Constants.CidrPrefixBitsCountMin}-{Constants.CidrPrefixBitsCountMax}):");
+                System.Console.WriteLine($"{Environment.NewLine}{prompt} (range {CidrPrefixBitsCountMin}-{CidrPrefixBitsCountMax}):");
 
                 var input = System.Console.ReadLine();
-                var bitCountValidationResult = ValidateNumberIsWithinRange(input, Constants.CidrPrefixBitsCountMin, Constants.CidrPrefixBitsCountMax);
+                var bitCountValidationResult = ValidateNumberIsWithinRange(input, CidrPrefixBitsCountMin, CidrPrefixBitsCountMax);
                 if (bitCountValidationResult.Failure)
                 {
                     System.Console.WriteLine(bitCountValidationResult.Error);
@@ -102,7 +108,7 @@
             while (portNumber is 0)
             {
                 //Console.Clear();
-                System.Console.WriteLine($"{Environment.NewLine}{prompt} (range {Constants.PortRangeMin}-{Constants.PortRangeMax}):");
+                System.Console.WriteLine($"{Environment.NewLine}{prompt} (range {PortRangeMin}-{PortRangeMax}):");
 
                 if (allowRandom)
                 {
@@ -119,12 +125,12 @@
                     }
 
                     var rnd = new Random();
-                    portNumber = rnd.Next(Constants.PortRangeMin, Constants.PortRangeMax + 1);
+                    portNumber = rnd.Next(PortRangeMin, PortRangeMax + 1);
                     System.Console.WriteLine($"Your randomly chosen port number is: {portNumber}");
                     break;
                 }
 
-                var portValidationResult = ValidateNumberIsWithinRange(input, Constants.PortRangeMin, Constants.PortRangeMax);
+                var portValidationResult = ValidateNumberIsWithinRange(input, PortRangeMin, PortRangeMax);
                 if (portValidationResult.Failure)
                 {
                     System.Console.WriteLine(portValidationResult.Error);
@@ -181,7 +187,7 @@
             return ipAddress;
         }
 
-        public static bool ClientAlreadyAdded(ServerInfo newClient, List<ServerInfo> clients)
+        public static bool ServerInfoAlreadyExists(ServerInfo newClient, List<ServerInfo> clients)
         {
             var exists = false;
             foreach (var remoteServer in clients)

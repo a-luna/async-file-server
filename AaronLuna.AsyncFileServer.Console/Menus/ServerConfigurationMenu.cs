@@ -59,7 +59,12 @@
 
                 if (result.Success && !(menuItem is ReturnToParentMenuItem))
                 {
-                    ApplyChanges();
+                    var applyChanges = ApplyChanges();
+                    if (applyChanges.Failure)
+                    {
+                        result = Result.Fail(applyChanges.Error);
+                    }
+
                     exit = true;
                     continue;
                 }
@@ -72,12 +77,18 @@
             return result;
         }
 
-        void ApplyChanges()
+        Result ApplyChanges()
         {
             _state.Settings.LocalServerPortNumber = _state.UserEntryLocalServerPort;
             _state.Settings.LocalNetworkCidrIp = _state.UserEntryLocalNetworkCidrIp;
 
-            ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
+            var saveSettings = ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
+            if (saveSettings.Failure)
+            {
+                return saveSettings;
+            }
+
+            return Result.Ok();
         }
     }
 }

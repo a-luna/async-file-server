@@ -30,6 +30,7 @@
         public byte[] MessageData { get; set; }
         public ServerRequestType RequestType { get; set; }
         public int RequestId { get; set; }
+        public int ItemsInQueueCount { get; set; }
 
         public int TextSessionId { get; set; }
         public string TextMessage { get; set; }
@@ -121,7 +122,7 @@
                     report += $"Incoming request length: {RequestLengthInBytes:N0} bytes ({RequestLengthData.ToHexString()})";
                     break;
 
-                case ServerEventType.PreserveExtraBytesReceivedWithIncomingRequestLength:
+                case ServerEventType.PreserveExtraBytesReceivedAfterLengthOfIncomingRequestReceived:
                     report +=
                         $"Received data from socket:{Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}Bytes Received:\t\t{BytesReceivedCount:N0}{Environment.NewLine}" +
@@ -169,6 +170,10 @@
 
                 case ServerEventType.ProcessRequestComplete:
                     report += $"PROCESS COMPLETE: {RequestType.Name()}";
+                    break;
+
+                case ServerEventType.QueueContainsUnhandledRequests:
+                    report += $"Number of unhandled requests currently in queue: {ItemsInQueueCount}";
                     break;
 
                 case ServerEventType.ShutdownListenSocketStarted:

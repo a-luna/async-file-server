@@ -63,7 +63,6 @@ namespace AaronLuna.AsyncFileServer.Controller
         public ServerRequest Request { get; private set; }
         public int RequestId => Request.Id;
         public ServerInfo RemoteServerInfo => Request.RemoteServerInfo;
-        public bool ProcessRequestImmediately => Request.ProcessRequestImmediately;
         public bool InboundFileTransferRequested => Request.Type == ServerRequestType.InboundFileTransferRequest;
         
         public event EventHandler<ServerEvent> EventOccurred;
@@ -377,7 +376,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             _eventLog.Add(new ServerEvent
             {
-                EventType = ServerEventType.PreserveExtraBytesReceivedWithIncomingRequestLength,
+                EventType = ServerEventType.PreserveExtraBytesReceivedAfterLengthOfIncomingRequestReceived,
                 BytesReceivedCount = _lastBytesReceivedCount,
                 RequestLengthInBytes = Constants.SizeOfInt32InBytes,
                 UnreadBytesCount = unreadBytesCount

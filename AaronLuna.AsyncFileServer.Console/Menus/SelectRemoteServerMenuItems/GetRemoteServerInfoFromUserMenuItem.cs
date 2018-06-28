@@ -26,57 +26,63 @@
         {
             var remoteServerIp = SharedFunctions.GetIpAddressFromUser($"{Environment.NewLine}Enter the client's IPv4 address:");
             var remoteServerPort = SharedFunctions.GetPortNumberFromUser($"{Environment.NewLine}Enter the client's port number:", false);
-            _state.SelectedServer = new ServerInfo(remoteServerIp, remoteServerPort);
+            var serverInfo = new ServerInfo(remoteServerIp, remoteServerPort);
             
-            var requestServerInfoResult = await RequestAdditionalInfoFromRemoteServerAsync();
+            var validateServerInfo = ValidateServerInfo(serverInfo);
+            if (validateServerInfo.Failure)
+            {
+                return validateServerInfo;
+            }
+            
+            var requestInfoFromServer = await RequestServerInfoAsync();
+            if (requestInfoFromServer.Failure)
+            {
+                return requestInfoFromServer;
+            }
 
-            return requestServerInfoResult.Success
+            _state.Settings.RemoteServers.Add(_state.SelectedServer);
+            var saveSettings = ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
+
+            return saveSettings.Success
                 ? Result.Ok()
-                : requestServerInfoResult;
+                : saveSettings;
         }
 
-        async Task<Result> RequestAdditionalInfoFromRemoteServerAsync()
+         Result ValidateServerInfo(ServerInfo serverInfo)
         {
-            var clientIp = _state.SelectedServer.SessionIpAddress;
-            var clientPort = _state.SelectedServer.PortNumber;
+            var clientIp = serverInfo.SessionIpAddress;
+            var clientPort = serverInfo.PortNumber;
 
-            if (_state.SelectedServer.IsEqualTo(_state.LocalServer.Info))
+            if (serverInfo.IsEqualTo(_state.LocalServer.Info))
             {
                 var error = $"{clientIp}:{clientPort} is the same IP address and port number used by this server.";
                 return Result.Fail(error);
             }
 
-            if (SharedFunctions.ClientAlreadyAdded(_state.SelectedServer, _state.Settings.RemoteServers))
+            var serverInfoAlreadyExists =
+                SharedFunctions.ServerInfoAlreadyExists(serverInfo, _state.Settings.RemoteServers);
+
+            if (serverInfoAlreadyExists)
             {
                 _state.SelectedServer =
-                    SharedFunctions.GetRemoteServer(_state.SelectedServer, _state.Settings.RemoteServers);
+                    SharedFunctions.GetRemoteServer(serverInfo, _state.Settings.RemoteServers);
 
-                return Result.Ok();
-            }
-            
-            var requestServerInfoResult = await RequestServerInfoAsync();
-            if (requestServerInfoResult.Failure)
-            {
-                return requestServerInfoResult;
+                return Result.Fail("Server is already added, returning to main menu.");
             }
 
-            _state.Settings.RemoteServers.Add(_state.SelectedServer);
-            ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
-
+            _state.SelectedServer = serverInfo;
             return Result.Ok();
+
         }
 
         async Task<Result> RequestServerInfoAsync()
         {
-            var remoteIp = _state.SelectedServer.SessionIpAddress;
-            var remotePort = _state.SelectedServer.PortNumber;
-
             _state.WaitingForServerInfoResponse = true;
 
             var requestServerInfoResult =
                 await _state.LocalServer.RequestServerInfoAsync(
-                        remoteIp,
-                        remotePort)
+                        _state.SelectedServer.SessionIpAddress,
+                        _state.SelectedServer.PortNumber)
                     .ConfigureAwait(false);
 
             if (requestServerInfoResult.Failure)

@@ -22,8 +22,7 @@
         {
             return $"{Type.Name()} from {RemoteServerInfo.SessionIpAddress}:{RemoteServerInfo.PortNumber} at {Timestamp:g}";
         }
-
-        public bool ProcessRequestImmediately => Type.ProcessRequestImmediately();
+        
         public bool IsFileTransferResponse => Type.IsFileTransferResponse();
         public bool IsFIleTransferError => Type.IsFileTransferError();
     }

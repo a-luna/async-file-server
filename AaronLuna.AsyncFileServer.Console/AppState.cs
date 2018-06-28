@@ -52,7 +52,7 @@
         public int UserEntryLocalServerPort { get; set; }
 
         public Controller.AsyncFileServer LocalServer { get; set; }
-        public List<(string filePath, long fileSize)> RemoteServerFileList => LocalServer.RemoteServerFileList;
+        public FileInfoList RemoteServerFileList => LocalServer.RemoteServerFileList;
         public string ErrorMessage { get; set; }
 
         public FileTransferProgressBar ProgressBar { get; set; }

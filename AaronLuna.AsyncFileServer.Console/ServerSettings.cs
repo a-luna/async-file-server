@@ -75,7 +75,12 @@
             if (!File.Exists(filePath))
             {
                 var defaultSettings = GetDefaultSettings();
-                SaveToFile(defaultSettings, filePath);
+
+                var saveSettings = SaveToFile(defaultSettings, filePath);
+                if (saveSettings.Failure)
+                {
+                    return Result.Fail<ServerSettings>(saveSettings.Error);
+                }
 
                 return Result.Ok(defaultSettings);
             }
@@ -115,7 +120,7 @@
             return Result.Ok(settings);
         }
 
-        public static void SaveToFile(ServerSettings settings, string filePath)
+        public static Result SaveToFile(ServerSettings settings, string filePath)
         {
             try
             {
@@ -127,25 +132,27 @@
             }
             catch (FileNotFoundException ex)
             {
-                //return Result.Fail<ServerSettings>($"{ex.Message} ({ex.GetType()})");
+                return Result.Fail($"{ex.Message} ({ex.GetType()})");
             }
             catch (Exception ex)
             {
-                //return Result.Fail<ServerSettings>($"{ex.Message} ({ex.GetType()})");
+                return Result.Fail($"{ex.Message} ({ex.GetType()})");
             }
+
+            return Result.Ok();
         }
 
         public void InitializeIpAddresses()
         {
             foreach (var server in RemoteServers)
             {
-                server.LocalIpAddress = IPAddress.None;
-                server.PublicIpAddress = IPAddress.None;
-                server.SessionIpAddress = IPAddress.None;
-
                 var localIp = server.LocalIpString;
                 var publicIp = server.PublicIpString;
                 var sessionIp = server.SessionIpString;
+
+                server.LocalIpAddress = IPAddress.None;
+                server.PublicIpAddress = IPAddress.None;
+                server.SessionIpAddress = IPAddress.None;
 
                 if (!string.IsNullOrEmpty(localIp))
                 {

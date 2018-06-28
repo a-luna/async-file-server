@@ -450,23 +450,23 @@
             string publicIpAddress,
             string remoteFolderPath) ReadServerInfoResponse(byte[] requestData)
         {
-            var remoteIpAddressLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes);
-            var remoteIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 2, remoteIpAddressLen);
+            var localIpLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes);
+            var localIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 2, localIpLen);
 
-            var remotePortNumberLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 2 + remoteIpAddressLen);
-            var remotePort = int.Parse(Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 3 + remoteIpAddressLen, remotePortNumberLen));
+            var portNumberLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 2 + localIpLen);
+            var portNumber = int.Parse(Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 3 + localIpLen, portNumberLen));
 
-            var publicIpLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 3 + remoteIpAddressLen + remotePortNumberLen);
-            var publicIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 4 + remoteIpAddressLen + remotePortNumberLen, publicIpLen);
+            var publicIpLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 3 + localIpLen + portNumberLen);
+            var publicIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 4 + localIpLen + portNumberLen, publicIpLen);
 
-            var remoteFolderPathLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 4 + remoteIpAddressLen + remotePortNumberLen + publicIpLen);
-            var remoteFolder = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 5 + remoteIpAddressLen + remotePortNumberLen + publicIpLen, remoteFolderPathLen);
+            var transferFolderPathLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 4 + localIpLen + portNumberLen + publicIpLen);
+            var transferFolderPath = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 5 + localIpLen + portNumberLen + publicIpLen, transferFolderPathLen);
 
             return (
-                remoteIp,
-                remotePort,
+                localIp,
+                portNumber,
                 publicIp,
-                remoteFolder);
+                transferFolderPath);
         }
     }
 }

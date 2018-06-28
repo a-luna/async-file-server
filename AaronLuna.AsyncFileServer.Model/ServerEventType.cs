@@ -16,7 +16,7 @@
         ReceiveRequestFromRemoteServerComplete,
 
         ReceiveRequestLengthStarted,
-        PreserveExtraBytesReceivedWithIncomingRequestLength,
+        PreserveExtraBytesReceivedAfterLengthOfIncomingRequestReceived,
         ReceiveRequestLengthComplete,
 
         SaveUnreadBytesAfterRequestLengthReceived,
@@ -29,6 +29,7 @@
         PreserveExtraBytesReceivedAfterAllRequestBytesWereReceived,
         CopySavedBytesToIncomingFile,
 
+        QueueContainsUnhandledRequests,
         ProcessRequestStarted,
         ProcessRequestComplete,
 
