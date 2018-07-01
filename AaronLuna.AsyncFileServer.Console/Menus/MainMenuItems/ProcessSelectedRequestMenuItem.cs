@@ -19,8 +19,7 @@
 
             ReturnToParent = false;
 
-            var mainMenuItemText = "Process request:" +
-                                   $"{Environment.NewLine}{Environment.NewLine}{request}{Environment.NewLine}";
+            var mainMenuItemText = $"Process inbound file transfer from {request.RemoteServerInfo}";
 
             ItemText = inMainMenu
                 ? mainMenuItemText
@@ -43,11 +42,11 @@
                 return result;
             }
 
-            _state.SignalReturnToMainMenu.WaitOne();
-            _state.SignalReturnToMainMenu.Reset();
+            //_state.SignalReturnToMainMenu.WaitOne();
+            //_state.SignalReturnToMainMenu.Reset();
 
-            System.Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
-            System.Console.ReadLine();
+            Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
+            Console.ReadLine();
 
             _state.SignalReturnToMainMenu.Set();
             return Result.Ok();

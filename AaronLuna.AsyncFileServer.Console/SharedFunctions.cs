@@ -18,6 +18,31 @@
         public const int CidrPrefixBitsCountMin = 0;
         public const int CidrPrefixBitsCountMax = 32;
 
+        public static void DisplayLocalServerInfo(AppState state)
+        {
+            Console.Clear();
+            Console.WriteLine(state.LocalServerInfo());
+        }
+
+        public static async Task<Result> SendTextMessageAsync(AppState state)
+        {
+            var ipAddress = state.SelectedServerInfo.SessionIpAddress.ToString();
+            var port = state.SelectedServerInfo.PortNumber;
+
+            Console.WriteLine($"{Environment.NewLine}Please enter a text message to send to {ipAddress}:{port}");
+            var message = Console.ReadLine();
+
+            var sendMessageResult =
+                await state.LocalServer.SendTextMessageAsync(
+                    message,
+                    ipAddress,
+                    port).ConfigureAwait(false);
+
+            return sendMessageResult.Success
+                ? Result.Ok()
+                : sendMessageResult;
+        }
+
         public static async Task<int> GetUserSelectionIndexAsync(
             string menuText,
             List<IMenuItem> menuItems,
@@ -27,15 +52,15 @@
             while (userSelection == 0)
             {
                 Menu.DisplayMenu(menuText, menuItems);
-                var input = System.Console.ReadLine();
+                var input = Console.ReadLine();
 
                 var validationResult = ValidateNumberIsWithinRange(input, 1, menuItems.Count);
                 if (validationResult.Failure)
                 {
-                    System.Console.WriteLine(Environment.NewLine + validationResult.Error);
+                    Console.WriteLine(Environment.NewLine + validationResult.Error);
                     await Task.Delay(state.MessageDisplayTime);
 
-                    state.DisplayCurrentStatus();
+                    DisplayLocalServerInfo(state);
                     continue;
                 }
 
@@ -44,7 +69,7 @@
 
             return userSelection;
         }
-
+        
         public static async Task<IMenuItem> GetUserSelectionAsync(
             string menuText,
             List<IMenuItem> menuItems,
@@ -86,13 +111,13 @@
             while (bitCount is 0)
             {
                 //Console.Clear();
-                System.Console.WriteLine($"{Environment.NewLine}{prompt} (range {CidrPrefixBitsCountMin}-{CidrPrefixBitsCountMax}):");
+                Console.WriteLine($"{Environment.NewLine}{prompt} (range {CidrPrefixBitsCountMin}-{CidrPrefixBitsCountMax}):");
 
-                var input = System.Console.ReadLine();
+                var input = Console.ReadLine();
                 var bitCountValidationResult = ValidateNumberIsWithinRange(input, CidrPrefixBitsCountMin, CidrPrefixBitsCountMax);
                 if (bitCountValidationResult.Failure)
                 {
-                    System.Console.WriteLine(bitCountValidationResult.Error);
+                    Console.WriteLine(bitCountValidationResult.Error);
                     continue;
                 }
 
@@ -108,32 +133,32 @@
             while (portNumber is 0)
             {
                 //Console.Clear();
-                System.Console.WriteLine($"{Environment.NewLine}{prompt} (range {PortRangeMin}-{PortRangeMax}):");
+                Console.WriteLine($"{Environment.NewLine}{prompt} (range {PortRangeMin}-{PortRangeMax}):");
 
                 if (allowRandom)
                 {
-                    System.Console.WriteLine("Enter zero to use a random port number");
+                    Console.WriteLine("Enter zero to use a random port number");
                 }
 
-                var input = System.Console.ReadLine() ?? string.Empty;
+                var input = Console.ReadLine() ?? string.Empty;
                 if (input.Equals("zero") || input.Equals("0"))
                 {
                     if (!allowRandom)
                     {
-                        System.Console.WriteLine("0 (zero) is not within the allowed range, please try again.");
+                        Console.WriteLine("0 (zero) is not within the allowed range, please try again.");
                         continue;
                     }
 
                     var rnd = new Random();
                     portNumber = rnd.Next(PortRangeMin, PortRangeMax + 1);
-                    System.Console.WriteLine($"Your randomly chosen port number is: {portNumber}");
+                    Console.WriteLine($"Your randomly chosen port number is: {portNumber}");
                     break;
                 }
 
                 var portValidationResult = ValidateNumberIsWithinRange(input, PortRangeMin, PortRangeMax);
                 if (portValidationResult.Failure)
                 {
-                    System.Console.WriteLine(portValidationResult.Error);
+                    Console.WriteLine(portValidationResult.Error);
                     continue;
                 }
 
@@ -170,14 +195,14 @@
 
             while (ipAddress.Equals(IPAddress.None))
             {
-                System.Console.WriteLine($"{Environment.NewLine}{prompt}");
-                var input = System.Console.ReadLine();
+                Console.WriteLine($"{Environment.NewLine}{prompt}");
+                var input = Console.ReadLine();
 
                 var parseIpResult = NetworkUtilities.ParseSingleIPv4Address(input);
                 if (parseIpResult.Failure)
                 {
                     var errorMessage = $"Unable tp parse IPv4 address from input string: {parseIpResult.Error}";
-                    System.Console.WriteLine(errorMessage);
+                    Console.WriteLine(errorMessage);
                     continue;
                 }
 
@@ -219,15 +244,15 @@
             var userChoice = 0;
             while (userChoice is 0)
             {
-                System.Console.WriteLine($"\n{prompt}");
-                System.Console.WriteLine("1. Yes");
-                System.Console.WriteLine("2. No");
+                Console.WriteLine(Environment.NewLine + prompt);
+                Console.WriteLine("1. Yes");
+                Console.WriteLine("2. No");
 
-                var input = System.Console.ReadLine();
+                var input = Console.ReadLine();
                 var validationResult = ValidateNumberIsWithinRange(input, 1, 2);
                 if (validationResult.Failure)
                 {
-                    System.Console.WriteLine(validationResult.Error);
+                    Console.WriteLine(validationResult.Error);
                     continue;
                 }
 

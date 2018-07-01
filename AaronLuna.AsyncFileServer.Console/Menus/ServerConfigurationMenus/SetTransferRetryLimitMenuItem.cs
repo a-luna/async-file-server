@@ -47,7 +47,7 @@
         public async Task<Result> ExecuteAsync()
         {
             _state.DoNotRefreshMainMenu = true;
-            _state.DisplayCurrentStatus();
+            SharedFunctions.DisplayLocalServerInfo(_state);
 
             var menuIndex = await SharedFunctions.GetUserSelectionIndexAsync(MenuText, MenuItems, _state);
             if (menuIndex > _retryLimitValues.Count) return Result.Ok();

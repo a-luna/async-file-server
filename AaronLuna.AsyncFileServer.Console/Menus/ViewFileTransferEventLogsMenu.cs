@@ -43,7 +43,7 @@
                 }
 
                 PopulateMenu();
-                _state.DisplayCurrentStatus();
+                SharedFunctions.DisplayLocalServerInfo(_state);
                 var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);
                 exit = menuItem.ReturnToParent;
                 result = await menuItem.ExecuteAsync();
@@ -56,9 +56,9 @@
         {
             if (_state.LocalServer.NoFileTransfers)
             {
-                System.Console.WriteLine("There are no file transfer event logs available");
-                System.Console.WriteLine($"{Environment.NewLine}Press enter to return to the previous menu.");
-                System.Console.ReadLine();
+                Console.WriteLine("There are no file transfer event logs available");
+                Console.WriteLine($"{Environment.NewLine}Press enter to return to the previous menu.");
+                Console.ReadLine();
 
                 return false;
             }

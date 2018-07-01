@@ -34,7 +34,7 @@
             }
 
             _state.DoNotRefreshMainMenu = true;
-            _state.DisplayCurrentStatus();
+            SharedFunctions.DisplayLocalServerInfo(_state);
             PopulateMenu();
 
             var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);

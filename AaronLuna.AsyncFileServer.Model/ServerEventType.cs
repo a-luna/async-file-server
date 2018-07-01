@@ -16,7 +16,7 @@
         ReceiveRequestFromRemoteServerComplete,
 
         ReceiveRequestLengthStarted,
-        PreserveExtraBytesReceivedAfterLengthOfIncomingRequestReceived,
+        ReceivedRequestLengthBytesFromSocket,
         ReceiveRequestLengthComplete,
 
         SaveUnreadBytesAfterRequestLengthReceived,
@@ -26,7 +26,7 @@
         ReceivedRequestBytesFromSocket,
         ReceiveRequestBytesComplete,
 
-        PreserveExtraBytesReceivedAfterAllRequestBytesWereReceived,
+        SaveUnreadBytesAfterAllRequestBytesReceived,
         CopySavedBytesToIncomingFile,
 
         QueueContainsUnhandledRequests,
@@ -36,6 +36,7 @@
         SendTextMessageStarted,
         SendTextMessageComplete,
         ReceivedTextMessage,
+        MarkTextMessageAsRead,
 
         FileTransferStatusChange,
 

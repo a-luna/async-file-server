@@ -1,6 +1,4 @@
-﻿using AaronLuna.AsyncFileServer.Utilities;
-
-namespace AaronLuna.AsyncFileServer.Controller
+﻿namespace AaronLuna.AsyncFileServer.Controller
 {
     using System;
     using System.Collections.Generic;
@@ -10,11 +8,11 @@ namespace AaronLuna.AsyncFileServer.Controller
     using System.Net.Sockets;
     using System.Threading.Tasks;
 
+    using Model;
+    using Utilities;
     using Common;
     using Common.Logging;
     using Common.Result;
-
-    using Model;
 
     public class ServerRequestController
     {
@@ -122,7 +120,8 @@ namespace AaronLuna.AsyncFileServer.Controller
             {
                 TimeStamp = Request.Timestamp,
                 Author = TextMessageAuthor.RemoteServer,
-                Message = _textMessage
+                Message = _textMessage,
+                Unread = true
             };
 
             return Result.Ok(textMessage);
@@ -376,7 +375,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             _eventLog.Add(new ServerEvent
             {
-                EventType = ServerEventType.PreserveExtraBytesReceivedAfterLengthOfIncomingRequestReceived,
+                EventType = ServerEventType.ReceivedRequestLengthBytesFromSocket,
                 BytesReceivedCount = _lastBytesReceivedCount,
                 RequestLengthInBytes = Constants.SizeOfInt32InBytes,
                 UnreadBytesCount = unreadBytesCount
@@ -393,8 +392,6 @@ namespace AaronLuna.AsyncFileServer.Controller
                 _eventLog.Add(new ServerEvent
                 {
                     EventType = ServerEventType.SaveUnreadBytesAfterRequestLengthReceived,
-                    CurrentRequestBytesReceived = _lastBytesReceivedCount,
-                    ExpectedByteCount = Constants.SizeOfInt32InBytes,
                     UnreadBytesCount = unreadBytesCount,
                 });
 
@@ -440,7 +437,6 @@ namespace AaronLuna.AsyncFileServer.Controller
                 {
                     EventType = ServerEventType.CopySavedBytesToRequestData,
                     UnreadBytesCount = UnreadBytes.Count,
-                    TotalRequestBytesReceived = currentRequestBytesReceived,
                     RequestLengthInBytes = _totalBytes,
                     RequestBytesRemaining = bytesRemaining
                 });
@@ -512,7 +508,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
                 _eventLog.Add(new ServerEvent
                 {
-                    EventType = ServerEventType.PreserveExtraBytesReceivedAfterAllRequestBytesWereReceived,
+                    EventType = ServerEventType.SaveUnreadBytesAfterAllRequestBytesReceived,
                     ExpectedByteCount = currentRequestBytesReceived,
                     UnreadBytesCount = unreadByteCount
                 });

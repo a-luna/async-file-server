@@ -85,6 +85,11 @@
         public string PublicIpString { get; set; }
         public int PortNumber { get; set; }
 
+        public override string ToString()
+        {
+            return $"{SessionIpAddress}:{PortNumber}";
+        }
+
         //void InitializeConnection(IPAddress ipAddress)
         //{
         //    SessionIpAddress = ipAddress;

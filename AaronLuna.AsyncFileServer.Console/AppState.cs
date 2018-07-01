@@ -1,7 +1,6 @@
 ﻿namespace AaronLuna.AsyncFileServer.Console
 {
     using System;
-    using System.Collections.Generic;
     using System.IO;
     using System.Net;
     using System.Threading;
@@ -14,7 +13,7 @@
         public AppState()
         {
             LocalServer = new Controller.AsyncFileServer();
-            SelectedServer = new ServerInfo();
+            SelectedServerInfo = new ServerInfo();
             
             WaitingForServerInfoResponse = true;
             WaitingForFileListResponse = true;
@@ -59,39 +58,52 @@
         public int RetryCounter { get; set; }
         public ProgressEventArgs FileStalledInfo { get; set; }
 
-        public ServerInfo SelectedServer { get; set; }
+        public ServerInfo SelectedServerInfo { get; set; }
 
-        public void DisplayCurrentStatus()
+        public string LocalServerInfo()
         {
-            System.Console.Clear();
-            System.Console.WriteLine(ReportLocalServerConnectionInfo());
-            System.Console.WriteLine(ReportItemsInQueue());
-            System.Console.WriteLine(ReportRemoteServerConnectionInfo());
+            var serverIsListening = LocalServer.IsListening
+                ? $"Server is listening for incoming requests on port {LocalServer.Info.PortNumber}{Environment.NewLine}"
+                : $"Server is currently not listening for incoming connections{Environment.NewLine}";
+
+            var localServerIp =
+                $"Local IP:  {LocalServer.Info.LocalIpAddress}{Environment.NewLine}" +
+                $"Public IP: {LocalServer.Info.PublicIpAddress}";
+
+            var newLine1 = LocalServer.NoTextSessions && LocalServer.NoFileTransfers
+                ? Environment.NewLine
+                : Environment.NewLine + Environment.NewLine;
+
+            var textSessions = LocalServer.NoTextSessions
+                ? string.Empty
+                : $"Unread text messages: {LocalServer.UnreadTextMessageCount}{Environment.NewLine}";
+
+            var newLine2 = string.IsNullOrEmpty(newLine1) && !LocalServer.NoTextSessions
+                ? Environment.NewLine
+                : string.Empty;
+
+            var fileTransferQueue = LocalServer.QueueIsEmpty
+                ? string.Empty
+                : $"File transfers in queue: {LocalServer.RequestsInQueue}";
+
+            var newLine3 = string.IsNullOrEmpty(newLine2) && !LocalServer.NoFileTransfers
+                ? Environment.NewLine
+                : string.Empty;
+
+            return
+                serverIsListening + localServerIp + newLine1
+                + textSessions + newLine2
+                + fileTransferQueue + newLine3;
         }
 
-        public string ReportLocalServerConnectionInfo()
+        public string RemoteServerInfo()
         {
-            return $"Server is listening for incoming requests on port {LocalServer.Info.PortNumber}{Environment.NewLine}" +
-                   $"Local IP:  {LocalServer.Info.LocalIpAddress}{Environment.NewLine}" +
-                   $"Public IP: {LocalServer.Info.PublicIpAddress}{Environment.NewLine}";
-        }
-
-        public string ReportItemsInQueue()
-        {
-            return $"Requests in queue: {LocalServer.RequestsInQueue}";
-        }
-
-        public string ReportRemoteServerConnectionInfo()
-        {
-            var selectedServerInfo = $"{SelectedServer.SessionIpAddress}:{SelectedServer.PortNumber}";
-            var remoteServerInfo = $"{LocalServer.RemoteServerSessionIpAddress}:{LocalServer.RemoteServerPortNumber}";
-
             var selectedServerStatus = ClientSelected
-                ? $"Remote server endpoint: {selectedServerInfo}{Environment.NewLine}"
-                : $"Please select a remote server{Environment.NewLine}";
+                ? $"Options for remote server: {SelectedServerInfo}"
+                : "Please select a remote server";
 
             return FileTransferInProgress
-                ? $"SENDING FILE TO {remoteServerInfo}...{Environment.NewLine}"
+                ? $"SENDING FILE TO {LocalServer.RemoteServerInfo}..."
                 : selectedServerStatus;
         }
     }

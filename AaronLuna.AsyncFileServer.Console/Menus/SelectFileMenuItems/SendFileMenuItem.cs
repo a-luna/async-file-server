@@ -29,9 +29,9 @@
 
         public async Task<Result> ExecuteAsync()
         {
-            var ipAddress = _state.SelectedServer.SessionIpAddress;
-            var port = _state.SelectedServer.PortNumber;
-            var transferFolderPath = _state.SelectedServer.TransferFolder;
+            var ipAddress = _state.SelectedServerInfo.SessionIpAddress;
+            var port = _state.SelectedServerInfo.PortNumber;
+            var transferFolderPath = _state.SelectedServerInfo.TransferFolder;
             
             var sendFileResult =
                 await _state.LocalServer.SendFileAsync(

@@ -34,7 +34,7 @@
 
         Result Execute()
         {
-            _state.SelectedServer = _server;
+            _state.SelectedServerInfo = _server;
             _state.ClientSelected = true;
             
             return Result.Ok();

@@ -18,7 +18,7 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Change file transfer stalled timeout value ({_state.Settings.FileTransferStalledTimeout.TotalMilliseconds} ms)";
+            ItemText = $"Change file transfer stalled timeout value ({_state.Settings.FileTransferStalledTimeout.TotalSeconds} seconds)";
             MenuText = "Select a value from the list below:";
 
             _timeoutValues = new List<int>
@@ -51,7 +51,7 @@
         public async Task<Result> ExecuteAsync()
         {
             _state.DoNotRefreshMainMenu = true;
-            _state.DisplayCurrentStatus();
+            SharedFunctions.DisplayLocalServerInfo(_state);
 
             var menuIndex = await SharedFunctions.GetUserSelectionIndexAsync(MenuText, MenuItems, _state);
             if (menuIndex > _timeoutValues.Count) return Result.Ok();

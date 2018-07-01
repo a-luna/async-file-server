@@ -27,8 +27,8 @@
         {
             NetworkUtilities.DisplayLocalIPv4AddressInfo();
 
-            System.Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
-            System.Console.ReadLine();
+            Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
+            Console.ReadLine();
 
             return Result.Ok();
         }

@@ -1,7 +1,5 @@
 ﻿// TODO: Investigate bug where if 2 file requests are in queue, all file transfers fail after the first transfer is processed. This does not occur when processing one file request at a time.
-// TODO: Add Unread property to TextMessage class, add menu system to notify of unread messages and allow user to view history of all text message sessions
 
-using AaronLuna.Common;
 namespace AaronLuna.AsyncFileServer.Console
 {
     using System;
@@ -12,6 +10,7 @@ namespace AaronLuna.AsyncFileServer.Console
 
     using Menus;
     using Model;
+    using Common;
     using Common.Extensions;
     using Common.IO;
     using Common.Logging;
@@ -37,6 +36,7 @@ namespace AaronLuna.AsyncFileServer.Console
             _cts = new CancellationTokenSource();
             _state = new AppState {MessageDisplayTime = _displayMessageDelay};
             _state.LocalServer.EventOccurred += HandleServerEventAsync;
+            _state.LocalServer.SocketEventOccurred += HandleServerEventAsync;
             _state.LocalServer.FileTransferProgress += HandleFileTransferProgress;
         }
 
@@ -218,19 +218,14 @@ namespace AaronLuna.AsyncFileServer.Console
 
             switch (serverEvent.EventType)
             {
-                //case ServerEventType.ReceiveRequestFromRemoteServerComplete:
+                case ServerEventType.ReceiveRequestFromRemoteServerComplete:
+                case ServerEventType.ProcessRequestStarted:
+                case ServerEventType.ProcessRequestComplete:
+                case ServerEventType.ReceivedTextMessage:
                 case ServerEventType.QueueContainsUnhandledRequests:
                     RefreshMainMenu(serverEvent);
                     break;
-
-                //case ServerEventType.ProcessRequestComplete:
-                //    ProcessRequestComplete(serverEvent);
-                //    break;
-
-                case ServerEventType.ReceivedTextMessage:
-                    await ReceivedTextMessageAsync(serverEvent);
-                    break;
-
+                
                 case ServerEventType.ReceivedServerInfo:
                     ReceivedServerInfo(serverEvent);
                     _state.WaitingForServerInfoResponse = false;
@@ -286,14 +281,7 @@ namespace AaronLuna.AsyncFileServer.Console
                     break;
                     
                 case ServerEventType.ErrorOccurred:
-                    _state.ErrorOccurred = true;
-                    _state.ErrorMessage = serverEvent.ErrorMessage;
-                    _state.FileTransferInProgress = false;
-
-                    if (!_state.ProgressBarInstantiated) return;
-
-                    _state.ProgressBar.Dispose();
-                    _state.ProgressBarInstantiated = false;
+                    HandleErrorOccurred(serverEvent);
                     break;
 
                 default:
@@ -304,48 +292,29 @@ namespace AaronLuna.AsyncFileServer.Console
         void RefreshMainMenu(ServerEvent serverEvent)
         {
             if (_state.FileTransferInProgress) return;
-            if (serverEvent.RequestType == ServerRequestType.ShutdownServerCommand) return;
+            if (DoNotRefreshMainMenu(serverEvent.RequestType)) return;
 
             Thread.Sleep(Constants.OneHalfSecondInMilliseconds);
             _mainMenu.DisplayMenu();
         }
-
-        //void ProcessRequestComplete(ServerEvent serverEvent)
-        //{
-        //    if (_state.FileTransferInProgress) return;
-        //    if (DoNotDisplayRequestProcessedMessage(serverEvent.RequestType)) return;
-            
-        //    Thread.Sleep(Constants.OneHalfSecondInMilliseconds);
-        //    _mainMenu.DisplayMenu();
-        //}
-
-        //bool DoNotDisplayRequestProcessedMessage(ServerRequestType messageType)
-        //{
-        //    switch (messageType)
-        //    {
-        //        case ServerRequestType.TextMessage:
-        //        case ServerRequestType.RequestedFolderDoesNotExist:
-        //        case ServerRequestType.NoFilesAvailableForDownload:
-        //        case ServerRequestType.FileListRequest:
-        //        case ServerRequestType.FileListResponse:
-        //        case ServerRequestType.FileTransferAccepted:
-        //        case ServerRequestType.InboundFileTransferRequest:
-        //        case ServerRequestType.ShutdownServerCommand:
-        //            return true;
-
-        //        default:
-        //            return false;
-        //    }
-        //}
-
-        async Task ReceivedTextMessageAsync(ServerEvent serverEvent)
+        
+        bool DoNotRefreshMainMenu(ServerRequestType messageType)
         {
-            Console.WriteLine($"{Environment.NewLine}{serverEvent.RemoteServerIpAddress}:{serverEvent.RemoteServerPortNumber} says:");
-            Console.WriteLine(serverEvent.TextMessage);
-            _state.SignalReturnToMainMenu.Set();
-            
-            await Task.Delay(Constants.OneHalfSecondInMilliseconds);
-            _state.SignalReturnToMainMenu.WaitOne();
+            switch (messageType)
+            {
+                case ServerRequestType.TextMessage:
+                case ServerRequestType.RequestedFolderDoesNotExist:
+                case ServerRequestType.NoFilesAvailableForDownload:
+                case ServerRequestType.FileListRequest:
+                case ServerRequestType.FileListResponse:
+                case ServerRequestType.FileTransferAccepted:
+                case ServerRequestType.InboundFileTransferRequest:
+                case ServerRequestType.ShutdownServerCommand:
+                    return true;
+
+                default:
+                    return false;
+            }
         }
 
         async Task RejectFileTransferAsync()
@@ -363,22 +332,10 @@ namespace AaronLuna.AsyncFileServer.Console
 
         void ReceivedServerInfo(ServerEvent serverEvent)
         {
-            _state.SelectedServer.TransferFolder = serverEvent.RemoteFolder;
-            _state.SelectedServer.PublicIpAddress = serverEvent.PublicIpAddress;
-            _state.SelectedServer.LocalIpAddress = serverEvent.LocalIpAddress;
-
-            var remoteServerLocalIp = serverEvent.LocalIpAddress;
-            var cidrIp = _state.Settings.LocalNetworkCidrIp;
-            var addressInRangeCheck = NetworkUtilities.IpAddressIsInRange(remoteServerLocalIp, cidrIp);
-
-            if (addressInRangeCheck.Success && addressInRangeCheck.Value)
-            {
-                _state.SelectedServer.SessionIpAddress = serverEvent.LocalIpAddress;
-            }
-            else
-            {
-                _state.SelectedServer.SessionIpAddress = serverEvent.PublicIpAddress;
-            }
+            _state.SelectedServerInfo.TransferFolder = serverEvent.RemoteFolder;
+            _state.SelectedServerInfo.PublicIpAddress = serverEvent.PublicIpAddress;
+            _state.SelectedServerInfo.LocalIpAddress = serverEvent.LocalIpAddress;
+            _state.SelectedServerInfo.SessionIpAddress = serverEvent.RemoteServerIpAddress;
         }
 
         void ReceivedInboundFileTransferRequest(ServerEvent serverEvent)
@@ -447,7 +404,7 @@ namespace AaronLuna.AsyncFileServer.Console
 
             _state.ProgressBar.BytesReceived = fileSize;
             _state.ProgressBar.Report(1);
-            _state.SignalReturnToMainMenu.WaitOne(Constants.OneHalfSecondInMilliseconds);
+            Thread.Sleep(Constants.OneHalfSecondInMilliseconds);
             
             var report =
                 $"{Environment.NewLine}{Environment.NewLine}" +
@@ -548,6 +505,18 @@ namespace AaronLuna.AsyncFileServer.Console
             
             await Task.Delay(Constants.OneHalfSecondInMilliseconds);
             _mainMenu.DisplayMenu();
+        }
+
+        void HandleErrorOccurred(ServerEvent serverEvent)
+        {
+            _state.ErrorOccurred = true;
+            _state.ErrorMessage = serverEvent.ErrorMessage;
+            _state.FileTransferInProgress = false;
+
+            if (!_state.ProgressBarInstantiated) return;
+
+            _state.ProgressBar.Dispose();
+            _state.ProgressBarInstantiated = false;
         }
     }
 }

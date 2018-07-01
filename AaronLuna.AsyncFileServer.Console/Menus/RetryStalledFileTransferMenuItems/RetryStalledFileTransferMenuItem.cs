@@ -26,8 +26,8 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.RetryStalledFileTransferMenuIt
         {
             var retryFileTransferesult = await _state.LocalServer.RetryFileTransferAsync(
                 _fileTransfer.Id,
-                _state.SelectedServer.SessionIpAddress,
-                _state.SelectedServer.PortNumber);
+                _state.SelectedServerInfo.SessionIpAddress,
+                _state.SelectedServerInfo.PortNumber);
 
             return retryFileTransferesult.Success
                 ? Result.Ok()

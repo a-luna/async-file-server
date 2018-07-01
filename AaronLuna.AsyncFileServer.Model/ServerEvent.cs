@@ -122,7 +122,7 @@
                     report += $"Incoming request length: {RequestLengthInBytes:N0} bytes ({RequestLengthData.ToHexString()})";
                     break;
 
-                case ServerEventType.PreserveExtraBytesReceivedAfterLengthOfIncomingRequestReceived:
+                case ServerEventType.ReceivedRequestLengthBytesFromSocket:
                     report +=
                         $"Received data from socket:{Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}Bytes Received:\t\t{BytesReceivedCount:N0}{Environment.NewLine}" +
@@ -131,7 +131,7 @@
                     break;
 
                 case ServerEventType.SaveUnreadBytesAfterRequestLengthReceived:
-                case ServerEventType.PreserveExtraBytesReceivedAfterAllRequestBytesWereReceived:
+                case ServerEventType.SaveUnreadBytesAfterAllRequestBytesReceived:
                     report +=
                         $"Socket.Receive operation returned {UnreadBytesCount:N0} more bytes than expected";
                     break;
@@ -204,6 +204,10 @@
                         $"Text message received{Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}Message From:\t{RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
                         $"{indentLevel1}Message:\t\t{TextMessage}{Environment.NewLine}";
+                    break;
+
+                case ServerEventType.MarkTextMessageAsRead:
+                    report += $"Text message from {RemoteServerIpAddress}:{RemoteServerPortNumber} has been marked as read";
                     break;
 
                 case ServerEventType.RequestServerInfoStarted:

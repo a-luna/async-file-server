@@ -16,7 +16,11 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Select remote server";
+
+            ItemText = _state.ClientSelected
+                ? "Change remote server"
+                : "Select remote server";
+
             MenuText = "Choose a remote server:";
             MenuItems = new List<IMenuItem>();
         }
@@ -30,7 +34,7 @@
         {
             _state.DoNotRefreshMainMenu = true;
 
-            _state.DisplayCurrentStatus();
+            SharedFunctions.DisplayLocalServerInfo(_state);
             PopulateMenu();
 
             var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);

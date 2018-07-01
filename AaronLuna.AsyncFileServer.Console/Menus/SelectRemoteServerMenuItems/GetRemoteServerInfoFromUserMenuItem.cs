@@ -40,7 +40,7 @@
                 return requestInfoFromServer;
             }
 
-            _state.Settings.RemoteServers.Add(_state.SelectedServer);
+            _state.Settings.RemoteServers.Add(_state.SelectedServerInfo);
             var saveSettings = ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
 
             return saveSettings.Success
@@ -64,13 +64,13 @@
 
             if (serverInfoAlreadyExists)
             {
-                _state.SelectedServer =
+                _state.SelectedServerInfo =
                     SharedFunctions.GetRemoteServer(serverInfo, _state.Settings.RemoteServers);
 
                 return Result.Fail("Server is already added, returning to main menu.");
             }
 
-            _state.SelectedServer = serverInfo;
+            _state.SelectedServerInfo = serverInfo;
             return Result.Ok();
 
         }
@@ -81,8 +81,8 @@
 
             var requestServerInfoResult =
                 await _state.LocalServer.RequestServerInfoAsync(
-                        _state.SelectedServer.SessionIpAddress,
-                        _state.SelectedServer.PortNumber)
+                        _state.SelectedServerInfo.SessionIpAddress,
+                        _state.SelectedServerInfo.PortNumber)
                     .ConfigureAwait(false);
 
             if (requestServerInfoResult.Failure)

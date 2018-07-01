@@ -52,7 +52,7 @@
 
             while (!exit)
             {
-                _state.DisplayCurrentStatus();
+                SharedFunctions.DisplayLocalServerInfo(_state);
 
                 var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);
                 result = await menuItem.ExecuteAsync();

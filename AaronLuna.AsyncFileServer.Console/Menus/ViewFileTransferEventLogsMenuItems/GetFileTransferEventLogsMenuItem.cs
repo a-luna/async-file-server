@@ -28,16 +28,16 @@
 
         Result Execute()
         {
-            System.Console.WriteLine($"{Environment.NewLine}############ FILE TRANSFER EVENT LOG ############{Environment.NewLine}");
+            Console.WriteLine($"{Environment.NewLine}############ FILE TRANSFER EVENT LOG ############{Environment.NewLine}");
             foreach (var serverEvent in _fileTransfer.EventLog)
             {
-                System.Console.WriteLine(serverEvent);
+                Console.WriteLine(serverEvent);
             }
 
-            System.Console.WriteLine($"{Environment.NewLine}############  FILE TRANSFER DETAILS  ############{Environment.NewLine}");
-            System.Console.WriteLine(_fileTransfer.TransferDetails());
-            System.Console.WriteLine($"{Environment.NewLine}Press enter to return to the previous menu.");
-            System.Console.ReadLine();
+            Console.WriteLine($"{Environment.NewLine}############  FILE TRANSFER DETAILS  ############{Environment.NewLine}");
+            Console.WriteLine(_fileTransfer.TransferDetails());
+            Console.WriteLine($"{Environment.NewLine}Press enter to return to the previous menu.");
+            Console.ReadLine();
             
             return Result.Ok();
         }

@@ -1,7 +1,4 @@
-﻿using AaronLuna.AsyncFileServer.Utilities;
-using AaronLuna.Common.Extensions;
-
-namespace AaronLuna.AsyncFileServer.Controller
+﻿namespace AaronLuna.AsyncFileServer.Controller
 {
     using System;
     using System.Collections.Generic;
@@ -13,6 +10,8 @@ namespace AaronLuna.AsyncFileServer.Controller
     using System.Threading.Tasks;
 
     using Model;
+    using Utilities;
+    using Common.Extensions;
     using Common.IO;
     using Common.Logging;
     using Common.Network;
@@ -182,10 +181,26 @@ namespace AaronLuna.AsyncFileServer.Controller
         public int RequestsInQueue => _requestQueue.Count;
         public ServerRequestController OldestRequestInQueue => _requestQueue.First();
 
+        public bool NoTextSessions => _textSessions.Count == 0;
+        public List<int> TextSessionIds => _textSessions.Select(t => t.Id).ToList();
+        public int TextSessionCount => TextSessionIds.Count;
+        public int UnreadTextMessageCount => GetNumberOfUnreadTextMessages();
+        public List<int> TextSessionIdsWithUnreadMessages => GetTextSessionIdsWithUnreadMessages();
+
         public bool NoFileTransfers => _fileTransfers.Count == 0;
         public List<int> FileTransferIds => _fileTransfers.Select(t => t.FiletransferId).ToList();
         public int OldestTransferId => _fileTransfers.First().FiletransferId;
         public int NewestTransferId => _fileTransfers.Last().FiletransferId;
+
+        public List<int> UnhandledTransferIds => _fileTransfers.Select(t => t).Where(t => t.AwaitingResponse)
+            .Select(t => t.FiletransferId).ToList();
+
+        public int UnhandledFileTransferCount => UnhandledTransferIds.Count;
+
+        public List<int> HandledTransferIds => _fileTransfers.Select(t => t).Where(t => t.TasksRemaining)
+            .Select(t => t.FiletransferId).ToList();
+
+        public int HandledFileTransferCount => HandledTransferIds.Count;
 
         public List<int> StalledTransfersIds =>
             _fileTransfers.Select(t => t)
@@ -358,6 +373,40 @@ namespace AaronLuna.AsyncFileServer.Controller
                 _eventLog.Select(e => e).Where(e => e.FileTransferId == requestedFileTransfer.FiletransferId).ToList();
 
             return Result.Ok(requestedFileTransfer);
+        }
+
+        int GetNumberOfUnreadTextMessages()
+        {
+            var unreadCount = 0;
+            foreach (var textSession in _textSessions)
+            {
+                foreach (var textMessage in textSession.Messages)
+                {
+                    if (textMessage.Unread)
+                    {
+                        unreadCount++;
+                    }
+                }
+            }
+
+            return unreadCount;
+        }
+
+        List<int> GetTextSessionIdsWithUnreadMessages()
+        {
+            var sessionIds = new List<int>();
+            foreach (var textSession in _textSessions)
+            {
+                foreach (var textMessage in textSession.Messages)
+                {
+                    if (textMessage.Unread)
+                    {
+                        sessionIds.Add(textSession.Id);
+                    }
+                }
+            }
+
+            return sessionIds.Distinct().ToList();
         }
         
         public async Task InitializeAsync(string cidrIp, int port)
@@ -554,7 +603,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             ServerIsBusy = true;
             RemoteServerInfo = requestController.RemoteServerInfo;
             RemoteServerTransferFolderPath = requestController.RemoteServerInfo.TransferFolder;
-            
+
             EventOccurred?.Invoke(this, new ServerEvent
             {
                 EventType = ServerEventType.ProcessRequestStarted,
@@ -684,7 +733,7 @@ namespace AaronLuna.AsyncFileServer.Controller
         {
             foreach (var request in _requestQueue)
             {
-                if (!request.InboundFileTransferRequested) continue;
+                if (request.InboundFileTransferRequested) continue;
 
                 var result = await ProcessRequestAsync(request.RequestId);
                 if (result.Failure)
@@ -708,18 +757,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
             var textSessionId = GetTextSessionIdForRemoteServer(RemoteServerInfo);
-
-            var newMessage = new TextMessage
-            {
-                SessionId = textSessionId,
-                TimeStamp = DateTime.Now,
-                Author = TextMessageAuthor.Self,
-                Message = message
-            };
-
-            var textSession = GetTextSessionById(textSessionId).Value;
-            textSession.Messages.Add(newMessage);
-
+            
             EventOccurred?.Invoke(this,
                 new ServerEvent
                 {
@@ -755,6 +793,18 @@ namespace AaronLuna.AsyncFileServer.Controller
             EventOccurred?.Invoke(this,
                 new ServerEvent
                     {EventType = ServerEventType.SendTextMessageComplete});
+
+            var newMessage = new TextMessage
+            {
+                SessionId = textSessionId,
+                TimeStamp = DateTime.Now,
+                Author = TextMessageAuthor.Self,
+                Message = message,
+                Unread = false
+            };
+
+            var textSession = GetTextSessionById(textSessionId).Value;
+            textSession.Messages.Add(newMessage);
 
             return Result.Ok();
         }

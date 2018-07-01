@@ -18,8 +18,7 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Change socket timeout value * ({_state.Settings.SocketSettings.SocketTimeoutInMilliseconds} ms)" +
-                       $"{Environment.NewLine}   Timeout value is used for Accept, Send and Receive operations{Environment.NewLine}";
+            ItemText = $"Change socket timeout value * ({_state.Settings.SocketSettings.SocketTimeoutInMilliseconds} ms)";
             MenuText = "Select a value from the list below:";
 
             _timeoutValues = new List<int>
@@ -52,7 +51,7 @@
         public async Task<Result> ExecuteAsync()
         {
             _state.DoNotRefreshMainMenu = true;
-            _state.DisplayCurrentStatus();
+            SharedFunctions.DisplayLocalServerInfo(_state);
 
             var menuIndex = await SharedFunctions.GetUserSelectionIndexAsync(MenuText, MenuItems, _state);
             if (menuIndex > _timeoutValues.Count) return Result.Ok();

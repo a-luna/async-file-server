@@ -19,14 +19,14 @@
             var exit = false;
             while (!exit)
             {
-                System.Console.WriteLine($"{Environment.NewLine}Starting asynchronous server...{Environment.NewLine}");
+                Console.WriteLine($"{Environment.NewLine}Starting asynchronous server...{Environment.NewLine}");
 
                 var server = new ServerApplication();
                 var result = await server.RunAsync().ConfigureAwait(false);
 
                 if (result.Failure)
                 {
-                    System.Console.WriteLine($"{Environment.NewLine}{result.Error}");
+                    Console.WriteLine($"{Environment.NewLine}{result.Error}");
 
                     if (result.Error.Contains("Restarting"))
                     {

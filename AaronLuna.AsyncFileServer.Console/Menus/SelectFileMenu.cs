@@ -25,8 +25,8 @@
             ReturnToParent = false;
             
             ItemText = sendFile
-                ? "Send file to remote server"
-                : "Download file from remote server" + Environment.NewLine;
+                ? "Send file"
+                : "Download file";
 
             MenuText = sendFile
                 ? "Choose a file to send:"
@@ -43,7 +43,7 @@
         public async Task<Result> ExecuteAsync()
         {
             _state.DoNotRefreshMainMenu = true;
-            _state.DisplayCurrentStatus();
+            SharedFunctions.DisplayLocalServerInfo(_state);
 
             var populateMenuResult = await PopulateMenuAsync();
             if (populateMenuResult.Failure)
@@ -121,9 +121,9 @@
 
         async Task<Result<FileInfoList>> GetListOfFilesFromRemoteServer()
         {
-            var ipAddress = _state.SelectedServer.SessionIpAddress;
-            var port = _state.SelectedServer.PortNumber;
-            var remoteFolder = _state.SelectedServer.TransferFolder;
+            var ipAddress = _state.SelectedServerInfo.SessionIpAddress;
+            var port = _state.SelectedServerInfo.PortNumber;
+            var remoteFolder = _state.SelectedServerInfo.TransferFolder;
 
             _state.WaitingForFileListResponse = true;
             _state.NoFilesAvailableForDownload = false;
