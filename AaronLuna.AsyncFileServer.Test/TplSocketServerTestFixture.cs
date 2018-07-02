@@ -357,6 +357,7 @@ namespace AaronLuna.AsyncFileServer.Test
             const int localPort = 8005;
             const int remoteServerPort = 8006;
             var getFilePath = _remoteFilePath;
+            var sentFileSize = new FileInfo(getFilePath).Length;
             var receivedFilePath = _localFilePath;
 
             await _server.InitializeAsync(_cidrIp,  remoteServerPort);
@@ -394,6 +395,7 @@ namespace AaronLuna.AsyncFileServer.Test
                         _localIp.ToString(),
                         remoteServerPort,
                         getFilePath,
+                        sentFileSize,
                         _localFolder).ConfigureAwait(false);
 
             if (getFileResult.Failure)
@@ -417,8 +419,7 @@ namespace AaronLuna.AsyncFileServer.Test
 
             Assert.IsTrue(File.Exists(receivedFilePath));
             Assert.AreEqual(FileName, Path.GetFileName(receivedFilePath));
-
-            var sentFileSize = new FileInfo(getFilePath).Length;
+            
             var receivedFileSize = new FileInfo(receivedFilePath).Length;
             Assert.AreEqual(sentFileSize, receivedFileSize);
         }
@@ -663,6 +664,7 @@ namespace AaronLuna.AsyncFileServer.Test
             const int localPort = 8015;
             const int remoteServerPort = 8016;
             var getFilePath = _remoteFilePath;
+            var sentFileSize = new FileInfo(getFilePath).Length;
             var receivedFilePath = _localFilePath;
 
             await _server.InitializeAsync(_cidrIp,  remoteServerPort);
@@ -699,6 +701,7 @@ namespace AaronLuna.AsyncFileServer.Test
                             _localIp.ToString(),
                             remoteServerPort,
                             getFilePath,
+                            sentFileSize,
                             _localFolder).ConfigureAwait(false);
 
             while (_client.QueueIsEmpty) { }
@@ -719,6 +722,7 @@ namespace AaronLuna.AsyncFileServer.Test
                             _localIp.ToString(),
                             remoteServerPort,
                             getFilePath,
+                            sentFileSize,
                             _localFolder).ConfigureAwait(false);
 
             while (_client.QueueIsEmpty) { }
@@ -741,8 +745,7 @@ namespace AaronLuna.AsyncFileServer.Test
 
             Assert.IsTrue(File.Exists(receivedFilePath));
             Assert.AreEqual(FileName, Path.GetFileName(receivedFilePath));
-
-            var sentFileSize = new FileInfo(getFilePath).Length;
+            
             var receivedFileSize = new FileInfo(receivedFilePath).Length;
             Assert.AreEqual(sentFileSize, receivedFileSize);
         }

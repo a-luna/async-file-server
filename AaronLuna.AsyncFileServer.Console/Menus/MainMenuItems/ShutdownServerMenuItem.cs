@@ -12,7 +12,7 @@
         public ShutdownServerMenuItem(AppState state)
         {
             _state = state;
-            ItemText = "Shutdown";
+            ItemText = "Shutdown local server";
         }
 
         public string ItemText { get; set; }

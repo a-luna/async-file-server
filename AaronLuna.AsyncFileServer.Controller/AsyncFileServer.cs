@@ -952,7 +952,7 @@
                 FileSizeInBytes = outboundFileTransfer.FileSizeInBytes,
                 RemoteServerIpAddress = RemoteServerSessionIpAddress,
                 RemoteServerPortNumber = RemoteServerPortNumber,
-                RemoteFolder = RemoteServerTransferFolderPath,
+                RemoteFolder = outboundFileTransfer.RemoteFolderPath,
                 FileTransferId = outboundFileTransfer.Id
             });
 
@@ -1248,6 +1248,7 @@
             string remoteServerIpAddress,
             int remoteServerPort,
             string remoteFilePath,
+            long fileSizeBytes,
             string localFolderPath)
         {
             var inboundFileTransfer = new FileTransfer(BufferSize)
@@ -1263,6 +1264,7 @@
                 RemoteServerPortNumber = remoteServerPort,
                 LocalFilePath = Path.Combine(localFolderPath, Path.GetFileName(remoteFilePath)),
                 LocalFolderPath = localFolderPath,
+                FileSizeInBytes = fileSizeBytes,
                 RemoteFolderPath = Path.GetDirectoryName(remoteFilePath),
                 RemoteFilePath = remoteFilePath,
                 RequestInitiatedTime = DateTime.Now
@@ -1277,19 +1279,21 @@
             RemoteServerTransferFolderPath = Path.GetDirectoryName(remoteFilePath);
             MyTransferFolderPath = localFolderPath;
 
-            EventOccurred?.Invoke(this,
-                new ServerEvent
-                {
-                    EventType = ServerEventType.RequestInboundFileTransferStarted,
-                    RemoteServerIpAddress = RemoteServerSessionIpAddress,
-                    RemoteServerPortNumber = RemoteServerPortNumber,
-                    RemoteFolder = RemoteServerTransferFolderPath,
-                    FileName = Path.GetFileName(remoteFilePath),
-                    LocalIpAddress = MyLocalIpAddress,
-                    LocalPortNumber = MyServerPortNumber,
-                    LocalFolder = MyTransferFolderPath,
-                    FileTransferId = inboundFileTransfer.Id
-                });
+            _eventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.RequestInboundFileTransferStarted,
+                RemoteServerIpAddress = RemoteServerSessionIpAddress,
+                RemoteServerPortNumber = RemoteServerPortNumber,
+                RemoteFolder = RemoteServerTransferFolderPath,
+                FileName = Path.GetFileName(remoteFilePath),
+                FileSizeInBytes = fileSizeBytes,
+                LocalIpAddress = MyLocalIpAddress,
+                LocalPortNumber = MyServerPortNumber,
+                LocalFolder = MyTransferFolderPath,
+                FileTransferId = inboundFileTransfer.Id
+            });
+
+            EventOccurred?.Invoke(this, _eventLog.Last());
 
             var messageData =
                 ServerRequestDataBuilder.ConstructInboundFileTransferRequest(
@@ -1318,9 +1322,13 @@
 
             CloseSocket(socket);
 
-            EventOccurred?.Invoke(this,
-                new ServerEvent
-                    {EventType = ServerEventType.RequestInboundFileTransferComplete});
+            _eventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.RequestInboundFileTransferComplete,
+                FileTransferId = inboundFileTransfer.Id
+            });
+
+            EventOccurred?.Invoke(this, _eventLog.Last());
 
             return Result.Ok();
         }

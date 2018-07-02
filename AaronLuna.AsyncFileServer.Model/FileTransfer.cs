@@ -85,7 +85,7 @@
         public int FileChunkSentCount { get; set; }
         public float PercentComplete { get; set; }
         public string TransferRate => GetTransferRate(TransferTimeSpan, FileSizeInBytes);
-        
+
         public string ErrorMessage { get; set; }
 
         public void ResetTransferValues()
@@ -149,26 +149,28 @@
                 : $"/{RemoteServerRetryLimit}{Environment.NewLine}";
 
             var attempt = $"Attempt #{RetryCounter}{retryLimit}";
-        
-            var transferStatus = $"[{Status}] {attempt}";
-            var fileName = $"File Name: {FileName}";
-            var fileSize = $"   File Size: {FileSizeString}";
-            var remoteServerInfo = $"   {TransferDirection} File Transfer from {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+
+            var transferStatus = $"[{Status}] {attempt}{Environment.NewLine}";
+            var requestType = $"{TransferDirection} file transfer initiated by {Initiator}{Environment.NewLine}{Environment.NewLine}";
+            var fileName = $"   File Name........: {FileName}{Environment.NewLine}";
+            var fileSize = $"   File Size........: {FileSizeString}{Environment.NewLine}";
+            var remoteServerInfo = $"   Remote Server....: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}";
 
             var requestTime = Initiator == FileTransferInitiator.Self
-                ? $"   Request sent:      {RequestInitiatedTime:MM/dd/yyyy hh:mm:ss.fff tt}"
-                : $"   Request received:  {RequestInitiatedTime:MM/dd/yyyy hh:mm:ss.fff tt}";
+                ? $"   Request Sent.....: {RequestInitiatedTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}"
+                : $"   Request Received : {RequestInitiatedTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}";
 
             var transferTime = Status.TasksRemaining()
-                ? $"   Transfer started:  {TransferStartTime:MM/dd/yyyy hh:mm:ss.fff tt}"
-                : $"   Transfer complete: {TransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}";
-                
+                ? $"   Transfer Started : {TransferStartTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}"
+                : $"   Transfer Complete: {TransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}";
+
             var lockoutExpireTime = Status == FileTransferStatus.RetryLimitExceeded
-                ? $"   Lockout expires:   {RetryLockoutExpireTime:MM/dd/yyyy hh:mm:ss.fff tt}"
+                ? $"   Lockout Expires..: {RetryLockoutExpireTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}"
                 : transferTime;
 
-            var summaryNotStarted = fileName + Environment.NewLine + fileSize + Environment.NewLine + Environment.NewLine + remoteServerInfo + Environment.NewLine + requestTime + Environment.NewLine + lockoutExpireTime + Environment.NewLine;
-            var summaryStarted = transferStatus + Environment.NewLine + "   " + summaryNotStarted;
+            var summaryNotStarted = requestType + fileName + fileSize + remoteServerInfo + requestTime;
+
+            var summaryStarted = $"{transferStatus}   {summaryNotStarted}{lockoutExpireTime}";
 
             return Status == FileTransferStatus.AwaitingResponse
                 ? summaryNotStarted
@@ -188,7 +190,7 @@
             var transferComplete = TransferCompleteTime != DateTime.MinValue
                 ? $"{TransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}"
                 : string.Empty;
-            
+
             var timeElapsed = TransferStartTime != DateTime.MinValue && TransferCompleteTime != DateTime.MinValue
                 ? TransferTimeElapsed
                 : string.Empty;
@@ -220,11 +222,22 @@
             details += $" File Name..............: {FileName}{Environment.NewLine}";
             details += $" File Size..............: {FileSizeString} ({FileSizeInBytes:N0} bytes){Environment.NewLine}";
             details += $" Local Folder...........: {LocalFolderPath}{Environment.NewLine}";
-            details += $" Remote Folder..........: {RemoteFolderPath}{Environment.NewLine}{Environment.NewLine}";
-            
+
+            var remoteFolder = $" Remote Folder..........: {RemoteFolderPath}{Environment.NewLine}{Environment.NewLine}";
+
+            details += string.IsNullOrEmpty(RemoteFolderPath)
+                ? Environment.NewLine
+                : remoteFolder;
+
             details += $" Request Initiated......: {requestInitiated}{Environment.NewLine}";
+
+            if (Status == FileTransferStatus.AwaitingResponse) return details;
+
             details += $" Transfer Started.......: {transferStarted}{Environment.NewLine}";
             details += $" Transfer Completed.....: {transferComplete}{Environment.NewLine}";
+
+            if (Status == FileTransferStatus.Rejected) return details;
+
             details += $" Transfer Time Elapsed..: {timeElapsed}{Environment.NewLine}";
             details += $" Transfer Rate..........: {TransferRate}{Environment.NewLine}{Environment.NewLine}";
 

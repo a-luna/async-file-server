@@ -11,11 +11,13 @@
     {
         readonly AppState _state;
         readonly string _remoteFilePath;
+        readonly long _fileSize;
 
         public GetFileMenuItem(AppState state, string remoteFilePath, long fileSize)
         {
             _state = state;
             _remoteFilePath = remoteFilePath;
+            _fileSize = fileSize;
 
             ReturnToParent = false;
 
@@ -36,6 +38,7 @@
                     remoteIp,
                     remotePort,
                     _remoteFilePath,
+                    _fileSize,
                     _state.LocalServer.MyTransferFolderPath).ConfigureAwait(false);
 
             return getFileResult.Success

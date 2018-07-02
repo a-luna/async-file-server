@@ -44,7 +44,7 @@
             PublicIpAddress = IPAddress.Loopback;
             //InitializeConnection(sessionIp);
         }
-        
+
         public string TransferFolder { get; set; }
 
         [XmlIgnore]

@@ -68,32 +68,30 @@
 
             var localServerIp =
                 $"Local IP:  {LocalServer.Info.LocalIpAddress}{Environment.NewLine}" +
-                $"Public IP: {LocalServer.Info.PublicIpAddress}";
+                $"Public IP: {LocalServer.Info.PublicIpAddress}{Environment.NewLine}{Environment.NewLine}";
 
-            var newLine1 = LocalServer.NoTextSessions && LocalServer.NoFileTransfers
-                ? Environment.NewLine
-                : Environment.NewLine + Environment.NewLine;
-
-            var textSessions = LocalServer.NoTextSessions
-                ? string.Empty
-                : $"Unread text messages: {LocalServer.UnreadTextMessageCount}{Environment.NewLine}";
-
-            var newLine2 = string.IsNullOrEmpty(newLine1) && !LocalServer.NoTextSessions
-                ? Environment.NewLine
-                : string.Empty;
+            var filePlural = LocalServer.RequestsInQueue > 1
+                ? "transfers"
+                : "transfer";
 
             var fileTransferQueue = LocalServer.QueueIsEmpty
-                ? string.Empty
-                : $"File transfers in queue: {LocalServer.RequestsInQueue}";
+                ? $"No pending file transfers{Environment.NewLine}"
+                : $"{LocalServer.RequestsInQueue} file {filePlural} in queue{Environment.NewLine}";
 
-            var newLine3 = string.IsNullOrEmpty(newLine2) && !LocalServer.NoFileTransfers
-                ? Environment.NewLine
-                : string.Empty;
+            var transferInProgress = LocalServer.FileTransferInProgress
+                ? $"FILE TRANSFER IN PROGRESS{Environment.NewLine}"
+                : fileTransferQueue;
 
+            var messagePlural = LocalServer.UnreadTextMessageCount > 1
+                ? "messages"
+                : "message";
+
+            var unreadTextMessages = LocalServer.UnreadTextMessageCount == 0
+                ? $"No unread text messages{Environment.NewLine}"
+                : $"{LocalServer.UnreadTextMessageCount} unread text {messagePlural}{Environment.NewLine}";
+            
             return
-                serverIsListening + localServerIp + newLine1
-                + textSessions + newLine2
-                + fileTransferQueue + newLine3;
+                serverIsListening + localServerIp + transferInProgress + unreadTextMessages;
         }
 
         public string RemoteServerInfo()

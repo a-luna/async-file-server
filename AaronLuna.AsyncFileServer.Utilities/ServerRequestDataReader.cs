@@ -57,7 +57,7 @@
                         remoteServerPortNumber,
                         remoteServerPublicIpString,
                         remoteFolderPath) = ReadServerInfoResponse(requestData);
-                    
+
                     break;
 
                 case ServerRequestType.TextMessage:
@@ -75,6 +75,7 @@
                         fileTransferRetryCounter,
                         fileTransferRetryLimit,
                         localFilePath,
+                        localFolderPath,
                         fileSizeBytes,
                         remoteServerIpString,
                         remoteServerPortNumber) = ReadInboundFileTransferRequest(requestData);
@@ -186,7 +187,7 @@
                 fileTransferRetryCounter,
                 fileTransferRetryLimit);
         }
-        
+
         public static (
             string message,
             string remoteIpAddress,
@@ -212,7 +213,8 @@
             int transferid,
             int retryCounter,
             int retryLimit,
-            string filePath,
+            string localFilePath,
+            string localFolderPath,
             long fileSizeInBytes,
             string remoteIpAddress,
             int remotePort) ReadInboundFileTransferRequest(byte[] requestData)
@@ -242,9 +244,9 @@
             var remotePort = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 9 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen + remoteIpLen);
 
             var targetFolderLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 9 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen + remoteIpLen + remotePortLen);
-            var targerFolder = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 10 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen + remoteIpLen + remotePortLen, targetFolderLen);
+            var targetFolder = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 10 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen + remoteIpLen + remotePortLen, targetFolderLen);
 
-            var localFilePath = Path.Combine(targerFolder, fileName);
+            var localFilePath = Path.Combine(targetFolder, fileName);
 
             return (
                 responseCode,
@@ -252,6 +254,7 @@
                 retryCounter,
                 retryLimit,
                 localFilePath,
+                targetFolder,
                 fileSize,
                 remoteIpAddress,
                 remotePort);
@@ -286,7 +289,7 @@
                 remoteServerPort,
                 remoteFolder);
         }
-        
+
         public static (
             string requestorIpAddress,
             int requestortPort,

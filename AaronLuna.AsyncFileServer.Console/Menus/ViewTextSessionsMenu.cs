@@ -17,7 +17,7 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = "View all text sessions";
+            ItemText = "View archived text messages";
             MenuText = "Select a text session from the list below:";
             MenuItems = new List<IMenuItem>();
         }
