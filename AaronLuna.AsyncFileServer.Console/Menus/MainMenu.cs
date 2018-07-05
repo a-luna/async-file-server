@@ -141,7 +141,7 @@
 
         void PopulateViewLogsMenuTier()
         {
-            var viewLogsMenuTier = new MenuTier { TierLabel = "File transfer/text message archives:" };
+            var viewLogsMenuTier = new MenuTier { TierLabel = "View logs:" };
             viewLogsMenuTier.MenuItems = new List<IMenuItem>();
             
             if (!_state.LocalServer.NoFileTransfers)

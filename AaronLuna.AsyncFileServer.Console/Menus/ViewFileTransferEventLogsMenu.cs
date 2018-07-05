@@ -89,7 +89,9 @@
                 if (id <= _state.LogViewerFileTransferId) continue;
 
                 var fileTransfer = _state.LocalServer.GetFileTransferById(id).Value;
-                MenuItems.Add(new GetFileTransferEventLogsMenuItem(fileTransfer.FileTransfer));
+                var eventLog = _state.LocalServer.GetEventLogForFileTransfer(id);
+
+                MenuItems.Add(new GetFileTransferEventLogsMenuItem(fileTransfer.FileTransfer, eventLog));
             }
 
             MenuItems.Add(new ClearFileTransferEventLogsMenuItem(_state));

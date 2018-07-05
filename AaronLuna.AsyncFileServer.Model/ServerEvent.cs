@@ -71,6 +71,8 @@
         public string ConfirmationMessage { get; set; }
         public string ErrorMessage { get; set; }
 
+        public bool ExcludeFromEventLog => EventType.ExcludeFromEventLog();
+
         public string GetLogFileEntry()
         {
             return Report(false);

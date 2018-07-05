@@ -1,4 +1,6 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ViewFileTransferEventLogsMenuItems
+﻿using System.Collections.Generic;
+
+namespace AaronLuna.AsyncFileServer.Console.Menus.ViewFileTransferEventLogsMenuItems
 {
     using System;
     using System.Threading.Tasks;
@@ -9,11 +11,13 @@
 
     class GetFileTransferEventLogsMenuItem: IMenuItem
     {
+        readonly List<ServerEvent> _eventLog;
         readonly FileTransfer _fileTransfer;
 
-        public GetFileTransferEventLogsMenuItem(FileTransfer fileTransfer)
+        public GetFileTransferEventLogsMenuItem(FileTransfer fileTransfer, List<ServerEvent> eventLog)
         {
             _fileTransfer = fileTransfer;
+            _eventLog = eventLog;
 
             ReturnToParent = false;
             ItemText = fileTransfer.ToString();
@@ -29,7 +33,7 @@
         Result Execute()
         {
             Console.WriteLine($"{Environment.NewLine}############ FILE TRANSFER EVENT LOG ############{Environment.NewLine}");
-            foreach (var serverEvent in _fileTransfer.EventLog)
+            foreach (var serverEvent in _eventLog)
             {
                 Console.WriteLine(serverEvent);
             }
