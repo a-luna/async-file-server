@@ -117,10 +117,9 @@
             var handleRequestsMenuTier = new MenuTier { TierLabel = "Pending requests:" };
             handleRequestsMenuTier.MenuItems = new List<IMenuItem>();
 
-            if (!_state.LocalServer.QueueIsEmpty)
+            if (!_state.LocalServer.NoFileTransfersPending)
             {
-                var oldestRequest = _state.LocalServer.OldestRequestInQueue;
-                handleRequestsMenuTier.MenuItems.Add(new ProcessSelectedRequestMenuItem(_state, oldestRequest.Request, true));
+                handleRequestsMenuTier.MenuItems.Add(new ProcessNextRequestInQueueMenuItem(_state));
             }
 
             if (_state.LocalServer.StalledTransfersIds.Count > 0)

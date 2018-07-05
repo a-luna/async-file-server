@@ -26,7 +26,7 @@
 
         public static async Task<Result> SendTextMessageAsync(AppState state)
         {
-            var ipAddress = state.SelectedServerInfo.SessionIpAddress.ToString();
+            var ipAddress = state.SelectedServerInfo.SessionIpAddress;
             var port = state.SelectedServerInfo.PortNumber;
 
             Console.WriteLine($"{Environment.NewLine}Please enter a text message to send to {ipAddress}:{port}");

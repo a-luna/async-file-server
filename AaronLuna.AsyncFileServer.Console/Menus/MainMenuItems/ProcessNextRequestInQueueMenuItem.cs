@@ -3,27 +3,19 @@
     using System;
     using System.Threading.Tasks;
 
-    using Model;
     using Common.Console.Menu;
     using Common.Result;
 
-    class ProcessSelectedRequestMenuItem : IMenuItem
+    class ProcessNextRequestInQueueMenuItem : IMenuItem
     {
         readonly AppState _state;
-        readonly ServerRequest _request;
 
-        public ProcessSelectedRequestMenuItem(AppState state, ServerRequest request, bool inMainMenu)
+        public ProcessNextRequestInQueueMenuItem(AppState state)
         {
             _state = state;
-            _request = request;
 
             ReturnToParent = false;
-
-            var mainMenuItemText = $"Process inbound file transfer from {request.RemoteServerInfo}";
-
-            ItemText = inMainMenu
-                ? mainMenuItemText
-                : request.ToString();
+            ItemText = "Process inbound file transfer";
         }
 
         public string ItemText { get; set; }
@@ -31,20 +23,17 @@
 
         public async Task<Result> ExecuteAsync()
         {
-            if (_state.LocalServer.QueueIsEmpty)
+            if (_state.LocalServer.NoFileTransfersPending)
             {
                 return Result.Ok();
             }
             
-            var result = await _state.LocalServer.ProcessRequestAsync(_request.Id);
+            var result = await _state.LocalServer.ProcessNextRequestInQueueAsync();
             if (result.Failure)
             {
                 return result;
             }
-
-            //_state.SignalReturnToMainMenu.WaitOne();
-            //_state.SignalReturnToMainMenu.Reset();
-
+            
             Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
             Console.ReadLine();
 

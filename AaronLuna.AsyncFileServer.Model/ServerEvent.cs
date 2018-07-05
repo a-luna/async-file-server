@@ -10,7 +10,12 @@
 
     public class ServerEvent
     {
+        public ServerEvent()
+        {
+            TimeStamp = DateTime.Now;
+        }
 
+        public DateTime TimeStamp { get; }
         public ServerEventType EventType { get; set; }
 
         public IPAddress RemoteServerIpAddress { get; set; }
@@ -21,13 +26,13 @@
 
         public int BytesReceivedCount { get; set; }
         public int ExpectedByteCount { get; set; }
-        public int UnreadBytesCount { get; set; }
+        public int UnreadBytesCount { get; set; }        
+        public byte[] RequestLengthBytes { get; set; }
         public int RequestLengthInBytes { get; set; }
-        public byte[] RequestLengthData { get; set; }
         public int CurrentRequestBytesReceived { get; set; }
         public int TotalRequestBytesReceived { get; set; }
         public int RequestBytesRemaining { get; set; }
-        public byte[] MessageData { get; set; }
+        public byte[] RequestBytes { get; set; }
         public ServerRequestType RequestType { get; set; }
         public int RequestId { get; set; }
         public int ItemsInQueueCount { get; set; }
@@ -51,9 +56,9 @@
         public DateTime FileTransferCompleteTime { get; set; }
         public DateTime RetryLockoutExpireTime { get; set; }
         public string RetryLockoutTimeRemianing => (RetryLockoutExpireTime - DateTime.Now).ToFormattedString();
-        public TimeSpan FileTransferTimeSpan => FileTransferCompleteTime - FileTransferStartTime;
-        public string FileTransferElapsedTimeString => FileTransferTimeSpan.ToFormattedString();
-        public string FileTransferRate => FileTransfer.GetTransferRate(FileTransferTimeSpan, FileSizeInBytes);
+        public TimeSpan FileTransferDuration => FileTransferCompleteTime - FileTransferStartTime;
+        public string FileTransferDurationTimeString => FileTransferDuration.ToFormattedString();
+        public string FileTransferRate => FileTransfer.GetTransferRate(FileTransferDuration, FileSizeInBytes);
         public int CurrentFileBytesReceived { get; set; }
         public long TotalFileBytesReceived { get; set; }
         public int CurrentFileBytesSent { get; set; }
@@ -119,7 +124,7 @@
                     break;
 
                 case ServerEventType.ReceiveRequestLengthComplete:
-                    report += $"Incoming request length: {RequestLengthInBytes:N0} bytes ({RequestLengthData.ToHexString()})";
+                    report += $"Incoming request length: {RequestLengthInBytes:N0} bytes ({RequestLengthBytes.ToHexString()})";
                     break;
 
                 case ServerEventType.ReceivedRequestLengthBytesFromSocket:
@@ -249,7 +254,7 @@
                 case ServerEventType.ReceivedFileListRequest:
                     report += $"File list request details{Environment.NewLine}{Environment.NewLine}" +
                               $"{indentLevel1}Send Response To: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
-                              $"{indentLevel1}Target Folder...: {RemoteFolder}{Environment.NewLine}";
+                              $"{indentLevel1}Target Folder...: {LocalFolder}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.SendFileListStarted:
@@ -385,7 +390,7 @@
                         $"Successfully received file from {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}Download Started : {FileTransferStartTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
                         $"{indentLevel1}Download Finished: {FileTransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
-                        $"{indentLevel1}Elapsed Time.....: {FileTransferElapsedTimeString}{Environment.NewLine}" +
+                        $"{indentLevel1}Elapsed Time.....: {FileTransferDurationTimeString}{Environment.NewLine}" +
                         $"{indentLevel1}Transfer Rate....: {FileTransferRate}{Environment.NewLine}";
                     break;
 
@@ -456,7 +461,7 @@
                         $"{indentLevel1}Remaining Lockout Time..: {RetryLockoutTimeRemianing}{Environment.NewLine}";
                     break;
 
-                case ServerEventType.ReceiveRetryLimitExceeded:
+                case ServerEventType.ReceivedRetryLimitExceeded:
                     report +=
                         "Maximum # of attempts to complete stalled file transfer reached or exceeded: " +
                         $"{indentLevel1}File Name...............: {FileName}{Environment.NewLine}" +

@@ -126,8 +126,8 @@ namespace AaronLuna.AsyncFileServer.Test
                 File.Copy(_restoreFilePath, _remoteFilePath);
             }
 
-            //_cidrIp = "192.168.3.1/24";
-            _cidrIp = "172.20.10.0/28";
+            _cidrIp = "192.168.1.0/24";
+            //_cidrIp = "172.20.10.0/28";
             _localIp = IPAddress.Loopback;
             _publicIp = IPAddress.None;
 
@@ -152,8 +152,8 @@ namespace AaronLuna.AsyncFileServer.Test
                 SocketTimeoutInMilliseconds = 5000
             };
 
-            _server = new AsyncFileServer();
-            _client = new AsyncFileServer();
+            _server = new AsyncFileServer {Name = "Server"};
+            _client = new AsyncFileServer {Name = "Client"};
         }
 
         [TestCleanup]
@@ -246,7 +246,7 @@ namespace AaronLuna.AsyncFileServer.Test
             var sendMessageResult1 =
                 await _client.SendTextMessageAsync(
                         messageForServer,
-                        _localIp.ToString(),
+                        _localIp,
                         remoteServerPort)
                     .ConfigureAwait(false);
 
@@ -261,7 +261,10 @@ namespace AaronLuna.AsyncFileServer.Test
             Assert.AreEqual(string.Empty, _messageFromServer);
 
             var sendMessageResult2 =
-                await _server.SendTextMessageAsync(messageForClient, _localIp.ToString(), localPort)
+                await _server.SendTextMessageAsync(
+                        messageForClient,
+                        _localIp,
+                        localPort)
                     .ConfigureAwait(false);
 
             if (sendMessageResult2.Failure)
@@ -329,14 +332,26 @@ namespace AaronLuna.AsyncFileServer.Test
                 Assert.Fail("There was an error sending the file to the remote server: " + sendFileResult.Error);
             }
 
-            while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextRequestInQueueAsync();
-            while (!_serverReceivedAllFileBytes)
+            while (_server.NoFileTransfersPending) { }
+
+            try
             {
-                if (_serverErrorOccurred)
+                await _server.ProcessNextRequestInQueueAsync();
+                while (!_serverReceivedAllFileBytes)
                 {
-                    Assert.Fail("File transfer failed");
+                    if (_serverErrorOccurred)
+                    {
+                        Assert.Fail("File transfer failed");
+                    }
                 }
+            }
+            catch (NullReferenceException ex)
+            {
+                var exceptionDetails =
+                    $"{ex.Message} ({ex.GetType()}) raised in method TplSocketServerTestFixture.VerifySendFile" +
+                    $"{Environment.NewLine}{ex.StackTrace}";
+
+                Console.WriteLine(exceptionDetails);
             }
 
             while (!_clientReceivedConfirmationMessage) { }
@@ -392,7 +407,7 @@ namespace AaronLuna.AsyncFileServer.Test
 
             var getFileResult =
                 await _client.GetFileAsync(
-                        _localIp.ToString(),
+                        _localIp,
                         remoteServerPort,
                         getFilePath,
                         sentFileSize,
@@ -404,7 +419,7 @@ namespace AaronLuna.AsyncFileServer.Test
                 Assert.Fail(getFileError);
             }
 
-            while (_client.QueueIsEmpty) { }
+            while (_client.NoFileTransfersPending) { }
             await _client.ProcessNextRequestInQueueAsync();
 
             while (!_clientReceivedAllFileBytes)
@@ -609,50 +624,14 @@ namespace AaronLuna.AsyncFileServer.Test
                     sendFilePath,
                     receiveFolderPath);
 
-            while (_server.QueueIsEmpty) { }
-            await _server.ProcessNextRequestInQueueAsync();
-
-            while (!_serverRejectedFileTransfer) { }
-
             if (sendFileResult1.Failure)
             {
                 Assert.Fail("Error occurred sending outbound file request to server");
             }
 
-            var sizeOfFileToSend = new FileInfo(sendFilePath).Length;
-            FileHelper.DeleteFileIfAlreadyExists(receiveFilePath, 3);
-            Assert.IsFalse(File.Exists(receiveFilePath));
-
-            var sendFileResult =
-                await _client.SendFileAsync(
-                    _localIp,
-                    remoteServerPort,
-                    sendFilePath,
-                    receiveFolderPath);
-
-            while (_server.QueueIsEmpty) { }
+            while (_server.NoFileTransfersPending) { }
             await _server.ProcessNextRequestInQueueAsync();
-
-            while (!_serverReceivedAllFileBytes)
-            {
-                if (_serverErrorOccurred)
-                {
-                    Assert.Fail("File transfer failed");
-                }
-            }
-
-            while (!_clientReceivedConfirmationMessage) { }
-
-            if (sendFileResult.Failure)
-            {
-                Assert.Fail("There was an error sending the file to the remote server: " + sendFileResult.Error);
-            }
-
-            Assert.IsTrue(File.Exists(receiveFilePath));
-            Assert.AreEqual(FileName, Path.GetFileName(receiveFilePath));
-
-            var receivedFileSize = new FileInfo(receiveFilePath).Length;
-            Assert.AreEqual(sizeOfFileToSend, receivedFileSize);
+            while (!_serverRejectedFileTransfer) { }
         }
 
         [TestMethod]
@@ -698,56 +677,20 @@ namespace AaronLuna.AsyncFileServer.Test
 
             var getFileResult1 =
                 await _client.GetFileAsync(
-                            _localIp.ToString(),
+                            _localIp,
                             remoteServerPort,
                             getFilePath,
                             sentFileSize,
                             _localFolder).ConfigureAwait(false);
-
-            while (_client.QueueIsEmpty) { }
-            await _client.ProcessNextRequestInQueueAsync();
 
             if (getFileResult1.Failure)
             {
                 Assert.Fail("There was an error requesting the file from the remote server: " + getFileResult1.Error);
             }
 
-            while (!_clientRejectedFileTransfer) { }
-
-            FileHelper.DeleteFileIfAlreadyExists(receivedFilePath, 3);
-            Assert.IsFalse(File.Exists(receivedFilePath));
-
-            var getFileResult2 =
-                await _client.GetFileAsync(
-                            _localIp.ToString(),
-                            remoteServerPort,
-                            getFilePath,
-                            sentFileSize,
-                            _localFolder).ConfigureAwait(false);
-
-            while (_client.QueueIsEmpty) { }
+            while (_client.NoFileTransfersPending) { }
             await _client.ProcessNextRequestInQueueAsync();
-
-            if (getFileResult2.Failure)
-            {
-                Assert.Fail("There was an error requesting the file from the remote server: " + getFileResult2.Error);
-            }
-
-            while (!_clientReceivedAllFileBytes)
-            {
-                if (_clientErrorOccurred)
-                {
-                    Assert.Fail("File transfer failed");
-                }
-            }
-
-            while (!_serverReceivedConfirmationMessage) { }
-
-            Assert.IsTrue(File.Exists(receivedFilePath));
-            Assert.AreEqual(FileName, Path.GetFileName(receivedFilePath));
-            
-            var receivedFileSize = new FileInfo(receivedFilePath).Length;
-            Assert.AreEqual(sentFileSize, receivedFileSize);
+            while (!_clientRejectedFileTransfer) { }
         }
 
         [TestMethod]

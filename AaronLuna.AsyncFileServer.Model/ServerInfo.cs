@@ -3,8 +3,7 @@
     using System.Net;
     using System.Xml.Serialization;
 
-    using Common.Enums;
-
+    using Common.Extensions;
     using Common.Network;
 
     public class ServerInfo
@@ -31,7 +30,6 @@
             SessionIpAddress = ipAddress;
             LocalIpAddress = IPAddress.Loopback;
             PublicIpAddress = IPAddress.Loopback;
-            //InitializeConnection(ipAddress);
         }
 
         public ServerInfo(string ipAddress, int portNumber)
@@ -42,7 +40,6 @@
             SessionIpAddress = NetworkUtilities.ParseSingleIPv4Address(ipAddress).Value;
             LocalIpAddress = IPAddress.Loopback;
             PublicIpAddress = IPAddress.Loopback;
-            //InitializeConnection(sessionIp);
         }
 
         public string TransferFolder { get; set; }
@@ -89,52 +86,20 @@
         {
             return $"{SessionIpAddress}:{PortNumber}";
         }
-
-        //void InitializeConnection(IPAddress ipAddress)
-        //{
-        //    SessionIpAddress = ipAddress;
-        //    LocalIpAddress = IPAddress.Loopback;
-        //    PublicIpAddress = IPAddress.Loopback;
-
-        //    if (NetworkUtilities.GetAddressType(SessionIpAddress) == NetworkUtilities.AddressType.Public)
-        //    {
-        //        LocalIpAddress = SessionIpAddress;
-        //    }
-        //    else if (NetworkUtilities.GetAddressType(SessionIpAddress) == NetworkUtilities.AddressType.Private)
-        //    {
-        //        PublicIpAddress = SessionIpAddress;
-        //    }
-        //}
     }
 
     public static class ServerInfoExtensions
     {
-        public static bool IsEqualTo(this ServerInfo myInfo, ServerInfo otherInfo)
+        public static bool IsEqualTo(this ServerInfo my, ServerInfo other)
         {
-            //// Transfer Folder not used to determine equality, ip address
-            //// and port number combination must be unique 
+            var portsDiffer = my.PortNumber != other.PortNumber;
+            if (portsDiffer) return false;
 
-            var sessionIpSimilarity = NetworkUtilities.CompareTwoIpAddresses(myInfo.SessionIpAddress, otherInfo.SessionIpAddress);
-            var localIpSimilarity = NetworkUtilities.CompareTwoIpAddresses(myInfo.LocalIpAddress, otherInfo.LocalIpAddress);
-            var publicIpSimilarity = NetworkUtilities.CompareTwoIpAddresses(myInfo.PublicIpAddress, otherInfo.PublicIpAddress);
-            var bothPortsMatch = myInfo.PortNumber == otherInfo.PortNumber;
+            var sessionIpsMatch = my.SessionIpAddress.IsEqualTo(other.SessionIpAddress);
+            var localIpsMatch = my.LocalIpAddress.IsEqualTo(other.LocalIpAddress);
+            var publicIpsMatch = my.PublicIpAddress.IsEqualTo(other.PublicIpAddress);
 
-            if (sessionIpSimilarity == IpAddressSimilarity.AllBytesMatch && bothPortsMatch)
-            {
-                return true;
-            }
-
-            if (publicIpSimilarity == IpAddressSimilarity.AllBytesMatch && bothPortsMatch)
-            {
-                return true;
-            }
-
-            if (localIpSimilarity == IpAddressSimilarity.AllBytesMatch && bothPortsMatch)
-            {
-                return true;
-            }
-
-            return false;
+            return sessionIpsMatch || localIpsMatch || publicIpsMatch;
         }
     }
 

@@ -1,6 +1,4 @@
-﻿// TODO: Investigate bug where if 2 file requests are in queue, all file transfers fail after the first transfer is processed. This does not occur when processing one file request at a time.
-
-namespace AaronLuna.AsyncFileServer.Console
+﻿namespace AaronLuna.AsyncFileServer.Console
 {
     using System;
     using System.IO;
@@ -276,7 +274,7 @@ namespace AaronLuna.AsyncFileServer.Console
                     await NotifiedRemoteServerThatFileTransferIsStalledAsync();
                     break;
 
-                case ServerEventType.ReceiveRetryLimitExceeded:
+                case ServerEventType.ReceivedRetryLimitExceeded:
                     await HandleRetryLimitExceededAsync(serverEvent);
                     break;
                     

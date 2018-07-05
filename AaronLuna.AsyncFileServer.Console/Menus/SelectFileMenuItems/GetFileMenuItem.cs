@@ -30,7 +30,7 @@
 
         public async Task<Result> ExecuteAsync()
         {
-            var remoteIp = _state.SelectedServerInfo.SessionIpString;
+            var remoteIp = _state.SelectedServerInfo.SessionIpAddress;
             var remotePort = _state.SelectedServerInfo.PortNumber;
 
             var getFileResult =

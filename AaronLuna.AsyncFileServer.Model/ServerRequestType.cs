@@ -1,5 +1,21 @@
 ﻿namespace AaronLuna.AsyncFileServer.Model
 {
+    public enum ServerRequestDirection
+    {
+        None,
+        Sent,
+        Received
+    }
+
+    public enum ServerRequestStatus
+    {
+        NoData,
+        Pending,
+        Processed,
+        Sent,
+        Error
+    }
+
     public enum ServerRequestType
     {
         None                                  = 0,

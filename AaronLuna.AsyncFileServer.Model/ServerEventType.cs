@@ -81,7 +81,7 @@
 
         SendRetryLimitExceededStarted,
         SendRetryLimitExceededCompleted,
-        ReceiveRetryLimitExceeded,
+        ReceivedRetryLimitExceeded,
 
         RequestFileListStarted,
         RequestFileListComplete,

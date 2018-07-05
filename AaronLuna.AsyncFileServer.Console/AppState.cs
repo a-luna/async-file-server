@@ -70,13 +70,13 @@
                 $"Local IP:  {LocalServer.Info.LocalIpAddress}{Environment.NewLine}" +
                 $"Public IP: {LocalServer.Info.PublicIpAddress}{Environment.NewLine}{Environment.NewLine}";
 
-            var filePlural = LocalServer.RequestsInQueue > 1
+            var filePlural = LocalServer.PendingFileTransferCount > 1
                 ? "transfers"
                 : "transfer";
 
-            var fileTransferQueue = LocalServer.QueueIsEmpty
+            var fileTransferQueue = LocalServer.NoFileTransfersPending
                 ? $"No pending file transfers{Environment.NewLine}"
-                : $"{LocalServer.RequestsInQueue} file {filePlural} in queue{Environment.NewLine}";
+                : $"{LocalServer.PendingFileTransferCount} file {filePlural} in queue{Environment.NewLine}";
 
             var transferInProgress = LocalServer.FileTransferInProgress
                 ? $"FILE TRANSFER IN PROGRESS{Environment.NewLine}"
