@@ -2,7 +2,6 @@
 //TODO: Update AsyncFileServer.ToString() to be more useful when debugging. New format should incorporate the Name and OperatingSystem properties
 
 //TODO: User can change a setting in ServerConfigurationMenu to enable verbose logs. When enabled, the ExculdeFromEventLogs filter is not applied and all file transfer events are displayed inculuding transfer progress updates, socket reads, etc.
-//TODO: Apply the TieredMenu to ServerConfigurationMenu
 
 namespace AaronLuna.AsyncFileServer.Console
 {

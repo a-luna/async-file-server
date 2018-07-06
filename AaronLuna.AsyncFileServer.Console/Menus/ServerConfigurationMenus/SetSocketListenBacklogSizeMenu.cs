@@ -34,11 +34,11 @@
 
             MenuItems = new List<IMenuItem>
             {
-                new SelectIntegerValueMenuItem($"{_backlogSizeValues[0]:N0} connection"),
-                new SelectIntegerValueMenuItem($"{_backlogSizeValues[1]:N0} connections"),
-                new SelectIntegerValueMenuItem($"{_backlogSizeValues[2]:N0} connections"),
-                new SelectIntegerValueMenuItem($"{_backlogSizeValues[3]:N0} connections"),
-                new SelectIntegerValueMenuItem($"{_backlogSizeValues[4]:N0} connections{Environment.NewLine}"),
+                new SelectDummyValueMenuItem($"{_backlogSizeValues[0]:N0} connection"),
+                new SelectDummyValueMenuItem($"{_backlogSizeValues[1]:N0} connections"),
+                new SelectDummyValueMenuItem($"{_backlogSizeValues[2]:N0} connections"),
+                new SelectDummyValueMenuItem($"{_backlogSizeValues[3]:N0} connections"),
+                new SelectDummyValueMenuItem($"{_backlogSizeValues[4]:N0} connections{Environment.NewLine}"),
                 new ReturnToParentMenuItem("Return to previous menu")
             };
         }

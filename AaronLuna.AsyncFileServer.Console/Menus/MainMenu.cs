@@ -114,7 +114,7 @@
 
         void PopulateHandleRequestsMenuTier()
         {
-            var handleRequestsMenuTier = new MenuTier { TierLabel = "Pending requests:" };
+            var handleRequestsMenuTier = new MenuTier { TierLabel = "Pending Requests:" };
             handleRequestsMenuTier.MenuItems = new List<IMenuItem>();
 
             if (!_state.LocalServer.NoFileTransfersPending)
@@ -141,7 +141,7 @@
 
         void PopulateViewLogsMenuTier()
         {
-            var viewLogsMenuTier = new MenuTier { TierLabel = "View logs:" };
+            var viewLogsMenuTier = new MenuTier { TierLabel = "View Logs:" };
             viewLogsMenuTier.MenuItems = new List<IMenuItem>();
             
             if (!_state.LocalServer.NoFileTransfers)
@@ -176,7 +176,7 @@
         {
             var localServerMenuTier = new MenuTier
             {
-                TierLabel = "Local server options:",
+                TierLabel = "Local Server Options:",
                 MenuItems = new List<IMenuItem>
                 {
                     new SelectRemoteServerMenu(_state),

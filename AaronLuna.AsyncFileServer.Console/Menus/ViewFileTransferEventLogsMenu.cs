@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using AaronLuna.AsyncFileServer.Model;
 
 namespace AaronLuna.AsyncFileServer.Console.Menus
 {
@@ -92,10 +93,19 @@ namespace AaronLuna.AsyncFileServer.Console.Menus
             {
                 if (id <= _state.LogViewerFileTransferId) continue;
 
-                var fileTransfer = _state.LocalServer.GetFileTransferById(id).Value;
+                var fileTransferController = _state.LocalServer.GetFileTransferById(id).Value;
                 var eventLog = _state.LocalServer.GetEventLogForFileTransfer(id);
 
-                MenuItems.Add(new GetFileTransferEventLogsMenuItem(fileTransfer.FileTransfer, eventLog));
+                if (_state.LogLevel == FileTransferLogLevel.Normal)
+                {
+                    eventLog.RemoveAll(e => e.ExcludeFromEventLog);
+                }
+
+                MenuItems.Add(
+                    new FileTransferLogViewerMenuItem(
+                        fileTransferController,
+                        eventLog,
+                        _state.LogLevel));
             }
 
             MenuItems.Add(new ClearFileTransferEventLogsMenuItem(_state));

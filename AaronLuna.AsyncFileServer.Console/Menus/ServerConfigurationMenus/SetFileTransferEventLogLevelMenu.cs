@@ -5,40 +5,33 @@
     using System.Threading.Tasks;
 
     using ServerConfigurationMenuItems;
+    using Model;
     using Common.Console.Menu;
     using Common.Result;
 
-    class SetSocketTimeoutMenu : IMenu
+    class SetFileTransferEventLogLevelMenu : IMenu
     {
         readonly AppState _state;
-        readonly List<int> _timeoutValues;
+        readonly List<FileTransferLogLevel> _logLevels;
 
-        public SetSocketTimeoutMenu(AppState state)
+        public SetFileTransferEventLogLevelMenu(AppState state)
         {
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Change socket timeout value * ({_state.Settings.SocketSettings.SocketTimeoutInMilliseconds} ms)";
-            MenuText = "Select a value from the list below:";
+            ItemText = $"Change file transfer event log level ({_state.LogLevel})";
+            MenuText = "Select the appropriate log level from the list below:";
 
-            _timeoutValues = new List<int>
+            _logLevels = new List<FileTransferLogLevel>
             {
-                1000,
-                2000,
-                3000,
-                5000,
-                10000,
-                15000
+                FileTransferLogLevel.Normal,
+                FileTransferLogLevel.Debug
             };
 
             MenuItems = new List<IMenuItem>
             {
-                new SelectDummyValueMenuItem("1 second"),
-                new SelectDummyValueMenuItem("2 seconds"),
-                new SelectDummyValueMenuItem("3 seconds"),
-                new SelectDummyValueMenuItem("5 seconds"),
-                new SelectDummyValueMenuItem("10 seconds"),
-                new SelectDummyValueMenuItem($"15 seconds{Environment.NewLine}"),
+                new SelectDummyValueMenuItem(FileTransferLogLevel.Normal.ToString()),
+                new SelectDummyValueMenuItem($"{FileTransferLogLevel.Debug}{Environment.NewLine}"),
                 new ReturnToParentMenuItem("Return to previous menu")
             };
         }
@@ -47,17 +40,17 @@
         public bool ReturnToParent { get; set; }
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
-
+        
         public async Task<Result> ExecuteAsync()
         {
+
             _state.DoNotRefreshMainMenu = true;
             SharedFunctions.DisplayLocalServerInfo(_state);
 
             var menuIndex = await SharedFunctions.GetUserSelectionIndexAsync(MenuText, MenuItems, _state);
-            if (menuIndex > _timeoutValues.Count) return Result.Ok();
+            if (menuIndex > _logLevels.Count) return Result.Ok();
 
-            _state.Settings.SocketSettings.SocketTimeoutInMilliseconds = _timeoutValues[menuIndex - 1];
-            _state.RestartRequired = true;
+            _state.LogLevel = _logLevels[menuIndex - 1];
 
             return Result.Ok();
         }

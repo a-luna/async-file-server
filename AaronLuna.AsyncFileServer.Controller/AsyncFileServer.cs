@@ -384,12 +384,7 @@
         public List<ServerEvent> GetEventLogForFileTransfer(int fileTransferId)
         {
             var eventLog = new List<ServerEvent>();
-
-            var fileTransferEvents =
-                _eventLog.Select(e => e)
-                    .Where(e => e.FileTransferId == fileTransferId && !e.ExcludeFromEventLog);
-
-            eventLog.AddRange(fileTransferEvents);
+            eventLog.AddRange(_eventLog.Select(e => e).Where(e => e.FileTransferId == fileTransferId));
 
             var matchingRequests =
                 _requests.Select(r => r)
@@ -398,11 +393,7 @@
 
             foreach (var matchingEvents in matchingRequests)
             {
-                var filteredEvents =
-                    matchingEvents.Select(e => e)
-                        .Where(e => !e.ExcludeFromEventLog);
-
-                eventLog.AddRange(filteredEvents);
+                eventLog.AddRange(matchingEvents);
             }
 
             return eventLog.OrderBy(e => e.TimeStamp).ToList();
@@ -1217,16 +1208,19 @@
                     fileTransfer.CurrentBytesSent = fileChunkSize;
 
                     if (fileTransfer.FileSizeInBytes > 10 * BufferSize) continue;
-                    SocketEventOccurred?.Invoke(this,
-                        new ServerEvent
-                        {
-                            EventType = ServerEventType.SentFileChunkToClient,
-                            FileSizeInBytes = fileTransfer.FileSizeInBytes,
-                            CurrentFileBytesSent = fileChunkSize,
-                            FileBytesRemaining = fileTransfer.BytesRemaining,
-                            FileChunkSentCount = fileTransfer.FileChunkSentCount,
-                            SocketSendCount = socketSendCount
-                        });
+
+                    _eventLog.Add(new ServerEvent
+                    {
+                        EventType = ServerEventType.SentFileChunkToClient,
+                        FileSizeInBytes = fileTransfer.FileSizeInBytes,
+                        CurrentFileBytesSent = fileChunkSize,
+                        FileBytesRemaining = fileTransfer.BytesRemaining,
+                        FileChunkSentCount = fileTransfer.FileChunkSentCount,
+                        SocketSendCount = socketSendCount,
+                        FileTransferId = fileTransfer.Id
+                    });
+
+                    SocketEventOccurred?.Invoke(this, _eventLog.Last());
                 }
 
                 fileTransfer.Status = FileTransferStatus.AwaitingConfirmation;
@@ -1627,7 +1621,8 @@
                     CurrentFileBytesReceived = unreadBytes.Length,
                     TotalFileBytesReceived = fileTransfer.TotalBytesReceived,
                     FileSizeInBytes = fileTransfer.FileSizeInBytes,
-                    FileBytesRemaining = fileTransfer.BytesRemaining
+                    FileBytesRemaining = fileTransfer.BytesRemaining,
+                    FileTransferId = fileTransfer.Id
                 });
 
                 EventOccurred?.Invoke(this, _eventLog.Last());
@@ -1712,8 +1707,7 @@
                 // the size of the file will result in less than 10 read events
                 if (fileTransfer.FileSizeInBytes < 10 * BufferSize)
                 {
-                    SocketEventOccurred?.Invoke(this,
-                    new ServerEvent
+                    _eventLog.Add(new ServerEvent
                     {
                         EventType = ServerEventType.ReceivedFileBytesFromSocket,
                         SocketReadCount = receiveCount,
@@ -1722,8 +1716,11 @@
                         TotalFileBytesReceived = fileTransfer.TotalBytesReceived,
                         FileSizeInBytes = fileTransfer.FileSizeInBytes,
                         FileBytesRemaining = fileTransfer.BytesRemaining,
-                        PercentComplete = fileTransfer.PercentComplete
+                        PercentComplete = fileTransfer.PercentComplete,
+                        FileTransferId = fileTransfer.Id
                     });
+
+                    SocketEventOccurred?.Invoke(this, _eventLog.Last());
                 }
 
                 // Report progress in intervals which are set by the user in the settings file
@@ -1731,12 +1728,15 @@
 
                 fileTransfer.PercentComplete = checkPercentComplete;
 
-                FileTransferProgress?.Invoke(this, new ServerEvent
+                _eventLog.Add(new ServerEvent
                 {
                     EventType = ServerEventType.UpdateFileTransferProgress,
                     TotalFileBytesReceived = fileTransfer.TotalBytesReceived,
-                    PercentComplete = fileTransfer.PercentComplete
+                    PercentComplete = fileTransfer.PercentComplete,
+                    FileTransferId = fileTransfer.Id
                 });
+
+                FileTransferProgress?.Invoke(this, _eventLog.Last());
             }
 
             if (InboundFileTransferStalled)

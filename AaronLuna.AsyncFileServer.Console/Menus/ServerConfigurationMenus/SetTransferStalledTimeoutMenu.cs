@@ -8,38 +8,37 @@
     using Common.Console.Menu;
     using Common.Result;
 
-    class SetTransferRetryLockoutTimeSpan : IMenu
+    class SetTransferStalledTimeoutMenu : IMenu
     {
         readonly AppState _state;
         readonly List<int> _timeoutValues;
 
-        public SetTransferRetryLockoutTimeSpan(AppState state)
+        public SetTransferStalledTimeoutMenu(AppState state)
         {
             _state = state;
 
             ReturnToParent = false;
-            ItemText = "Change length of time to reject transfers after retry limit exceeded " +
-                       $"({_state.Settings.RetryLimitLockout.Minutes} minutes){Environment.NewLine}";
+            ItemText = $"Change file transfer stalled timeout value ({_state.Settings.FileTransferStalledTimeout.TotalSeconds} seconds)";
             MenuText = "Select a value from the list below:";
 
             _timeoutValues = new List<int>
             {
-                5,
-                10,
-                15,
-                30,
-                60,
-                120
+                1000,
+                2000,
+                3000,
+                5000,
+                10000,
+                15000
             };
 
             MenuItems = new List<IMenuItem>
             {
-                new SelectIntegerValueMenuItem($"{_timeoutValues[0]} minutes"),
-                new SelectIntegerValueMenuItem($"{_timeoutValues[1]} minutes"),
-                new SelectIntegerValueMenuItem($"{_timeoutValues[2]} minutes"),
-                new SelectIntegerValueMenuItem($"{_timeoutValues[3]} minutes"),
-                new SelectIntegerValueMenuItem($"{_timeoutValues[4]} minutes"),
-                new SelectIntegerValueMenuItem($"{_timeoutValues[5]} minutes{Environment.NewLine}"),
+                new SelectDummyValueMenuItem("1 second"),
+                new SelectDummyValueMenuItem("2 seconds"),
+                new SelectDummyValueMenuItem("3 seconds"),
+                new SelectDummyValueMenuItem("5 seconds"),
+                new SelectDummyValueMenuItem("10 seconds"),
+                new SelectDummyValueMenuItem($"15 seconds{Environment.NewLine}"),
                 new ReturnToParentMenuItem("Return to previous menu")
             };
         }
@@ -57,7 +56,7 @@
             var menuIndex = await SharedFunctions.GetUserSelectionIndexAsync(MenuText, MenuItems, _state);
             if (menuIndex > _timeoutValues.Count) return Result.Ok();
 
-            _state.Settings.RetryLimitLockout = TimeSpan.FromMinutes(_timeoutValues[menuIndex - 1]);
+            _state.Settings.FileTransferStalledTimeout = TimeSpan.FromMilliseconds(_timeoutValues[menuIndex - 1]);
             _state.RestartRequired = true;
 
             return Result.Ok();

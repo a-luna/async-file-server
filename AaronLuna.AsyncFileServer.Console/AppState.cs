@@ -19,6 +19,8 @@
             WaitingForFileListResponse = true;
 
             SignalReturnToMainMenu = new AutoResetEvent(false);
+
+            LogLevel = FileTransferLogLevel.Normal;
         }
 
         public ServerSettings Settings { get; set; }
@@ -59,6 +61,8 @@
         public ProgressEventArgs FileStalledInfo { get; set; }
 
         public ServerInfo SelectedServerInfo { get; set; }
+
+        public FileTransferLogLevel LogLevel { get; set; }
 
         public string LocalServerInfo()
         {

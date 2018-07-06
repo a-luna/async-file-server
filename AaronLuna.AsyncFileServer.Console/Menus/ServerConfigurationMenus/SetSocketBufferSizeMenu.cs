@@ -35,14 +35,14 @@
 
             MenuItems = new List<IMenuItem>
             {
-                new SelectIntegerValueMenuItem($"1 Kb ({_bufferSizeValues[0]:N0} bytes)"),
-                new SelectIntegerValueMenuItem($"2 Kb ({_bufferSizeValues[1]:N0} bytes)"),
-                new SelectIntegerValueMenuItem($"4 Kb ({_bufferSizeValues[2]:N0} bytes)"),
-                new SelectIntegerValueMenuItem($"1 KB ({_bufferSizeValues[3]:N0} bytes)"),
-                new SelectIntegerValueMenuItem($"2 KB ({_bufferSizeValues[4]:N0} bytes)"),
-                new SelectIntegerValueMenuItem($"4 KB ({_bufferSizeValues[5]:N0} bytes)"),
-                new SelectIntegerValueMenuItem($"8 KB ({_bufferSizeValues[6]:N0} bytes)"),
-                new SelectIntegerValueMenuItem($"16 KB ({_bufferSizeValues[7]:N0} bytes){Environment.NewLine}"),
+                new SelectDummyValueMenuItem($"1 Kb ({_bufferSizeValues[0]:N0} bytes)"),
+                new SelectDummyValueMenuItem($"2 Kb ({_bufferSizeValues[1]:N0} bytes)"),
+                new SelectDummyValueMenuItem($"4 Kb ({_bufferSizeValues[2]:N0} bytes)"),
+                new SelectDummyValueMenuItem($"1 KB ({_bufferSizeValues[3]:N0} bytes)"),
+                new SelectDummyValueMenuItem($"2 KB ({_bufferSizeValues[4]:N0} bytes)"),
+                new SelectDummyValueMenuItem($"4 KB ({_bufferSizeValues[5]:N0} bytes)"),
+                new SelectDummyValueMenuItem($"8 KB ({_bufferSizeValues[6]:N0} bytes)"),
+                new SelectDummyValueMenuItem($"16 KB ({_bufferSizeValues[7]:N0} bytes){Environment.NewLine}"),
                 new ReturnToParentMenuItem("Return to previous menu")
             };
         }

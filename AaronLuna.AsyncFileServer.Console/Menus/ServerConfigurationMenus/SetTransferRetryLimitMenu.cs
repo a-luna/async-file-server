@@ -8,12 +8,12 @@
     using Common.Console.Menu;
     using Common.Result;
 
-    class SetTransferRetryLimitMenuItem : IMenu
+    class SetTransferRetryLimitMenu : IMenu
     {
         readonly AppState _state;
         readonly List<int> _retryLimitValues;
 
-        public SetTransferRetryLimitMenuItem(AppState state)
+        public SetTransferRetryLimitMenu(AppState state)
         {
             _state = state;
 
@@ -31,10 +31,10 @@
 
             MenuItems = new List<IMenuItem>
             {
-                new SelectIntegerValueMenuItem($"{_retryLimitValues[0]} attempt"),
-                new SelectIntegerValueMenuItem($"{_retryLimitValues[1]} attempts"),
-                new SelectIntegerValueMenuItem($"{_retryLimitValues[2]} attempts"),
-                new SelectIntegerValueMenuItem($"{_retryLimitValues[3]} attempts{Environment.NewLine}"),
+                new SelectDummyValueMenuItem($"{_retryLimitValues[0]} attempt"),
+                new SelectDummyValueMenuItem($"{_retryLimitValues[1]} attempts"),
+                new SelectDummyValueMenuItem($"{_retryLimitValues[2]} attempts"),
+                new SelectDummyValueMenuItem($"{_retryLimitValues[3]} attempts{Environment.NewLine}"),
                 new ReturnToParentMenuItem("Return to previous menu")
             };
         }

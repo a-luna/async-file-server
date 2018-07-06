@@ -1,5 +1,6 @@
 ﻿namespace AaronLuna.AsyncFileServer.Console.Menus
 {
+    using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
 
@@ -11,34 +12,19 @@
     class ServerConfigurationMenu : IMenu
     {
         readonly AppState _state;
+        readonly TieredMenu _tieredMenu;
 
         public ServerConfigurationMenu(AppState state)
         {
             _state = state;
+            _tieredMenu = new TieredMenu();
 
             ReturnToParent = false;
-            ItemText = "Change local server settings";
+            ItemText = "Configuration Options";
             MenuText = Resources.Menu_ChangeSettings;
-
-            MenuItems = new List<IMenuItem>
-            {
-                new SetMyPortNumberMenuItem(state),
-                new SetMyCidrIpMenuItem(state),
-                new DisplayLocalIPv4AddressesMenuItem(),
-
-                new SetSocketBufferSizeMenu(state),
-                new SetSocketListenBacklogSizeMenu(state),
-                new SetSocketTimeoutMenu(state),
-
-                new SetTransferUpdateIntervalMenuItem(state),
-                new SetTransferStalledTimeoutMenuItem(state),
-                new SetTransferRetryLimitMenuItem(state),
-                new SetTransferRetryLockoutTimeSpan(state),
-
-                new ReturnToParentMenuItem("Return to main menu")
-            };
+            MenuItems = new List<IMenuItem>();
         }
-
+        
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
         public string MenuText { get; set; }
@@ -46,16 +32,17 @@
         
         public async Task<Result> ExecuteAsync()
         {
-            _state.DoNotRefreshMainMenu = true;
             var exit = false;
             Result result = null;
 
             while (!exit)
             {
+                _state.DoNotRefreshMainMenu = true;
                 SharedFunctions.DisplayLocalServerInfo(_state);
+                PopulateMenu();
 
-                var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);
-                result = await menuItem.ExecuteAsync();
+                var menuItem = await GetUserSelectionAsync();
+                result = await menuItem.ExecuteAsync().ConfigureAwait(false);
 
                 if (result.Success && !(menuItem is ReturnToParentMenuItem))
                 {
@@ -75,6 +62,84 @@
                 exit = true;
             }
             return result;
+        }
+
+        void PopulateMenu()
+        {
+            _tieredMenu.Clear();
+
+            var localServerSettingsMenuTier = new MenuTier
+            {
+                TierLabel = "Local Server Settings:",
+                MenuItems = new List<IMenuItem>
+                {
+                    new SetMyPortNumberMenuItem(_state),
+                    new SetMyCidrIpMenuItem(_state),
+                    new DisplayLocalIPv4AddressesMenuItem(),
+                }
+            };
+
+            var socketSettingsMenuTier = new MenuTier
+            {
+                TierLabel = "Socket Settings",
+                MenuItems = new List<IMenuItem>
+                {
+                    new SetSocketBufferSizeMenu(_state),
+                    new SetSocketListenBacklogSizeMenu(_state),
+                    new SetSocketTimeoutMenu(_state),
+                }
+            };
+
+            var filetransferSettingsMenuTier = new MenuTier
+            {
+                TierLabel = "File Transfer Settings:",
+                MenuItems = new List<IMenuItem>
+                {
+                    new SetTransferUpdateIntervalMenu(_state),
+                    new SetTransferStalledTimeoutMenu(_state),
+                    new SetTransferRetryLimitMenu(_state),
+                    new SetTransferRetryLockoutTimeSpanMenu(_state),
+                    new SetFileTransferEventLogLevelMenu(_state)
+                }
+            };
+
+            var returnToMainMenuTier = new MenuTier
+            {
+                MenuItems = new List<IMenuItem>
+                {
+                    new ReturnToParentMenuItem("Return to main menu")
+                }
+            };
+
+            _tieredMenu.Add(localServerSettingsMenuTier);
+            _tieredMenu.Add(socketSettingsMenuTier);
+            _tieredMenu.Add(filetransferSettingsMenuTier);
+            _tieredMenu.Add(returnToMainMenuTier);
+        }
+
+        async Task<IMenuItem> GetUserSelectionAsync()
+        {
+            var userSelection = 0;
+            while (userSelection == 0)
+            {
+                Menu.DisplayTieredMenu(_tieredMenu);
+                Console.WriteLine($"Enter a menu item number (valid range 1-{_tieredMenu.Count}):");
+                var input = Console.ReadLine();
+
+                var validationResult = SharedFunctions.ValidateNumberIsWithinRange(input, 1, _tieredMenu.Count);
+                if (validationResult.Failure)
+                {
+                    Console.WriteLine(Environment.NewLine + validationResult.Error);
+                    await Task.Delay(_state.MessageDisplayTime);
+
+                    SharedFunctions.DisplayLocalServerInfo(_state);
+                    continue;
+                }
+
+                userSelection = validationResult.Value;
+            }
+
+            return _tieredMenu.GetMenuItem(userSelection - 1);
         }
 
         Result ApplyChanges()

@@ -8,12 +8,12 @@
     using Common.Console.Menu;
     using Common.Result;
 
-    class SetTransferUpdateIntervalMenuItem : IMenu
+    class SetTransferUpdateIntervalMenu : IMenu
     {
         readonly AppState _state;
         readonly List<float> _updateFrequencyValues;
 
-        public SetTransferUpdateIntervalMenuItem(AppState state)
+        public SetTransferUpdateIntervalMenu(AppState state)
         {
             _state = state;
 
@@ -33,12 +33,12 @@
 
             MenuItems = new List<IMenuItem>
             {
-                new SelectIntegerValueMenuItem($"{_updateFrequencyValues[0]:P2}"),
-                new SelectIntegerValueMenuItem($"{_updateFrequencyValues[1]:P2}"),
-                new SelectIntegerValueMenuItem($"{_updateFrequencyValues[2]:P2}"),
-                new SelectIntegerValueMenuItem($"{_updateFrequencyValues[3]:P2}"),
-                new SelectIntegerValueMenuItem($"{_updateFrequencyValues[4]:P2}"),
-                new SelectIntegerValueMenuItem($"{_updateFrequencyValues[5]:P2}{Environment.NewLine}"),
+                new SelectDummyValueMenuItem($"{_updateFrequencyValues[0]:P2}"),
+                new SelectDummyValueMenuItem($"{_updateFrequencyValues[1]:P2}"),
+                new SelectDummyValueMenuItem($"{_updateFrequencyValues[2]:P2}"),
+                new SelectDummyValueMenuItem($"{_updateFrequencyValues[3]:P2}"),
+                new SelectDummyValueMenuItem($"{_updateFrequencyValues[4]:P2}"),
+                new SelectDummyValueMenuItem($"{_updateFrequencyValues[5]:P2}{Environment.NewLine}"),
                 new ReturnToParentMenuItem("Return to previous menu")
             };
         }

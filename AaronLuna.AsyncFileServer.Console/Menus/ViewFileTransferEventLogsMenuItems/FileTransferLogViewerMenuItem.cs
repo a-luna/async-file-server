@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using AaronLuna.AsyncFileServer.Controller;
 
 namespace AaronLuna.AsyncFileServer.Console.Menus.ViewFileTransferEventLogsMenuItems
 {
@@ -9,18 +10,23 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.ViewFileTransferEventLogsMenuI
     using Common.Console.Menu;
     using Common.Result;
 
-    class GetFileTransferEventLogsMenuItem: IMenuItem
+    class FileTransferLogViewerMenuItem: IMenuItem
     {
         readonly List<ServerEvent> _eventLog;
         readonly FileTransfer _fileTransfer;
+        readonly FileTransferLogLevel _logLevel;
 
-        public GetFileTransferEventLogsMenuItem(FileTransfer fileTransfer, List<ServerEvent> eventLog)
+        public FileTransferLogViewerMenuItem(
+            FileTransferController fileTransferController,
+            List<ServerEvent> eventLog,
+            FileTransferLogLevel logLevel)
         {
-            _fileTransfer = fileTransfer;
+            _fileTransfer = fileTransferController.FileTransfer;
             _eventLog = eventLog;
+            _logLevel = logLevel;
 
             ReturnToParent = false;
-            ItemText = fileTransfer.ToString();
+            ItemText = _fileTransfer.ToString();
         }
 
         public string ItemText { get; set; }
@@ -35,7 +41,7 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.ViewFileTransferEventLogsMenuI
             Console.WriteLine($"{Environment.NewLine}############ FILE TRANSFER EVENT LOG ############{Environment.NewLine}");
             foreach (var serverEvent in _eventLog)
             {
-                Console.WriteLine(serverEvent);
+                Console.WriteLine(GetServerEventDetailsforLogLevel(serverEvent));
             }
 
             Console.WriteLine($"{Environment.NewLine}############  FILE TRANSFER DETAILS  ############{Environment.NewLine}");
@@ -44,6 +50,18 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.ViewFileTransferEventLogsMenuI
             Console.ReadLine();
             
             return Result.Ok();
+        }
+
+        string GetServerEventDetailsforLogLevel(ServerEvent serverEvent)
+        {
+            switch (_logLevel)
+            {
+                case FileTransferLogLevel.Debug:
+                    return $"{DateTime.Now:MM/dd/yyyy HH:mm:ss.fff}\t{serverEvent}";
+
+                default:
+                    return serverEvent.ToString();
+            }
         }
     }
 }

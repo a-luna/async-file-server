@@ -6,9 +6,9 @@
     using Common.Console.Menu;
     using Common.Result;
 
-    class SelectIntegerValueMenuItem : IMenuItem
+    class SelectDummyValueMenuItem : IMenuItem
     {
-        public SelectIntegerValueMenuItem(string itemText)
+        public SelectDummyValueMenuItem(string itemText)
         {
             ReturnToParent = false;
             ItemText = itemText;

@@ -11,7 +11,7 @@
         public DisplayLocalIPv4AddressesMenuItem()
         {
             ReturnToParent = false;
-            ItemText = "Display Local IPv4 Address Info" + Environment.NewLine;
+            ItemText = "Display Local IPv4 Address Info";
 
         }
 

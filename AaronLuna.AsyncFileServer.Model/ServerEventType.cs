@@ -143,6 +143,10 @@
                 case ServerEventType.SaveUnreadBytesAfterAllRequestBytesReceived:
                 case ServerEventType.ProcessRequestStarted:
                 case ServerEventType.ProcessRequestComplete:
+                case ServerEventType.SentFileChunkToClient:
+                case ServerEventType.CopySavedBytesToIncomingFile:
+                case ServerEventType.ReceivedFileBytesFromSocket:
+                case ServerEventType.UpdateFileTransferProgress:
                     return true;
 
                 default:
