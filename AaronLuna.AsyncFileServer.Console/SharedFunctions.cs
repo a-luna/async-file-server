@@ -212,6 +212,38 @@
             return ipAddress;
         }
 
+        public static string GetServerNameFromUser(ServerInfo serverInfo)
+        {
+            var defaultServerName = $"{serverInfo.SessionIpAddress}:{serverInfo.PortNumber}-{serverInfo.Platform}";
+
+            var initialPrompt =
+                $"Would you like to enter a name to help you identify this server? If you select no, a default name will be created ({defaultServerName})";
+
+            var enterCustomName = PromptUserYesOrNo(initialPrompt);
+            if (!enterCustomName) return defaultServerName;
+
+            var remoteServerName = string.Empty;
+            const string getNamePrompt =
+                "Please enter a name to help identify this server (this name will not be shared with the remote server, it is only stored locally):";
+            
+            while (string.IsNullOrEmpty(remoteServerName))
+            {
+
+                Console.WriteLine($"{Environment.NewLine}{getNamePrompt}");
+                var input = Console.ReadLine();
+
+                var confirm = $"Is \"{input}\" the name you wish to use for this server? Select no if you would like to change this value.";
+
+                var useThisName = PromptUserYesOrNo(confirm);
+                if (useThisName)
+                {
+                    remoteServerName = input;
+                }
+            }
+
+            return remoteServerName;
+        }
+
         public static bool ServerInfoAlreadyExists(ServerInfo newClient, List<ServerInfo> clients)
         {
             var exists = false;

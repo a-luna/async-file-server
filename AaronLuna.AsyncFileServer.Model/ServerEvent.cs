@@ -20,6 +20,7 @@
 
         public IPAddress RemoteServerIpAddress { get; set; }
         public int RemoteServerPortNumber { get; set; }
+        public ServerPlatform RemoteServerPlatform { get; set; }
         public IPAddress LocalIpAddress { get; set; }
         public int LocalPortNumber { get; set; }
         public IPAddress PublicIpAddress { get; set; }

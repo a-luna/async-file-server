@@ -97,11 +97,11 @@
         public string RemoteServerInfo()
         {
             var selectedServerStatus = ClientSelected
-                ? $"Options for remote server: {SelectedServerInfo}"
+                ? $"Options for remote server: {SelectedServerInfo.Name}"
                 : "Please select a remote server";
 
             return FileTransferInProgress
-                ? $"SENDING FILE TO {LocalServer.RemoteServerInfo}..."
+                ? $"SENDING FILE TO {LocalServer.RemoteServerInfo.Name}..."
                 : selectedServerStatus;
         }
     }

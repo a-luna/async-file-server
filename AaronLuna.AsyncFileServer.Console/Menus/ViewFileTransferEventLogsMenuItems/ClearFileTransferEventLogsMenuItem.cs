@@ -1,6 +1,9 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ViewFileTransferEventLogsMenuItems
+﻿using System.Linq;
+
+namespace AaronLuna.AsyncFileServer.Console.Menus.ViewFileTransferEventLogsMenuItems
 {
     using System;
+    using System.Collections.Generic;
     using System.Threading.Tasks;
 
     using Common.Console.Menu;
@@ -9,10 +12,12 @@
     class ClearFileTransferEventLogsMenuItem : IMenuItem
     {
         readonly AppState _state;
+        readonly List<int> _fileTransferIds;
 
         public ClearFileTransferEventLogsMenuItem(AppState state)
         {
             _state = state;
+            _fileTransferIds = _state.LocalServer.FileTransferIds;
 
             ReturnToParent = true;
             ItemText = "Clear file transfer list";
@@ -28,7 +33,9 @@
 
         Result Execute()
         {
-            _state.LogViewerFileTransferId = _state.LocalServer.NewestTransferId;
+            if (_fileTransferIds.Count == 0) return Result.Ok();
+
+            _state.LogViewerFileTransferId = _fileTransferIds.Last();
 
             return Result.Ok();
         }

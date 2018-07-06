@@ -122,7 +122,7 @@
                 handleRequestsMenuTier.MenuItems.Add(new ProcessNextRequestInQueueMenuItem(_state));
             }
 
-            if (_state.LocalServer.StalledTransfersIds.Count > 0)
+            if (_state.LocalServer.StalledTransferIds.Count > 0)
             {
                 handleRequestsMenuTier.MenuItems.Add(new RetryStalledFileTransferMenu(_state));
             }

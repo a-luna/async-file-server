@@ -1,4 +1,10 @@
-﻿namespace AaronLuna.AsyncFileServer.Console
+﻿//TODO: Bring back functionality where when ServerInfo is requested, the server receiving the request checks if the requesting server exists in its list of remote servers. If it is not known, prompt user yes/no if they would like to add it, and if yes, ServerInfoRequest is sent. 
+//TODO: Update AsyncFileServer.ToString() to be more useful when debugging. New format should incorporate the Name and OperatingSystem properties
+
+//TODO: User can change a setting in ServerConfigurationMenu to enable verbose logs. When enabled, the ExculdeFromEventLogs filter is not applied and all file transfer events are displayed inculuding transfer progress updates, socket reads, etc.
+//TODO: Apply the TieredMenu to ServerConfigurationMenu
+
+namespace AaronLuna.AsyncFileServer.Console
 {
     using System;
     using System.IO;
@@ -334,6 +340,7 @@
             _state.SelectedServerInfo.PublicIpAddress = serverEvent.PublicIpAddress;
             _state.SelectedServerInfo.LocalIpAddress = serverEvent.LocalIpAddress;
             _state.SelectedServerInfo.SessionIpAddress = serverEvent.RemoteServerIpAddress;
+            _state.SelectedServerInfo.Platform = serverEvent.RemoteServerPlatform;
         }
 
         void ReceivedInboundFileTransferRequest(ServerEvent serverEvent)
@@ -358,9 +365,9 @@
                 $"{remoteServerIp}:{remotePortNumber} ({transferAttempt}){Environment.NewLine}";
 
             var fileInfo =
-                $"File Name:\t{fileName}{Environment.NewLine}" +
-                $"File Size:\t{fileSize}{Environment.NewLine}" +
-                $"Save To:\t{localFolder}{Environment.NewLine}";
+                $"File Name: {fileName}{Environment.NewLine}" +
+                $"File Size: {fileSize}{Environment.NewLine}" +
+                $"Save To..: {localFolder}{Environment.NewLine}";
             
             Console.WriteLine(remoteServerInfo);
             Console.WriteLine(fileInfo);
@@ -406,10 +413,10 @@
             
             var report =
                 $"{Environment.NewLine}{Environment.NewLine}" +
-                $"Download Started:\t{startTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
-                $"Download Finished:\t{completeTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
-                $"Elapsed Time:\t\t{timeElapsed}{Environment.NewLine}" +
-                $"Transfer Rate:\t\t{transferRate}";
+                $"Download Started : {startTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                $"Download Finished: {completeTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                $"Elapsed Time.....: {timeElapsed}{Environment.NewLine}" +
+                $"Transfer Rate....: {transferRate}";
             
             Console.WriteLine(report);
             _state.SignalReturnToMainMenu.Set();

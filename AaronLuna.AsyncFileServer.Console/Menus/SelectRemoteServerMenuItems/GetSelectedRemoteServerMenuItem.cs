@@ -18,10 +18,7 @@
             _server = server;
 
             ReturnToParent = false;
-
-            ItemText =
-                $"IP: {_server.SessionIpAddress}{Environment.NewLine}" +
-                $"   Port: {_server.PortNumber}{Environment.NewLine}";
+            ItemText = server.ItemText;
         }
 
         public string ItemText { get; set; }

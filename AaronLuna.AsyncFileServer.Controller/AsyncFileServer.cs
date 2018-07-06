@@ -147,6 +147,8 @@
             ShutdownInitiated = false;
             Name = string.Empty;
 
+            Platform = Environment.OSVersion.Platform.ToServerPlatform();
+
             SocketSettings = new SocketSettings
             {
                 ListenBacklogSize = 5,
@@ -174,6 +176,7 @@
         }
 
         public string Name { get; set; }
+        public ServerPlatform Platform { get; }
         public float TransferUpdateInterval { get; set; }
         public int TransferRetryLimit { get; set; }
         public TimeSpan RetryLimitLockout { get; set; }
@@ -204,26 +207,14 @@
 
         public bool NoTextSessions => _textSessions.Count == 0;
         public List<int> TextSessionIds => _textSessions.Select(t => t.Id).ToList();
-        public int TextSessionCount => TextSessionIds.Count;
+        
         public int UnreadTextMessageCount => GetNumberOfUnreadTextMessages();
         public List<int> TextSessionIdsWithUnreadMessages => GetTextSessionIdsWithUnreadMessages();
 
         public bool NoFileTransfers => _fileTransfers.Count == 0;
         public List<int> FileTransferIds => _fileTransfers.Select(t => t.FiletransferId).ToList();
-        public int OldestTransferId => _fileTransfers.First().FiletransferId;
-        public int NewestTransferId => _fileTransfers.Last().FiletransferId;
 
-        public List<int> UnhandledTransferIds => _fileTransfers.Select(t => t).Where(t => t.AwaitingResponse)
-            .Select(t => t.FiletransferId).ToList();
-
-        public int UnhandledFileTransferCount => UnhandledTransferIds.Count;
-
-        public List<int> HandledTransferIds => _fileTransfers.Select(t => t).Where(t => t.TasksRemaining)
-            .Select(t => t.FiletransferId).ToList();
-
-        public int HandledFileTransferCount => HandledTransferIds.Count;
-
-        public List<int> StalledTransfersIds =>
+        public List<int> StalledTransferIds =>
             _fileTransfers.Select(t => t)
                 .Where(t => t.TransferStalled)
                 .Select(t => t.FiletransferId).ToList();
@@ -231,8 +222,6 @@
         public int ListenBacklogSize => SocketSettings.ListenBacklogSize;
         public int BufferSize => SocketSettings.BufferSize;
         public int SocketTimeoutInMilliseconds => SocketSettings.SocketTimeoutInMilliseconds;
-
-        public PlatformID OperatingSystem => Environment.OSVersion.Platform;
 
         public IPAddress MyLocalIpAddress => Info.LocalIpAddress;
         public IPAddress MyPublicIpAddress => Info.PublicIpAddress;
@@ -2356,6 +2345,7 @@
                 ServerRequestDataBuilder.ConstructServerInfoResponse(
                     MyLocalIpAddress.ToString(),
                     MyServerPortNumber,
+                    Platform,
                     MyPublicIpAddress.ToString(),
                     MyTransferFolderPath);
 
@@ -2401,6 +2391,7 @@
                 EventType = ServerEventType.ReceivedServerInfo,
                 RemoteServerIpAddress = RemoteServerSessionIpAddress,
                 RemoteServerPortNumber = RemoteServerPortNumber,
+                RemoteServerPlatform = RemoteServerInfo.Platform,
                 RemoteFolder = RemoteServerTransferFolderPath,
                 LocalIpAddress = RemoteServerLocalIpAddress,
                 PublicIpAddress = RemoteServerPublicIpAddress,

@@ -1,5 +1,6 @@
 ﻿namespace AaronLuna.AsyncFileServer.Model
 {
+    using System;
     using System.Net;
     using System.Xml.Serialization;
 
@@ -77,15 +78,23 @@
             }
         }
 
+        public string Name { get; set; }
         public string SessionIpString { get; set; }
         public string LocalIpString { get; set; }
         public string PublicIpString { get; set; }
         public int PortNumber { get; set; }
+        public ServerPlatform Platform { get; set; }
 
         public override string ToString()
         {
             return $"{SessionIpAddress}:{PortNumber}";
         }
+
+        public string ItemText =>
+            $"Name....: {Name}{Environment.NewLine}" +
+            $"   IP......: {SessionIpAddress}{Environment.NewLine}" +
+            $"   Port....: {PortNumber}{Environment.NewLine}" +
+            $"   Platform: {Platform}{Environment.NewLine}";
     }
 
     public static class ServerInfoExtensions

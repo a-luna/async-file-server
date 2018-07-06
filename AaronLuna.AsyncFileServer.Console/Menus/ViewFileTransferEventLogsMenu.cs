@@ -1,4 +1,6 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus
+﻿using System.Linq;
+
+namespace AaronLuna.AsyncFileServer.Console.Menus
 {
     using System;
     using System.Collections.Generic;
@@ -11,10 +13,12 @@
     class ViewFileTransferEventLogsMenu : IMenu
     {
         readonly AppState _state;
+        readonly List<int> _fileTransferIds;
 
         public ViewFileTransferEventLogsMenu(AppState state)
         {
             _state = state;
+            _fileTransferIds = _state.LocalServer.FileTransferIds;
 
             ReturnToParent = false;
             ItemText = "View file transfer event logs";
@@ -63,7 +67,7 @@
                 return false;
             }
 
-            var lastTransferId = _state.LocalServer.NewestTransferId;
+            var lastTransferId = _fileTransferIds.Last();
             if (lastTransferId > _state.LogViewerFileTransferId) return true;
 
             const string prompt =
@@ -84,7 +88,7 @@
         {
             MenuItems.Clear();
 
-            foreach (var id in _state.LocalServer.FileTransferIds)
+            foreach (var id in _fileTransferIds)
             {
                 if (id <= _state.LogViewerFileTransferId) continue;
 

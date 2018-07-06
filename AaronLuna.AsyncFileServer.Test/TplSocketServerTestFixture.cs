@@ -44,11 +44,14 @@ namespace AaronLuna.AsyncFileServer.Test
         string _restoreFilePath;
         string _messageFromClient;
         string _messageFromServer;
-        string _transferFolderPath; string _cidrIp;
+        string _transferFolderPath;
+        string _cidrIp;
         IPAddress _localIp;
         IPAddress _publicIp;
         IPAddress _remoteServerLocalIp;
         IPAddress _remoteServerPublicIp;
+        ServerPlatform _remoteServerPlatform;
+        ServerPlatform _thisServerPlatform;
 
         bool _serverReceivedTextMessage;
         bool _serverReceivedAllFileBytes;
@@ -126,10 +129,12 @@ namespace AaronLuna.AsyncFileServer.Test
                 File.Copy(_restoreFilePath, _remoteFilePath);
             }
 
-            _cidrIp = "192.168.1.0/24";
-            //_cidrIp = "172.20.10.0/28";
+            //_cidrIp = "192.168.1.0/24";
+            _cidrIp = "172.20.10.0/28";
             _localIp = IPAddress.Loopback;
             _publicIp = IPAddress.None;
+            _remoteServerPlatform = ServerPlatform.None;
+            _thisServerPlatform = Environment.OSVersion.Platform.ToServerPlatform();
 
             var getLocalIpResult = NetworkUtilities.GetLocalIPv4Address(_cidrIp);
             if (getLocalIpResult.Success)
@@ -494,6 +499,7 @@ namespace AaronLuna.AsyncFileServer.Test
             Assert.AreEqual(_remoteFolder, _transferFolderPath);
             Assert.IsTrue(_remoteServerPublicIp.Equals(_publicIp));
             Assert.IsTrue(_remoteServerLocalIp.Equals(_localIp));
+            Assert.AreEqual(_thisServerPlatform, _remoteServerPlatform);
         }
 
         [TestMethod]
@@ -911,6 +917,7 @@ namespace AaronLuna.AsyncFileServer.Test
                     _transferFolderPath = serverEvent.RemoteFolder;
                     _remoteServerPublicIp = serverEvent.PublicIpAddress;
                     _remoteServerLocalIp = serverEvent.LocalIpAddress;
+                    _remoteServerPlatform = serverEvent.RemoteServerPlatform;
                     _clientReceivedServerInfo = true;
                     break;
 

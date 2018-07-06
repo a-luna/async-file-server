@@ -25,6 +25,7 @@
                 _,
                 remoteServerLocalIpAddress,
                 remoteServerPublicIpAddress,
+                platform,
                 _,
                 _,
                 _,
@@ -42,6 +43,7 @@
                 {
                     LocalIpAddress = remoteServerLocalIpAddress,
                     PublicIpAddress = remoteServerPublicIpAddress,
+                    Platform = platform,
                     PortNumber = remoteServerPortNumber,
                     TransferFolder = remoteFolderPath
                 };
@@ -61,6 +63,7 @@
             int fileTransferId,
             IPAddress remoteServerLocalIpAddress,
             IPAddress remoteServerPublicIpAddress,
+            ServerPlatform _platform,
             string requestedFilePath,
             string localFilePath,
             string localFolderPath,
@@ -78,6 +81,7 @@
             var fileTransferId = 0;
             var remoteServerLocalIpString = string.Empty;
             var remoteServerPublicIpString = string.Empty;
+            var platform = ServerPlatform.None;
             var requestedFilePath = string.Empty;
             var localFilePath = string.Empty;
             var localFolderPath = string.Empty;
@@ -98,6 +102,7 @@
 
                     (remoteServerLocalIpString,
                         remoteServerPortNumber,
+                        platform,
                         remoteServerPublicIpString,
                         remoteFolderPath) = ReadServerInfoResponse(requestBytes);
 
@@ -221,6 +226,7 @@
                 fileTransferId,
                 remoteServerLocalIpAddress,
                 remoteServerPublicIpAddress,
+                platform,
                 requestedFilePath,
                 localFilePath,
                 localFolderPath,
@@ -434,6 +440,7 @@
         static (
             string remoteIpAddress,
             int remotePortNumber,
+            ServerPlatform platform,
             string publicIpAddress,
             string remoteFolderPath) ReadServerInfoResponse(byte[] requestData)
         {
@@ -442,15 +449,19 @@
 
             var portNumber = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 3 + localIpLen);
 
-            var publicIpLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 4 + localIpLen);
-            var publicIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 5 + localIpLen, publicIpLen);
+            var platformData = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 5 + localIpLen).ToString();
+            var platform = (ServerPlatform)Enum.Parse(typeof(ServerPlatform), platformData);
 
-            var transferFolderPathLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 5 + localIpLen + publicIpLen);
-            var transferFolderPath = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 6 + localIpLen + publicIpLen, transferFolderPathLen);
+            var publicIpLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 6 + localIpLen);
+            var publicIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 7 + localIpLen, publicIpLen);
+
+            var transferFolderPathLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 7 + localIpLen + publicIpLen);
+            var transferFolderPath = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 8 + localIpLen + publicIpLen, transferFolderPathLen);
 
             return (
                 localIp,
                 portNumber,
+                platform,
                 publicIp,
                 transferFolderPath);
         }

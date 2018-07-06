@@ -292,16 +292,24 @@
         public static byte[] ConstructServerInfoResponse(
             string localIpAddress,
             int localPort,
+            ServerPlatform platform,
             string publicIp,
             string transferFolder)
         {
             var requestType = BitConverter.GetBytes((int)ServerRequestType.ServerInfoResponse);
+
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
+
             var thisServerPortData = BitConverter.GetBytes(localPort);
             var thisServerPortLen = BitConverter.GetBytes(Constants.SizeOfInt32InBytes);
+
+            var platformData = BitConverter.GetBytes((int)platform);
+            var platformLen = BitConverter.GetBytes(Constants.SizeOfInt32InBytes);
+
             var publicIpData = Encoding.UTF8.GetBytes(publicIp);
             var publicIpLen = BitConverter.GetBytes(publicIpData.Length);
+
             var transferFolderData = Encoding.UTF8.GetBytes(transferFolder);
             var transferFolderLen = BitConverter.GetBytes(transferFolderData.Length);
 
@@ -311,6 +319,8 @@
             wrappedRequest.AddRange(thisServerIpData);
             wrappedRequest.AddRange(thisServerPortLen);
             wrappedRequest.AddRange(thisServerPortData);
+            wrappedRequest.AddRange(platformLen);
+            wrappedRequest.AddRange(platformData);
             wrappedRequest.AddRange(publicIpLen);
             wrappedRequest.AddRange(publicIpData);
             wrappedRequest.AddRange(transferFolderLen);

@@ -33,12 +33,14 @@
             {
                 return validateServerInfo;
             }
-            
+
             var requestInfoFromServer = await RequestServerInfoAsync();
             if (requestInfoFromServer.Failure)
             {
                 return requestInfoFromServer;
             }
+
+            _state.SelectedServerInfo.Name = SharedFunctions.GetServerNameFromUser(_state.SelectedServerInfo);
 
             _state.Settings.RemoteServers.Add(_state.SelectedServerInfo);
             var saveSettings = ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
@@ -69,12 +71,13 @@
 
                 return Result.Fail("Server is already added, returning to main menu.");
             }
-
+            
             _state.SelectedServerInfo = serverInfo;
+
             return Result.Ok();
 
         }
-
+        
         async Task<Result> RequestServerInfoAsync()
         {
             _state.WaitingForServerInfoResponse = true;
