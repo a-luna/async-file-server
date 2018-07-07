@@ -5,6 +5,7 @@
     using System.Net;
     using System.Threading;
 
+    using Controller;
     using Model;
     using ConsoleProgressBar;
 
@@ -12,13 +13,17 @@
     {
         public AppState()
         {
-            LocalServer = new Controller.AsyncFileServer();
+            LocalServer = new AsyncFileServer();
             SelectedServerInfo = new ServerInfo();
             
             WaitingForServerInfoResponse = true;
             WaitingForFileListResponse = true;
 
             SignalReturnToMainMenu = new AutoResetEvent(false);
+
+            UserEntryRemoteServerName = string.Empty;
+            UserEntryIpAddress = IPAddress.None;
+            UserEntryPortNumber = 0;
 
             LogLevel = FileTransferLogLevel.Normal;
         }
@@ -48,11 +53,12 @@
         public bool FileTransferCanceled => LocalServer.FileTransferCanceled;
 
         public string UserEntryLocalNetworkCidrIp { get; set; }
-        public IPAddress UserEntryLocalIpAddress { get; set; }
+        public IPAddress UserEntryIpAddress { get; set; }
         public IPAddress UserEntryPublicIpAddress { get; set; }
-        public int UserEntryLocalServerPort { get; set; }
+        public int UserEntryPortNumber { get; set; }
+        public string UserEntryRemoteServerName { get; set; }
 
-        public Controller.AsyncFileServer LocalServer { get; set; }
+        public AsyncFileServer LocalServer { get; set; }
         public FileInfoList RemoteServerFileList => LocalServer.RemoteServerFileList;
         public string ErrorMessage { get; set; }
 
@@ -101,7 +107,7 @@
         public string RemoteServerInfo()
         {
             var selectedServerStatus = ClientSelected
-                ? $"Options for remote server: {SelectedServerInfo.Name}"
+                ? $"Selected Server: {SelectedServerInfo.Name} ({SelectedServerInfo})"
                 : "Please select a remote server";
 
             return FileTransferInProgress

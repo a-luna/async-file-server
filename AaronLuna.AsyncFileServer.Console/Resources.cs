@@ -13,6 +13,25 @@
             "Enter the CIDR IP that describes the configuration of this local network " +
             "(i.e., enter 'a.b.c.d' portion of CIDR IP a.b.c.d/n)";
 
+        internal static readonly string Prompt_SetRemoteServerIp =
+            "Enter the IP address of the remote server in IPv4 format (i.e., a.b.c.d):";
+
+        internal static readonly string Prompt_SetRemoteServerName =
+            "Please enter a name to help identify this server (this name will not be shared " +
+            "with the remote server, it is only stored locally):";
+
+        internal static readonly string Prompt_SetRemoteServerPortNumber =
+            "Enter the port number of the remote server:";
+
+        internal static readonly string Prompt_ChangeRemoteServerIp =
+            "Enter a new value for the IP address of the selected server in IPv4 format (i.e., a.b.c.d):";
+
+        internal static readonly string Prompt_ChangeRemoteServerName =
+            "Enter a new name for the remote server:";
+
+        internal static readonly string Prompt_ChangeRemoteServerPortNumber =
+            "Enter a new value for the port number of the selected server:";
+
         internal static readonly string Warning_UseLoopbackIp =
             "Unable to determine the local IP address for this machine, please " +
             "ensure that the CIDR IP address is correct for your LAN.\nWould you " +

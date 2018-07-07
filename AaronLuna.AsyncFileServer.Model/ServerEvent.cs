@@ -72,7 +72,7 @@
         public string ConfirmationMessage { get; set; }
         public string ErrorMessage { get; set; }
 
-        public bool ExcludeFromEventLog => EventType.ExcludeFromEventLog();
+        public bool LogLevelIsDebugOnly => EventType.LogLevelIsDebugOnly();
 
         public string GetLogFileEntry()
         {

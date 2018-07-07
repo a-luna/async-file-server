@@ -24,8 +24,14 @@
 
         public async Task<Result> ExecuteAsync()
         {
-            var remoteServerIp = SharedFunctions.GetIpAddressFromUser($"{Environment.NewLine}Enter the client's IPv4 address:");
-            var remoteServerPort = SharedFunctions.GetPortNumberFromUser($"{Environment.NewLine}Enter the client's port number:", false);
+            var remoteServerIp =
+                SharedFunctions.GetIpAddressFromUser(Resources.Prompt_SetRemoteServerIp);
+
+            var remoteServerPort =
+                SharedFunctions.GetPortNumberFromUser(
+                    Resources.Prompt_SetRemoteServerPortNumber,
+                    false);
+
             var serverInfo = new ServerInfo(remoteServerIp, remoteServerPort);
             
             var validateServerInfo = ValidateServerInfo(serverInfo);
@@ -40,7 +46,7 @@
                 return requestInfoFromServer;
             }
 
-            _state.SelectedServerInfo.Name = SharedFunctions.GetServerNameFromUser(_state.SelectedServerInfo);
+            _state.SelectedServerInfo.Name = SharedFunctions.SetSelectedServerName(_state.SelectedServerInfo);
 
             _state.Settings.RemoteServers.Add(_state.SelectedServerInfo);
             var saveSettings = ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);

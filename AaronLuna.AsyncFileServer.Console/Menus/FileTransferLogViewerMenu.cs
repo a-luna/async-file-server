@@ -1,22 +1,21 @@
-﻿using System.Linq;
-using AaronLuna.AsyncFileServer.Model;
-
-namespace AaronLuna.AsyncFileServer.Console.Menus
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Threading.Tasks;
 
     using ViewFileTransferEventLogsMenuItems;
     using Common.Console.Menu;
     using Common.Result;
+    using Model;
 
-    class ViewFileTransferEventLogsMenu : IMenu
+    class FileTransferLogViewerMenu : IMenu
     {
         readonly AppState _state;
         readonly List<int> _fileTransferIds;
 
-        public ViewFileTransferEventLogsMenu(AppState state)
+        public FileTransferLogViewerMenu(AppState state)
         {
             _state = state;
             _fileTransferIds = _state.LocalServer.FileTransferIds;
@@ -40,7 +39,7 @@ namespace AaronLuna.AsyncFileServer.Console.Menus
 
             while (!exit)
             {
-                if (!RestoreEventLogsIfPreviouslyCleared())
+                if (NoFileTransfersToDisplay())
                 {
                     exit = true;
                     result = Result.Ok();
@@ -57,7 +56,7 @@ namespace AaronLuna.AsyncFileServer.Console.Menus
             return result;
         }
 
-        bool RestoreEventLogsIfPreviouslyCleared()
+        bool NoFileTransfersToDisplay()
         {
             if (_state.LocalServer.NoFileTransfers)
             {
@@ -65,11 +64,11 @@ namespace AaronLuna.AsyncFileServer.Console.Menus
                 Console.WriteLine($"{Environment.NewLine}Press enter to return to the previous menu.");
                 Console.ReadLine();
 
-                return false;
+                return true;
             }
 
             var lastTransferId = _fileTransferIds.Last();
-            if (lastTransferId > _state.LogViewerFileTransferId) return true;
+            if (lastTransferId > _state.LogViewerFileTransferId) return false;
 
             const string prompt =
                 "No file transfers have occurred since this list was cleared, would you like to view " +
@@ -78,11 +77,11 @@ namespace AaronLuna.AsyncFileServer.Console.Menus
             var restoreLogEntries = SharedFunctions.PromptUserYesOrNo(prompt);
             if (!restoreLogEntries)
             {
-                return false;
+                return true;
             }
 
             _state.LogViewerFileTransferId = 0;
-            return true;
+            return false;
         }
 
         void PopulateMenu()
@@ -98,7 +97,7 @@ namespace AaronLuna.AsyncFileServer.Console.Menus
 
                 if (_state.LogLevel == FileTransferLogLevel.Normal)
                 {
-                    eventLog.RemoveAll(e => e.ExcludeFromEventLog);
+                    eventLog.RemoveAll(LogLevelIsDebugOnly);
                 }
 
                 MenuItems.Add(
@@ -110,6 +109,11 @@ namespace AaronLuna.AsyncFileServer.Console.Menus
 
             MenuItems.Add(new ClearFileTransferEventLogsMenuItem(_state));
             MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));
+        }
+
+        static bool LogLevelIsDebugOnly(ServerEvent serverEvent)
+        {
+            return serverEvent.LogLevelIsDebugOnly;
         }
     }
 }

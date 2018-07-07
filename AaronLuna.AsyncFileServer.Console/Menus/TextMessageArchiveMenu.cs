@@ -8,17 +8,17 @@
 
     using ViewTextSessionsMenuItems;
 
-    class ViewTextSessionsMenu : IMenu
+    class TextMessageArchiveMenu : IMenu
     {
         AppState _state;
 
-        public ViewTextSessionsMenu(AppState state)
+        public TextMessageArchiveMenu(AppState state)
         {
             _state = state;
 
             ReturnToParent = false;
             ItemText = "View archived text messages";
-            MenuText = "Select a text session from the list below:";
+            MenuText = "Select a remote server from the list below:";
             MenuItems = new List<IMenuItem>();
         }
 

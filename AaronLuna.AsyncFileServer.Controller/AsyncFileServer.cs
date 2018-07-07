@@ -1728,15 +1728,12 @@
 
                 fileTransfer.PercentComplete = checkPercentComplete;
 
-                _eventLog.Add(new ServerEvent
+                FileTransferProgress?.Invoke(this, new ServerEvent
                 {
                     EventType = ServerEventType.UpdateFileTransferProgress,
                     TotalFileBytesReceived = fileTransfer.TotalBytesReceived,
-                    PercentComplete = fileTransfer.PercentComplete,
-                    FileTransferId = fileTransfer.Id
+                    PercentComplete = fileTransfer.PercentComplete
                 });
-
-                FileTransferProgress?.Invoke(this, _eventLog.Last());
             }
 
             if (InboundFileTransferStalled)

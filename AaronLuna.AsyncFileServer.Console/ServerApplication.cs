@@ -211,7 +211,7 @@ namespace AaronLuna.AsyncFileServer.Console
             }
 
             _state.Settings = readSettingsFileResult.Value;
-            _state.UserEntryLocalServerPort = _state.Settings.LocalServerPortNumber;
+            _state.UserEntryPortNumber = _state.Settings.LocalServerPortNumber;
             _state.UserEntryLocalNetworkCidrIp = _state.Settings.LocalNetworkCidrIp;
         }
 

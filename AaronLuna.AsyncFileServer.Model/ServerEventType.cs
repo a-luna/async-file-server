@@ -124,7 +124,7 @@
 
     public static class ServerEventTypeExtensions
     {
-        public static bool ExcludeFromEventLog(this ServerEventType eventType)
+        public static bool LogLevelIsDebugOnly(this ServerEventType eventType)
         {
             switch (eventType)
             {

@@ -212,7 +212,7 @@
             return ipAddress;
         }
 
-        public static string GetServerNameFromUser(ServerInfo serverInfo)
+        public static string SetSelectedServerName(ServerInfo serverInfo)
         {
             var defaultServerName = $"{serverInfo.SessionIpAddress}:{serverInfo.PortNumber}-{serverInfo.Platform}";
 
@@ -220,16 +220,18 @@
                 $"Would you like to enter a name to help you identify this server? If you select no, a default name will be created ({defaultServerName})";
 
             var enterCustomName = PromptUserYesOrNo(initialPrompt);
-            if (!enterCustomName) return defaultServerName;
 
+            return enterCustomName
+                ? GetServerNameFromUser(Resources.Prompt_SetRemoteServerName)
+                : defaultServerName;
+        }
+
+        public static string GetServerNameFromUser(string prompt)
+        {
             var remoteServerName = string.Empty;
-            const string getNamePrompt =
-                "Please enter a name to help identify this server (this name will not be shared with the remote server, it is only stored locally):";
-            
             while (string.IsNullOrEmpty(remoteServerName))
             {
-
-                Console.WriteLine($"{Environment.NewLine}{getNamePrompt}");
+                Console.WriteLine($"{Environment.NewLine}{prompt}");
                 var input = Console.ReadLine();
 
                 var confirm = $"Is \"{input}\" the name you wish to use for this server? Select no if you would like to change this value.";
@@ -258,12 +260,12 @@
             return exists;
         }
 
-        public static ServerInfo GetRemoteServer(ServerInfo client, List<ServerInfo> clientList)
+        public static ServerInfo GetRemoteServer(ServerInfo lookup, List<ServerInfo> serverInfoList)
         {
             var match = new ServerInfo();
-            foreach (var server in clientList)
+            foreach (var server in serverInfoList)
             {
-                if (!server.IsEqualTo(client)) continue;
+                if (!server.IsEqualTo(lookup)) continue;
                 match = server;
                 break;
             }

@@ -81,9 +81,9 @@
         {
             _tieredMenu.Clear();
 
-            PopulateHandleRequestsMenuTier();
+            PopulatePendingRequestsMenuTier();
             PopulateViewLogsMenuTier();
-            PopulateRemoteServerMenuTier();
+            PopulateSelectedServerMenuTier();
             PopulateLocalServerMenuTier();
         }
 
@@ -112,7 +112,7 @@
             return _tieredMenu.GetMenuItem(userSelection - 1);
         }
 
-        void PopulateHandleRequestsMenuTier()
+        void PopulatePendingRequestsMenuTier()
         {
             var handleRequestsMenuTier = new MenuTier { TierLabel = "Pending Requests:" };
             handleRequestsMenuTier.MenuItems = new List<IMenuItem>();
@@ -146,45 +146,47 @@
             
             if (!_state.LocalServer.NoFileTransfers)
             {
-                viewLogsMenuTier.MenuItems.Add(new ViewFileTransferEventLogsMenu(_state));
+                viewLogsMenuTier.MenuItems.Add(new FileTransferLogViewerMenu(_state));
             }
 
             if (!_state.LocalServer.NoTextSessions)
             {
-                viewLogsMenuTier.MenuItems.Add(new ViewTextSessionsMenu(_state));
+                viewLogsMenuTier.MenuItems.Add(new TextMessageArchiveMenu(_state));
             }
 
             _tieredMenu.Add(viewLogsMenuTier);
         }
 
-        void PopulateRemoteServerMenuTier()
+        void PopulateSelectedServerMenuTier()
         {
-            var remoteServerMenuTier = new MenuTier { TierLabel = _state.RemoteServerInfo() };
-            remoteServerMenuTier.MenuItems = new List<IMenuItem>();
+            var selectedServerMenuTier = new MenuTier { TierLabel = _state.RemoteServerInfo() };
+            selectedServerMenuTier.MenuItems = new List<IMenuItem>();
 
             if (_state.ClientSelected)
             {
-                remoteServerMenuTier.MenuItems.Add(new SendTextMessageMenuItem(_state));
-                remoteServerMenuTier.MenuItems.Add(new SelectFileMenu(_state, true));
-                remoteServerMenuTier.MenuItems.Add(new SelectFileMenu(_state, false));
+                selectedServerMenuTier.MenuItems.Add(new SendTextMessageMenuItem(_state));
+                selectedServerMenuTier.MenuItems.Add(new SelectFileMenu(_state, true));
+                selectedServerMenuTier.MenuItems.Add(new SelectFileMenu(_state, false));
+                selectedServerMenuTier.MenuItems.Add(new UpdateSelectedServerInfoMenu(_state));
+                selectedServerMenuTier.MenuItems.Add(new SelectRemoteServerMenu(_state));
             }
             
-            _tieredMenu.Add(remoteServerMenuTier);
+            _tieredMenu.Add(selectedServerMenuTier);
         }
 
         void PopulateLocalServerMenuTier()
         {
-            var localServerMenuTier = new MenuTier
+            var localServerMenuTier = new MenuTier { TierLabel = "Local Server Options:" };
+            localServerMenuTier.MenuItems = new List<IMenuItem>();
+
+            if (!_state.ClientSelected)
             {
-                TierLabel = "Local Server Options:",
-                MenuItems = new List<IMenuItem>
-                {
-                    new SelectRemoteServerMenu(_state),
-                    new ServerConfigurationMenu(_state),
-                    _shutdownServer
-                }
-            };
-            
+                localServerMenuTier.MenuItems.Add(new SelectRemoteServerMenu(_state));
+            }
+
+            localServerMenuTier.MenuItems.Add(new ServerSettingsMenu(_state));
+            localServerMenuTier.MenuItems.Add(_shutdownServer);
+
             _tieredMenu.Add(localServerMenuTier);
         }
     }

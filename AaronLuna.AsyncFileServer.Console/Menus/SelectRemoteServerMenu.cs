@@ -18,7 +18,7 @@
             ReturnToParent = false;
 
             ItemText = _state.ClientSelected
-                ? "Change remote server"
+                ? "Change selected remote server"
                 : "Select remote server";
 
             MenuText = "Choose a remote server:";

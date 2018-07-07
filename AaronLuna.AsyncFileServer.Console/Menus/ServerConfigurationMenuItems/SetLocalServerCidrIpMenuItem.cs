@@ -2,20 +2,19 @@
 {
     using System;
     using System.Threading.Tasks;
-
     using Common.Console.Menu;
     using Common.Result;
 
-    class SetMyPortNumberMenuItem : IMenuItem
+    class SetLocalServerCidrIpMenuItem : IMenuItem
     {
         readonly AppState _state;
 
-        public SetMyPortNumberMenuItem(AppState state)
+        public SetLocalServerCidrIpMenuItem(AppState state)
         {
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Change local server port number * ({_state.Settings.LocalServerPortNumber})";
+            ItemText = $"Change CIDR IP for this LAN * ({_state.Settings.LocalNetworkCidrIp})";
         }
 
         public string ItemText { get; set; }
@@ -28,10 +27,9 @@
 
         Result Execute()
         {
-            _state.UserEntryLocalServerPort =
-                SharedFunctions.GetPortNumberFromUser(Resources.Prompt_SetLocalPortNumber, true);
-
+            _state.Settings.LocalNetworkCidrIp = SharedFunctions.InitializeLanCidrIp();
             _state.RestartRequired = true;
+
             return Result.Ok();
         }
     }

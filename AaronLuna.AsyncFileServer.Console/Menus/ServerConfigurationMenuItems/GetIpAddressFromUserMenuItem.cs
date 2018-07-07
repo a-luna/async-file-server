@@ -5,16 +5,16 @@
     using Common.Console.Menu;
     using Common.Result;
 
-    class SetMyCidrIpMenuItem : IMenuItem
+    class GetIpAddressFromUserMenuItem : IMenuItem
     {
         readonly AppState _state;
 
-        public SetMyCidrIpMenuItem(AppState state)
+        public GetIpAddressFromUserMenuItem(AppState state)
         {
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Change CIDR IP for this LAN * ({_state.Settings.LocalNetworkCidrIp})";
+            ItemText = $"Change IP address ({_state.SelectedServerInfo.SessionIpAddress})";
         }
 
         public string ItemText { get; set; }
@@ -27,10 +27,11 @@
 
         Result Execute()
         {
-            _state.Settings.LocalNetworkCidrIp = SharedFunctions.InitializeLanCidrIp();
-            _state.RestartRequired = true;
+            _state.SelectedServerInfo.SessionIpAddress = 
+                SharedFunctions.GetIpAddressFromUser(Resources.Prompt_ChangeRemoteServerIp);
 
             return Result.Ok();
         }
+
     }
 }

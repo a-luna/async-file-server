@@ -9,18 +9,18 @@
     using Common.Console.Menu;
     using Common.Result;
 
-    class ServerConfigurationMenu : IMenu
+    class ServerSettingsMenu : IMenu
     {
         readonly AppState _state;
         readonly TieredMenu _tieredMenu;
 
-        public ServerConfigurationMenu(AppState state)
+        public ServerSettingsMenu(AppState state)
         {
             _state = state;
             _tieredMenu = new TieredMenu();
 
             ReturnToParent = false;
-            ItemText = "Configuration Options";
+            ItemText = "Server settings";
             MenuText = Resources.Menu_ChangeSettings;
             MenuItems = new List<IMenuItem>();
         }
@@ -32,12 +32,12 @@
         
         public async Task<Result> ExecuteAsync()
         {
+            _state.DoNotRefreshMainMenu = true;
             var exit = false;
             Result result = null;
 
             while (!exit)
-            {
-                _state.DoNotRefreshMainMenu = true;
+            {   
                 SharedFunctions.DisplayLocalServerInfo(_state);
                 PopulateMenu();
 
@@ -61,6 +61,7 @@
                 
                 exit = true;
             }
+
             return result;
         }
 
@@ -73,8 +74,8 @@
                 TierLabel = "Local Server Settings:",
                 MenuItems = new List<IMenuItem>
                 {
-                    new SetMyPortNumberMenuItem(_state),
-                    new SetMyCidrIpMenuItem(_state),
+                    new GetPortNumberFromUserMenuItem(_state, _state.LocalServer.Info, true),
+                    new SetLocalServerCidrIpMenuItem(_state),
                     new DisplayLocalIPv4AddressesMenuItem(),
                 }
             };
@@ -144,7 +145,7 @@
 
         Result ApplyChanges()
         {
-            _state.Settings.LocalServerPortNumber = _state.UserEntryLocalServerPort;
+            _state.Settings.LocalServerPortNumber = _state.LocalServer.Info.PortNumber;
             _state.Settings.LocalNetworkCidrIp = _state.UserEntryLocalNetworkCidrIp;
 
             var saveSettings = ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
