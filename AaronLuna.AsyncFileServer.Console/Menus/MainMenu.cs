@@ -162,7 +162,7 @@
             var selectedServerMenuTier = new MenuTier { TierLabel = _state.RemoteServerInfo() };
             selectedServerMenuTier.MenuItems = new List<IMenuItem>();
 
-            if (_state.ClientSelected)
+            if (_state.RemoteServerSelected)
             {
                 selectedServerMenuTier.MenuItems.Add(new SendTextMessageMenuItem(_state));
                 selectedServerMenuTier.MenuItems.Add(new SelectFileMenu(_state, true));
@@ -179,7 +179,7 @@
             var localServerMenuTier = new MenuTier { TierLabel = "Local Server Options:" };
             localServerMenuTier.MenuItems = new List<IMenuItem>();
 
-            if (!_state.ClientSelected)
+            if (!_state.RemoteServerSelected)
             {
                 localServerMenuTier.MenuItems.Add(new SelectRemoteServerMenu(_state));
             }

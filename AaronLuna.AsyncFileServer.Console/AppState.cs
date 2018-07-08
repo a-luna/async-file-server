@@ -36,7 +36,7 @@
 
         public bool WaitingForServerInfoResponse { get; set; }
         public bool WaitingForFileListResponse { get; set; }
-        public bool ClientSelected { get; set; }
+        public bool RemoteServerSelected { get; set; }
         public bool ErrorOccurred { get; set; }
         public bool ProgressBarInstantiated { get; set; }
         public bool RequestedFolderDoesNotExist { get; set; }
@@ -106,7 +106,7 @@
 
         public string RemoteServerInfo()
         {
-            var selectedServerStatus = ClientSelected
+            var selectedServerStatus = RemoteServerSelected
                 ? $"Selected Server: {SelectedServerInfo.Name} ({SelectedServerInfo})"
                 : "Please select a remote server";
 

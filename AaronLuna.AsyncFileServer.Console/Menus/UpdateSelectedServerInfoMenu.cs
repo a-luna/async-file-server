@@ -6,6 +6,7 @@
     using Common.Console.Menu;
     using Common.Result;
     using ServerConfigurationMenuItems;
+    using UpdateSelectedServerInfoMenuItems;
 
     class UpdateSelectedServerInfoMenu : IMenu
     {
@@ -22,6 +23,7 @@
                 new GetIpAddressFromUserMenuItem(state),
                 new GetPortNumberFromUserMenuItem(state, state.SelectedServerInfo, false),
                 new GetServerNameFromUserMenuItem(state),
+                new DeleteSelectedServerInfoMenuItem(state),
                 new ReturnToParentMenuItem("Return to main menu")
             };
         }
@@ -72,11 +74,7 @@
             serverFromFile.PortNumber = _state.SelectedServerInfo.PortNumber;
             serverFromFile.Name = _state.SelectedServerInfo.Name;
 
-            var saveSettings = ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
-
-            return saveSettings.Success
-                ? Result.Ok()
-                : saveSettings;
+            return ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
         }
 
     }

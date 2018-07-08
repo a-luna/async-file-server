@@ -17,8 +17,8 @@
 
             ReturnToParent = false;
 
-            ItemText = _state.ClientSelected
-                ? "Change selected remote server"
+            ItemText = _state.RemoteServerSelected
+                ? "Select a different remote server"
                 : "Select remote server";
 
             MenuText = "Choose a remote server:";
@@ -42,7 +42,7 @@
             var selectRemoteServerResult = await menuItem.ExecuteAsync();
             if (selectRemoteServerResult.Success && !(menuItem is ReturnToParentMenuItem))
             {
-                _state.ClientSelected = true;
+                _state.RemoteServerSelected = true;
             }
 
             return selectRemoteServerResult;

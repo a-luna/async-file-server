@@ -96,8 +96,9 @@
 
             if (requestServerInfoResult.Failure)
             {
-                var error = $"Error requesting public IP address from new client:" +
-                            Environment.NewLine + requestServerInfoResult.Error;
+                var error =
+                    "Error requesting additional info from remote server:" +
+                    Environment.NewLine + requestServerInfoResult.Error;
 
                 return Result.Fail(error);
             }

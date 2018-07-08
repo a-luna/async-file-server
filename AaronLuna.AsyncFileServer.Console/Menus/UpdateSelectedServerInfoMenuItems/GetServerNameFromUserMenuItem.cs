@@ -1,11 +1,10 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenuItems
+﻿using System;
+using System.Threading.Tasks;
+using AaronLuna.Common.Console.Menu;
+using AaronLuna.Common.Result;
+
+namespace AaronLuna.AsyncFileServer.Console.Menus.UpdateSelectedServerInfoMenuItems
 {
-    using System;
-    using System.Threading.Tasks;
-
-    using Common.Console.Menu;
-    using Common.Result;
-
     class GetServerNameFromUserMenuItem : IMenuItem
     {
         readonly AppState _state;
@@ -15,7 +14,7 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Change the name ({_state.SelectedServerInfo.Name}){Environment.NewLine}";
+            ItemText = $"Change the name ({_state.SelectedServerInfo.Name})";
         }
 
         public string ItemText { get; set; }

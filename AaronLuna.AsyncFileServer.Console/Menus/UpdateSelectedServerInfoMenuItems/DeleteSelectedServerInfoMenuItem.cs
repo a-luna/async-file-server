@@ -1,20 +1,21 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenuItems
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.UpdateSelectedServerInfoMenuItems
 {
     using System;
     using System.Threading.Tasks;
+
     using Common.Console.Menu;
     using Common.Result;
 
-    class GetIpAddressFromUserMenuItem : IMenuItem
+    class DeleteSelectedServerInfoMenuItem : IMenuItem
     {
         readonly AppState _state;
 
-        public GetIpAddressFromUserMenuItem(AppState state)
+        public DeleteSelectedServerInfoMenuItem(AppState state)
         {
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Change IP address ({_state.SelectedServerInfo.SessionIpAddress})";
+            ItemText = $"Forget about this server{Environment.NewLine}";
         }
 
         public string ItemText { get; set; }
@@ -27,11 +28,10 @@
 
         Result Execute()
         {
-            _state.SelectedServerInfo.SessionIpAddress = 
-                SharedFunctions.GetIpAddressFromUser(Resources.Prompt_ChangeRemoteServerIp);
+            _state.RemoteServerSelected = false;
+            _state.Settings.RemoteServers.Remove(_state.SelectedServerInfo);
 
-            return Result.Ok();
+            return ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
         }
-
     }
 }

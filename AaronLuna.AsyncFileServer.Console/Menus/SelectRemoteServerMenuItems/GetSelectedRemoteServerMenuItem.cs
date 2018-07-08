@@ -32,7 +32,7 @@
         Result Execute()
         {
             _state.SelectedServerInfo = _server;
-            _state.ClientSelected = true;
+            _state.RemoteServerSelected = true;
             
             return Result.Ok();
         }
