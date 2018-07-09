@@ -46,8 +46,11 @@ namespace AaronLuna.AsyncFileServer.Console.Menus
                 var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);
                 result = await menuItem.ExecuteAsync();
 
-                if (result.Success && !(menuItem is ReturnToParentMenuItem))
+                if (result.Success)
                 {
+                    if (menuItem is ReturnToParentMenuItem) continue;
+                    if (menuItem is DeleteSelectedServerInfoMenuItem) continue;
+
                     var applyChanges = ApplyChanges();
                     if (applyChanges.Failure)
                     {
