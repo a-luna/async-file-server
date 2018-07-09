@@ -49,7 +49,11 @@ namespace AaronLuna.AsyncFileServer.Console.Menus
                 if (result.Success)
                 {
                     if (menuItem is ReturnToParentMenuItem) continue;
-                    if (menuItem is DeleteSelectedServerInfoMenuItem) continue;
+                    if (menuItem is DeleteSelectedServerInfoMenuItem)
+                    {
+                        exit = true;
+                        continue;
+                    };
 
                     var applyChanges = ApplyChanges();
                     if (applyChanges.Failure)
