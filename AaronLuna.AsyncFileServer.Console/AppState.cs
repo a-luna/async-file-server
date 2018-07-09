@@ -62,10 +62,8 @@
         public FileInfoList RemoteServerFileList => LocalServer.RemoteServerFileList;
         public string ErrorMessage { get; set; }
 
-        public FileTransferProgressBar ProgressBar { get; set; }
-        public int RetryCounter { get; set; }
+        public FileTransferProgressBar ProgressBar { get; set; }        
         public ProgressEventArgs FileStalledInfo { get; set; }
-
         public ServerInfo SelectedServerInfo { get; set; }
 
         public FileTransferLogLevel LogLevel { get; set; }
@@ -73,23 +71,23 @@
         public string LocalServerInfo()
         {
             var serverIsListening = LocalServer.IsListening
-                ? $"Server is listening for incoming requests on port {LocalServer.Info.PortNumber}{Environment.NewLine}"
-                : $"Server is currently not listening for incoming connections{Environment.NewLine}";
+                ? $"Server is listening on port {LocalServer.Info.PortNumber}"
+                : "Server is currently not listening for incoming connections";
 
             var localServerIp =
                 $"Local IP:  {LocalServer.Info.LocalIpAddress}{Environment.NewLine}" +
-                $"Public IP: {LocalServer.Info.PublicIpAddress}{Environment.NewLine}{Environment.NewLine}";
+                $"Public IP: {LocalServer.Info.PublicIpAddress}{Environment.NewLine}";
 
             var filePlural = LocalServer.PendingFileTransferCount > 1
-                ? "transfers"
-                : "transfer";
+                ? "requests"
+                : "request";
 
             var fileTransferQueue = LocalServer.NoFileTransfersPending
-                ? $"No pending file transfers{Environment.NewLine}"
-                : $"{LocalServer.PendingFileTransferCount} file {filePlural} in queue{Environment.NewLine}";
+                ? "No pending file transfers"
+                : $"{LocalServer.PendingFileTransferCount} pending file transfer {filePlural}";
 
             var transferInProgress = LocalServer.FileTransferInProgress
-                ? $"FILE TRANSFER IN PROGRESS{Environment.NewLine}"
+                ? "FILE TRANSFER IN PROGRESS"
                 : fileTransferQueue;
 
             var messagePlural = LocalServer.UnreadTextMessageCount > 1
@@ -97,21 +95,24 @@
                 : "message";
 
             var unreadTextMessages = LocalServer.UnreadTextMessageCount == 0
-                ? $"No unread text messages{Environment.NewLine}"
-                : $"{LocalServer.UnreadTextMessageCount} unread text {messagePlural}{Environment.NewLine}";
+                ? "No unread messages"
+                : $"{LocalServer.UnreadTextMessageCount} unread {messagePlural}";
             
             return
-                serverIsListening + localServerIp + transferInProgress + unreadTextMessages;
+                serverIsListening + Environment.NewLine +
+                localServerIp + Environment.NewLine +
+                transferInProgress + Environment.NewLine +
+                unreadTextMessages + Environment.NewLine;
         }
 
         public string RemoteServerInfo()
         {
             var selectedServerStatus = RemoteServerSelected
-                ? $"Selected Server: {SelectedServerInfo.Name} ({SelectedServerInfo})"
+                ? $"Selected Server: {SelectedServerInfo}"
                 : "Please select a remote server";
 
             return FileTransferInProgress
-                ? $"SENDING FILE TO {LocalServer.RemoteServerInfo.Name}..."
+                ? $"SENDING FILE TO {LocalServer.RemoteServerInfo}..."
                 : selectedServerStatus;
         }
     }

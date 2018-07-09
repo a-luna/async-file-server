@@ -87,14 +87,19 @@
 
         public override string ToString()
         {
-            return $"{SessionIpAddress}:{PortNumber}";
+            var endpoint = $"{SessionIpAddress}:{PortNumber}";
+            var serverInfo = $"{Name} ({endpoint})";
+
+            return string.IsNullOrEmpty(Name)
+                ? endpoint
+                : serverInfo;
         }
 
         public string ItemText =>
-            $"Name....: {Name}{Environment.NewLine}" +
-            $"   IP......: {SessionIpAddress}{Environment.NewLine}" +
-            $"   Port....: {PortNumber}{Environment.NewLine}" +
-            $"   Platform: {Platform}{Environment.NewLine}";
+            $"Name......: {Name}{Environment.NewLine}" +
+            $"   IP........: {SessionIpAddress}{Environment.NewLine}" +
+            $"   Port......: {PortNumber}{Environment.NewLine}" +
+            $"   Platform..: {Platform}{Environment.NewLine}";
     }
 
     public static class ServerInfoExtensions

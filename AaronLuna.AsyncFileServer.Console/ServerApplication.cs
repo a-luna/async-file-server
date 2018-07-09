@@ -1,8 +1,6 @@
 ﻿//TODO: Bring back functionality where when ServerInfo is requested, the server receiving the request checks if the requesting server exists in its list of remote servers. If it is not known, prompt user yes/no if they would like to add it, and if yes, ServerInfoRequest is sent. 
 //TODO: Update AsyncFileServer.ToString() to be more useful when debugging. New format should incorporate the Name and OperatingSystem properties
 
-//TODO: User can change a setting in ServerConfigurationMenu to enable verbose logs. When enabled, the ExculdeFromEventLogs filter is not applied and all file transfer events are displayed inculuding transfer progress updates, socket reads, etc.
-
 namespace AaronLuna.AsyncFileServer.Console
 {
     using System;
@@ -35,7 +33,9 @@ namespace AaronLuna.AsyncFileServer.Console
 
         public ServerApplication()
         {
-            _settingsFilePath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}";
+            _settingsFilePath =
+                $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}";
+
             _cts = new CancellationTokenSource();
             _state = new AppState {MessageDisplayTime = _displayMessageDelay};
             _state.LocalServer.EventOccurred += HandleServerEventAsync;
@@ -88,52 +88,23 @@ namespace AaronLuna.AsyncFileServer.Console
             }
             catch (AggregateException ex)
             {
-                _log.Error("Error raised in method RunAsync", ex);
-                Console.WriteLine("\nException messages:");
-                foreach (var ie in ex.InnerExceptions)
-                {
-                    _log.Error("Error raised in method RunAsync", ie);
-
-                    var exceptionDetails = 
-                        $"\t{ie.GetType().Name}: {ie.Message}{Environment.NewLine}" +
-                        $"{ie.StackTrace}";
-
-                    Console.WriteLine(exceptionDetails);
-                }
+                HandleException(ex);
             }
             catch (SocketException ex)
             {
-                _log.Error("Error raised in method RunAsync", ex);
-
-                var exceptionDetails =
-                    $"{ex.Message} ({ex.GetType()}) raised in method ServerApplication.RunAsync" +
-                    $"{Environment.NewLine}{ex.StackTrace}";
-
-                Console.WriteLine(exceptionDetails);
+                HandleException(ex);
             }
-            catch (TaskCanceledException)
+            catch (TaskCanceledException ex)
             {
-                Console.WriteLine("Accept connection task canceled");
+                HandleException(ex);
             }
             catch (IOException ex)
             {
-                _log.Error("Error raised in method RunAsync", ex);
-
-                var exceptionDetails =
-                    $"{ex.Message} ({ex.GetType()}) raised in method ServerApplication.RunAsync" +
-                    $"{Environment.NewLine}{ex.StackTrace}";
-
-                Console.WriteLine(exceptionDetails);
+                HandleException(ex);
             }
             catch (Exception ex)
             {
-                _log.Error("Error raised in method RunAsync", ex);
-
-                var exceptionDetails =
-                    $"{ex.Message} ({ex.GetType()}) raised in method ServerApplication.RunAsync" +
-                    $"{Environment.NewLine}{ex.StackTrace}";
-
-                Console.WriteLine(exceptionDetails);
+                HandleException(ex);
             }
 
             return runServerResult;
@@ -168,9 +139,12 @@ namespace AaronLuna.AsyncFileServer.Console
                     var cidrIpMatch = _state.Settings.LocalNetworkCidrIp == newCidrIp;
                     if (!cidrIpMatch)
                     {
-                        var prompt = $"The current value for CIDR IP is {_state.Settings.LocalNetworkCidrIp}, " +
-                                     $"however it appears that {newCidrIp} is the correct value for the current " +
-                                     "LAN, would you like to use this value?";
+                        var prompt = 
+                            "The current value for CIDR IP is" +
+                            $"{_state.Settings.LocalNetworkCidrIp}, however it appears " +
+                            $"that {newCidrIp} is the correct value for the current LAN, " +
+                            "would you like to use this value?";
+
                         var updateCidrIp = SharedFunctions.PromptUserYesOrNo(prompt);
                         if (updateCidrIp)
                         {
@@ -181,23 +155,20 @@ namespace AaronLuna.AsyncFileServer.Console
                 }
             }
 
-            await _state.LocalServer.InitializeAsync(_state.Settings.LocalNetworkCidrIp, _state.Settings.LocalServerPortNumber);
+            await
+                _state.LocalServer.InitializeAsync(
+                    _state.Settings.LocalNetworkCidrIp,
+                    _state.Settings.LocalServerPortNumber);
+
             _state.LocalServer.SocketSettings = _state.Settings.SocketSettings;
             _state.LocalServer.TransferUpdateInterval = _state.Settings.TransferUpdateInterval;
             _state.LocalServer.TransferRetryLimit = _state.Settings.TransferRetryLimit;
             _state.LocalServer.RetryLimitLockout = _state.Settings.RetryLimitLockout;
             _state.LocalServer.Info.TransferFolder = _state.Settings.LocalServerFolderPath;
 
-            if (settingsChanged)
-            {
-                var saveSettings = ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
-                if (saveSettings.Failure)
-                {
-                    return saveSettings;
-                }
-            }
-
-            return Result.Ok();
+            return settingsChanged
+                ? ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath)
+                : Result.Ok();
         }
         
         void InitializeSettings()
@@ -215,14 +186,24 @@ namespace AaronLuna.AsyncFileServer.Console
             _state.UserEntryLocalNetworkCidrIp = _state.Settings.LocalNetworkCidrIp;
         }
 
+        void HandleException(Exception ex)
+        {
+            _log.Error("Exception cought:", ex);
+            Console.WriteLine(Environment.NewLine + ex.GetReport());
+        }
+
         async void HandleServerEventAsync(object sender, ServerEvent serverEvent)
         {
             _log.Info(serverEvent.ToString());
 
             switch (serverEvent.EventType)
             {
-                case ServerEventType.ReceiveRequestFromRemoteServerComplete:
                 case ServerEventType.ProcessRequestStarted:
+                    LookupRemoteServerName();
+                    RefreshMainMenu(serverEvent);
+                    break;
+
+                case ServerEventType.ReceiveRequestFromRemoteServerComplete:                
                 case ServerEventType.ProcessRequestComplete:
                 case ServerEventType.ReceivedTextMessage:
                 case ServerEventType.QueueContainsUnhandledRequests:
@@ -291,7 +272,21 @@ namespace AaronLuna.AsyncFileServer.Console
                     return;
             }
         }
-        
+
+        private void LookupRemoteServerName()
+        {
+            if (!string.IsNullOrEmpty(_state.LocalServer.RemoteServerInfo.Name)) return;
+
+            var foundName =
+                SharedFunctions.LookupRemoteServerName(
+                    _state.LocalServer.RemoteServerInfo,
+                    _state.Settings.RemoteServers);
+
+            if (foundName.Failure) return;
+
+            _state.LocalServer.RemoteServerInfo.Name = foundName.Value;
+        }
+
         void RefreshMainMenu(ServerEvent serverEvent)
         {
             if (_state.FileTransferInProgress) return;
@@ -364,9 +359,9 @@ namespace AaronLuna.AsyncFileServer.Console
                 $"{remoteServerIp}:{remotePortNumber} ({transferAttempt}){Environment.NewLine}";
 
             var fileInfo =
-                $"File Name: {fileName}{Environment.NewLine}" +
-                $"File Size: {fileSize}{Environment.NewLine}" +
-                $"Save To..: {localFolder}{Environment.NewLine}";
+                $"File Name..: {fileName}{Environment.NewLine}" +
+                $"File Size..: {fileSize}{Environment.NewLine}" +
+                $"Save To....: {localFolder}{Environment.NewLine}";
             
             Console.WriteLine(remoteServerInfo);
             Console.WriteLine(fileInfo);
@@ -411,18 +406,17 @@ namespace AaronLuna.AsyncFileServer.Console
             Thread.Sleep(Constants.OneHalfSecondInMilliseconds);
             
             var report =
-                $"{Environment.NewLine}{Environment.NewLine}" +
-                $"Download Started : {startTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
-                $"Download Finished: {completeTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
-                $"Elapsed Time.....: {timeElapsed}{Environment.NewLine}" +
-                $"Transfer Rate....: {transferRate}";
+                Environment.NewLine + Environment.NewLine +
+                $"Download Started...: {startTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                $"Download Finished..: {completeTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                $"Elapsed Time.......: {timeElapsed}{Environment.NewLine}" +
+                $"Transfer Rate......: {transferRate}";
             
             Console.WriteLine(report);
             _state.SignalReturnToMainMenu.Set();
 
             _state.ProgressBar.Dispose();
             _state.ProgressBarInstantiated = false;
-            _state.RetryCounter = 0;
 
             await Task.Delay(Constants.OneHalfSecondInMilliseconds);
             _state.SignalReturnToMainMenu.WaitOne();
@@ -430,10 +424,14 @@ namespace AaronLuna.AsyncFileServer.Console
 
         async void HandleStalledFileTransferAsync(object sender, ProgressEventArgs eventArgs)
         {
-            var getFileTransferResult = _state.LocalServer.GetFileTransferById(_state.InboundFileTransferId);
+            var getFileTransferResult =
+                _state.LocalServer.GetFileTransferById(_state.InboundFileTransferId);
+
             if (getFileTransferResult.Failure)
             {
-                var error = $"{getFileTransferResult.Error} (ServerApplication.HandleStalledFileTransferAsync)";
+                var error = 
+                    $"{getFileTransferResult.Error} (ServerApplication.HandleStalledFileTransferAsync)";
+
                 Console.WriteLine(error);
                 return;
             }
@@ -444,7 +442,9 @@ namespace AaronLuna.AsyncFileServer.Console
             _state.ProgressBar.Dispose();
             _state.ProgressBarInstantiated = false;
             
-            var notifyStalledResult = await SendFileTransferStalledNotification(inboundFileTransfer.FiletransferId);
+            var notifyStalledResult =
+                await SendFileTransferStalledNotification(inboundFileTransfer.FiletransferId);
+
             if (notifyStalledResult.Failure)
             {
                 Console.WriteLine(notifyStalledResult.Error);
@@ -463,8 +463,8 @@ namespace AaronLuna.AsyncFileServer.Console
                 await _state.LocalServer.SendNotificationFileTransferStalledAsync(fileTransferId);
 
             var notifyClientError =
-                $"{Environment.NewLine}Error occurred when notifying client that file transfer data " +
-                $"is no longer being received:\n{notifyClientResult.Error}";
+                $"{Environment.NewLine}Error occurred when notifying client that file transfer " +
+                $"data is no longer being received:\n{notifyClientResult.Error}";
 
             return notifyClientResult.Success
                 ? Result.Ok()
@@ -473,18 +473,23 @@ namespace AaronLuna.AsyncFileServer.Console
         
         async Task NotifiedRemoteServerThatFileTransferIsStalledAsync()
         {
-            var getFileTransferResult = _state.LocalServer.GetFileTransferById(_inboundFileTransferId);
+            var getFileTransferResult =
+                _state.LocalServer.GetFileTransferById(_inboundFileTransferId);
+
             if (getFileTransferResult.Success)
             {
                 var inboundFileTransfer = getFileTransferResult.Value;
-                FileHelper.DeleteFileIfAlreadyExists(inboundFileTransfer.FileTransfer.LocalFilePath, 3);
+
+                FileHelper.DeleteFileIfAlreadyExists(
+                    inboundFileTransfer.FileTransfer.LocalFilePath,
+                    3);
             }
 
             var fileStalledTimeSpan = _state.FileStalledInfo.Elapsed.ToFormattedString();
 
             var sentFileStalledNotification =
-                $"{Environment.NewLine}Successfully notified remote server that file transfer has " +
-                $"stalled, {fileStalledTimeSpan} elapsed since last data received.";
+                $"{Environment.NewLine}Successfully notified remote server that file transfer " +
+                $"has stalled, {fileStalledTimeSpan} elapsed since last data received.";
 
             Console.WriteLine(sentFileStalledNotification);
             _state.SignalReturnToMainMenu.Set();
@@ -500,9 +505,10 @@ namespace AaronLuna.AsyncFileServer.Console
             var lockoutExpireTime = serverEvent.RetryLockoutExpireTime;
 
             var retryLImitExceeded =
-                $"{Environment.NewLine}Maximum # of attempts to complete stalled file transfer reached or exceeded: " +
-                $"{retryLimit} failed attempts for \"{fileName}\"{Environment.NewLine}" +
-                $"You will be locked out from attempting this file transfer until {lockoutExpireTime:g}";
+                $"{Environment.NewLine}Maximum # of attempts to complete stalled file transfer " +
+                $"reached or exceeded: {retryLimit} failed attempts for \"{fileName}\"" +
+                $"{Environment.NewLine}You will be locked out from attempting this " +
+                $"file transfer until {lockoutExpireTime:g}";
 
             Console.WriteLine(retryLImitExceeded);
             _state.SignalReturnToMainMenu.Set();

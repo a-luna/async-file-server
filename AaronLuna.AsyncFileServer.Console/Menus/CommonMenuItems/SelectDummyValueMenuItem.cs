@@ -1,11 +1,10 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenuItems
+﻿using System;
+using System.Threading.Tasks;
+using AaronLuna.Common.Console.Menu;
+using AaronLuna.Common.Result;
+
+namespace AaronLuna.AsyncFileServer.Console.Menus.CommonMenuItems
 {
-    using System;
-    using System.Threading.Tasks;
-
-    using Common.Console.Menu;
-    using Common.Result;
-
     class SelectDummyValueMenuItem : IMenuItem
     {
         public SelectDummyValueMenuItem(string itemText)

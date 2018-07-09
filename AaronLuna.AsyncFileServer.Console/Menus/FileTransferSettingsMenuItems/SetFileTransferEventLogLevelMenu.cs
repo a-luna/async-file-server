@@ -1,14 +1,13 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using AaronLuna.AsyncFileServer.Console.Menus.CommonMenuItems;
+using AaronLuna.AsyncFileServer.Model;
+using AaronLuna.Common.Console.Menu;
+using AaronLuna.Common.Result;
+
+namespace AaronLuna.AsyncFileServer.Console.Menus.FileTransferSettingsMenuItems
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Threading.Tasks;
-
-    using ServerConfigurationMenuItems;
-    using Model;
-    using Common.Console.Menu;
-    using Common.Result;
-
     class SetFileTransferEventLogLevelMenu : IMenu
     {
         readonly AppState _state;
@@ -19,7 +18,7 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Change file transfer event log level ({_state.LogLevel})";
+            ItemText = $"Change file transfer event log level ({_state.LogLevel}){Environment.NewLine}";
             MenuText = "Select the appropriate log level from the list below:";
 
             _logLevels = new List<FileTransferLogLevel>

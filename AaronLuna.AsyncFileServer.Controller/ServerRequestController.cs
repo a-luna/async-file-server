@@ -225,6 +225,7 @@
             {
                 EventType = ServerEventType.ReceiveRequestFromRemoteServerComplete,
                 RemoteServerIpAddress = _remoteServerIpAddress,
+                RemoteServerPortNumber = _remoteServerPortNumber,
                 RequestType = RequestType
             });
 

@@ -31,12 +31,14 @@
         {
             var ipAddress = _state.SelectedServerInfo.SessionIpAddress;
             var port = _state.SelectedServerInfo.PortNumber;
+            var serverName = _state.SelectedServerInfo.Name;
             var transferFolderPath = _state.SelectedServerInfo.TransferFolder;
             
             var sendFileResult =
                 await _state.LocalServer.SendFileAsync(
                     ipAddress,
                     port,
+                    serverName,
                     _outgoingFilePath,
                     transferFolderPath);
 

@@ -1,17 +1,17 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenuItems
-{
-    using System;
-    using System.Threading.Tasks;
-    using Common.Console.Menu;
-    using Common.Network;
-    using Common.Result;
+﻿using System;
+using System.Threading.Tasks;
+using AaronLuna.Common.Console.Menu;
+using AaronLuna.Common.Network;
+using AaronLuna.Common.Result;
 
+namespace AaronLuna.AsyncFileServer.Console.Menus.LocalServerSettingsMenuItems
+{
     class DisplayLocalIPv4AddressesMenuItem : IMenuItem
     {
         public DisplayLocalIPv4AddressesMenuItem()
         {
             ReturnToParent = false;
-            ItemText = "Display Local IPv4 Address Info";
+            ItemText = $"Display Local IPv4 Address Info{Environment.NewLine}";
 
         }
 
@@ -27,8 +27,8 @@
         {
             NetworkUtilities.DisplayLocalIPv4AddressInfo();
 
-            Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
-            Console.ReadLine();
+            System.Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
+            System.Console.ReadLine();
 
             return Result.Ok();
         }

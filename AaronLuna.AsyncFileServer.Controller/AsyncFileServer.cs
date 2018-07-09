@@ -139,14 +139,6 @@
 
         public AsyncFileServer()
         {
-            ServerIsInitialized = false;
-            ServerIsListening = false;
-            ServerIsBusy = false;
-            InboundFileTransferStalled = false;
-            OutboundFileTransferStalled = false;
-            ShutdownInitiated = false;
-            Name = string.Empty;
-
             Platform = Environment.OSVersion.Platform.ToServerPlatform();
 
             SocketSettings = new SocketSettings
@@ -158,9 +150,17 @@
 
             Info = new ServerInfo()
             {
-                TransferFolder = GetDefaultTransferFolder()
+                TransferFolder = GetDefaultTransferFolder(),
+                Name = "AsyncFileServer"
             };
 
+            ServerIsInitialized = false;
+            ServerIsListening = false;
+            ServerIsBusy = false;
+            InboundFileTransferStalled = false;
+            OutboundFileTransferStalled = false;
+            ShutdownInitiated = false;
+            Name = string.Empty;
             RemoteServerInfo = new ServerInfo();
             RemoteServerFileList = new FileInfoList();
             
@@ -174,8 +174,7 @@
             _fileTransfers = new List<FileTransferController>();
             _textSessions = new List<TextSession>();
         }
-
-        public string Name { get; set; }
+        
         public ServerPlatform Platform { get; }
         public float TransferUpdateInterval { get; set; }
         public int TransferRetryLimit { get; set; }
@@ -184,6 +183,12 @@
         public ServerInfo Info { get; set; }
         public ServerInfo RemoteServerInfo { get; set; }
         public FileInfoList RemoteServerFileList { get; set; }
+
+        public string Name
+        {
+            get => Info.Name;
+            set => Info.Name = value;
+        }
 
         public string MyTransferFolderPath
         {
@@ -637,7 +642,8 @@
                 EventType = ServerEventType.ProcessRequestStarted,
                 RequestType = inboundRequest.RequestType,
                 RequestId = inboundRequest.Id,
-                RemoteServerIpAddress = RemoteServerSessionIpAddress
+                RemoteServerIpAddress = RemoteServerSessionIpAddress,
+                RemoteServerPortNumber = RemoteServerPortNumber
             });
 
             EventOccurred?.Invoke(this, _eventLog.Last());
@@ -879,9 +885,9 @@
             return Result.Ok();
         }
 
-        public async Task<Result> SendFileAsync(
-            IPAddress remoteServerIpAddress,
+        public async Task<Result> SendFileAsync(IPAddress remoteServerIpAddress,
             int remoteServerPort,
+            string remoteServerName,
             string localFilePath,
             string remoteFolderPath)
         {
@@ -904,6 +910,7 @@
                 MyServerPortNumber = MyServerPortNumber,
                 RemoteServerIpAddress = remoteServerIpAddress,
                 RemoteServerPortNumber = remoteServerPort,
+                RemoteServerName = remoteServerName,
                 LocalFilePath = localFilePath,
                 LocalFolderPath = Path.GetDirectoryName(localFilePath),
                 RemoteFolderPath = remoteFolderPath,
@@ -1281,6 +1288,7 @@
         public async Task<Result> GetFileAsync(
             IPAddress remoteServerIpAddress,
             int remoteServerPort,
+            string remoteServerName,
             string remoteFilePath,
             long fileSizeBytes,
             string localFolderPath)
@@ -1300,6 +1308,7 @@
                 MyServerPortNumber = MyServerPortNumber,
                 RemoteServerIpAddress = remoteServerIpAddress,
                 RemoteServerPortNumber = remoteServerPort,
+                RemoteServerName = remoteServerName,
                 LocalFilePath = Path.Combine(localFolderPath, Path.GetFileName(remoteFilePath)),
                 LocalFolderPath = localFolderPath,
                 FileSizeInBytes = fileSizeBytes,

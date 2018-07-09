@@ -329,6 +329,7 @@ namespace AaronLuna.AsyncFileServer.Test
                 await _client.SendFileAsync(
                     _localIp,
                     remoteServerPort,
+                    _server.Info.Name,
                     sendFilePath,
                     receiveFolderPath);
 
@@ -414,6 +415,7 @@ namespace AaronLuna.AsyncFileServer.Test
                 await _client.GetFileAsync(
                         _localIp,
                         remoteServerPort,
+                        _server.Info.Name,
                         getFilePath,
                         sentFileSize,
                         _localFolder).ConfigureAwait(false);
@@ -627,6 +629,7 @@ namespace AaronLuna.AsyncFileServer.Test
                 await _client.SendFileAsync(
                     _localIp,
                     remoteServerPort,
+                    _server.Info.Name,
                     sendFilePath,
                     receiveFolderPath);
 
@@ -685,6 +688,7 @@ namespace AaronLuna.AsyncFileServer.Test
                 await _client.GetFileAsync(
                             _localIp,
                             remoteServerPort,
+                            _server.Info.Name,
                             getFilePath,
                             sentFileSize,
                             _localFolder).ConfigureAwait(false);

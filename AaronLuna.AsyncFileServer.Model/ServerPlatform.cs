@@ -5,10 +5,8 @@
     public enum ServerPlatform
     {
         None,
-        MacOSX,
         Unix,
-        Windows,
-        XBox
+        Windows
     }
 
     public static class ServePlatformExtensions
@@ -21,17 +19,13 @@
                 case PlatformID.Win32Windows:
                 case PlatformID.Win32NT:
                 case PlatformID.WinCE:
+                case PlatformID.Xbox:
                     return ServerPlatform.Windows;
 
                 case PlatformID.Unix:
-                    return ServerPlatform.Unix;
-
-                case PlatformID.Xbox:
-                    return ServerPlatform.XBox;
-
                 case PlatformID.MacOSX:
-                    return ServerPlatform.MacOSX;
-
+                    return ServerPlatform.Unix;
+                    
                 default:
                     return ServerPlatform.None;
             }

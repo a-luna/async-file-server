@@ -133,9 +133,9 @@
                 case ServerEventType.ReceivedRequestLengthBytesFromSocket:
                     report +=
                         $"Received data from socket:{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}Bytes Received: {BytesReceivedCount:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Expected Bytes: {RequestLengthInBytes:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Unread Bytes..: {UnreadBytesCount:N0}{Environment.NewLine}";
+                        $"{indentLevel1}Bytes Received..: {BytesReceivedCount:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Expected Bytes..: {RequestLengthInBytes:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Unread Bytes....: {UnreadBytesCount:N0}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.SaveUnreadBytesAfterRequestLengthReceived:
@@ -147,21 +147,21 @@
                 case ServerEventType.CopySavedBytesToRequestData:
                     report +=
                         $"Processed unread bytes as request data:{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}Unread Bytes...: {UnreadBytesCount:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Request Length : {RequestLengthInBytes:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Bytes Remaining: {RequestBytesRemaining:N0}{Environment.NewLine}";
+                        $"{indentLevel1}Unread Bytes.....: {UnreadBytesCount:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Request Length...: {RequestLengthInBytes:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Bytes Remaining..: {RequestBytesRemaining:N0}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ReceivedRequestBytesFromSocket:
                     report +=
                         $"Received data from socket:{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}Socket Read Count......: {SocketReadCount:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Bytes Received.........: {BytesReceivedCount:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Request Bytes (Current): {CurrentRequestBytesReceived:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Request Bytes (Total)..: {TotalRequestBytesReceived:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Request Length.........: {RequestLengthInBytes:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Bytes Remaining........: {RequestBytesRemaining:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Unread Bytes...........: {UnreadBytesCount:N0}{Environment.NewLine}";
+                        $"{indentLevel1}Socket Read Count........: {SocketReadCount:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Bytes Received...........: {BytesReceivedCount:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Request Bytes (Current)..: {CurrentRequestBytesReceived:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Request Bytes (Total)....: {TotalRequestBytesReceived:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Request Length...........: {RequestLengthInBytes:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Bytes Remaining..........: {RequestBytesRemaining:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Unread Bytes.............: {UnreadBytesCount:N0}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ReceiveRequestBytesStarted:
@@ -210,8 +210,8 @@
                 case ServerEventType.ReceivedTextMessage:
                     report +=
                         $"Text message received{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}Message From: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
-                        $"{indentLevel1}Message.....: {TextMessage}{Environment.NewLine}";
+                        $"{indentLevel1}Message From..: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
+                        $"{indentLevel1}Message.......: {TextMessage}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.MarkTextMessageAsRead:
@@ -250,14 +250,14 @@
                 case ServerEventType.RequestFileListStarted:
                     report +=
                         $"Sending request for available file information to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}Requested By : {LocalIpAddress}:{LocalPortNumber}{Environment.NewLine}" +
-                        $"{indentLevel1}Target Folder: {RemoteFolder}{Environment.NewLine}";
+                        $"{indentLevel1}Requested By...: {LocalIpAddress}:{LocalPortNumber}{Environment.NewLine}" +
+                        $"{indentLevel1}Target Folder..: {RemoteFolder}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ReceivedFileListRequest:
                     report += $"File list request details{Environment.NewLine}{Environment.NewLine}" +
-                              $"{indentLevel1}Send Response To: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
-                              $"{indentLevel1}Target Folder...: {LocalFolder}{Environment.NewLine}";
+                              $"{indentLevel1}Send Response To..: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
+                              $"{indentLevel1}Target Folder.....: {LocalFolder}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.SendFileListStarted:
@@ -277,38 +277,38 @@
                 case ServerEventType.RequestInboundFileTransferStarted:
                     report +=
                         $"Sending inbound file transfer request to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}Requested By : {LocalIpAddress}:{LocalPortNumber}{Environment.NewLine}" +
-                        $"{indentLevel1}File Name....: {FileName}{Environment.NewLine}" +
-                        $"{indentLevel1}File Location: {RemoteFolder}{Environment.NewLine}" +
-                        $"{indentLevel1}Target Folder: {LocalFolder}{Environment.NewLine}";
+                        $"{indentLevel1}Requested By...: {LocalIpAddress}:{LocalPortNumber}{Environment.NewLine}" +
+                        $"{indentLevel1}File Name......: {FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}File Location..: {RemoteFolder}{Environment.NewLine}" +
+                        $"{indentLevel1}Target Folder..: {LocalFolder}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ReceivedInboundFileTransferRequest:
                     report +=
-                        $"File transfer request details{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}File Sender..: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
-                        $"{indentLevel1}File Name....: {FileName}{Environment.NewLine}" +
-                        $"{indentLevel1}File Size....: {FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
-                        $"{indentLevel1}Target Folder: {LocalFolder}{Environment.NewLine}";
+                        $"Received inbound file transfer request:{Environment.NewLine}{Environment.NewLine}" +
+                        $"{indentLevel1}File Sender....: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
+                        $"{indentLevel1}File Name......: {FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size......: {FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
+                        $"{indentLevel1}Target Folder..: {LocalFolder}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.RequestOutboundFileTransferStarted:
                     report +=
                         $"Sending outbound file transfer request to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}File Name....: {FileName}{Environment.NewLine}" +
-                        $"{indentLevel1}File Size....: {FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
-                        $"{indentLevel1}File Location: {LocalFolder}{Environment.NewLine}" +
-                        $"{indentLevel1}Target Folder: {RemoteFolder}{Environment.NewLine}";
+                        $"{indentLevel1}File Name......: {FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size......: {FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
+                        $"{indentLevel1}File Location..: {LocalFolder}{Environment.NewLine}" +
+                        $"{indentLevel1}Target Folder..: {RemoteFolder}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ReceivedOutboundFileTransferRequest:
                     report +=
-                        $"File transfer request details{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}Send File To : {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
-                        $"{indentLevel1}File Name....: {FileName}{Environment.NewLine}" +
-                        $"{indentLevel1}File Size....: {FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
-                        $"{indentLevel1}File Location: {LocalFolder}{Environment.NewLine}" +
-                        $"{indentLevel1}Target Folder: {RemoteFolder}{Environment.NewLine}";
+                        $"Received outbound file transfer request:{Environment.NewLine}{Environment.NewLine}" +
+                        $"{indentLevel1}Send File To...: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
+                        $"{indentLevel1}File Name......: {FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size......: {FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
+                        $"{indentLevel1}File Location..: {LocalFolder}{Environment.NewLine}" +
+                        $"{indentLevel1}Target Folder..: {RemoteFolder}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.SendFileTransferAcceptedStarted:
@@ -347,9 +347,9 @@
                 case ServerEventType.SentFileChunkToClient:
                     report +=
                         $"Sent file chunk #{FileChunkSentCount:N0} ({SocketSendCount:N0} total Socket.Send calls):{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}Current Bytes Sent: {CurrentFileBytesSent:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Bytes Remaining...: {FileBytesRemaining:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}File Size In Bytes: {FileSizeInBytes:N0}{Environment.NewLine}";
+                        $"{indentLevel1}Current Bytes Sent..: {CurrentFileBytesSent:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Bytes Remaining.....: {FileBytesRemaining:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size In Bytes..: {FileSizeInBytes:N0}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.SendFileBytesComplete:
@@ -359,9 +359,9 @@
                 case ServerEventType.CopySavedBytesToIncomingFile:
                     report +=
                         $"Processed unread bytes as file data{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}Saved Bytes....: {CurrentFileBytesReceived:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}File Size......: {FileSizeInBytes:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Bytes Remaining: {FileBytesRemaining:N0}{Environment.NewLine}";
+                        $"{indentLevel1}Saved Bytes......: {CurrentFileBytesReceived:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size........: {FileSizeInBytes:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Bytes Remaining..: {FileBytesRemaining:N0}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ReceiveFileBytesStarted:
@@ -371,12 +371,12 @@
                 case ServerEventType.ReceivedFileBytesFromSocket:
                     report +=
                         $"Received Data From Socket:{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}Socket Read Count...: {SocketReadCount:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Bytes Received......: {BytesReceivedCount:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}File Bytes (Current): {CurrentFileBytesReceived:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}File Bytes (Total)..: {TotalFileBytesReceived:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}File Size...........: {FileSizeInBytes:N0}{Environment.NewLine}" +
-                        $"{indentLevel1}Bytes Remaining.....: {FileBytesRemaining:N0}{Environment.NewLine}";
+                        $"{indentLevel1}Socket Read Count.....: {SocketReadCount:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Bytes Received........: {BytesReceivedCount:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}File Bytes (Current)..: {CurrentFileBytesReceived:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}File Bytes (Total)....: {TotalFileBytesReceived:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size.............: {FileSizeInBytes:N0}{Environment.NewLine}" +
+                        $"{indentLevel1}Bytes Remaining.......: {FileBytesRemaining:N0}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.MultipleFileWriteAttemptsNeeded:
@@ -391,10 +391,10 @@
                 case ServerEventType.ReceiveFileBytesComplete:
                     report +=
                         $"Successfully received file from {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}Download Started : {FileTransferStartTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
-                        $"{indentLevel1}Download Finished: {FileTransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
-                        $"{indentLevel1}Elapsed Time.....: {FileTransferDurationTimeString}{Environment.NewLine}" +
-                        $"{indentLevel1}Transfer Rate....: {FileTransferRate}{Environment.NewLine}";
+                        $"{indentLevel1}Download Started...: {FileTransferStartTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Finished..: {FileTransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                        $"{indentLevel1}Elapsed Time.......: {FileTransferDurationTimeString}{Environment.NewLine}" +
+                        $"{indentLevel1}Transfer Rate......: {FileTransferRate}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.SendFileTransferStalledStarted:
@@ -457,21 +457,21 @@
                 case ServerEventType.SendRetryLimitExceededStarted:
                     report +=
                         $"Notifying {RemoteServerIpAddress}:{RemoteServerPortNumber} that \"{FileName}\" cannot be downloaded due to repeated failed attempts:{Environment.NewLine}{Environment.NewLine}" +
-                        $"{indentLevel1}File Name...............: {FileName}{Environment.NewLine}" +
-                        $"{indentLevel1}Download Attempts.......: {RetryCounter}{Environment.NewLine}" +
-                        $"{indentLevel1}Max Attempts Allowed....: {RemoteServerRetryLimit}{Environment.NewLine}" +
-                        $"{indentLevel1}Download Lockout Expires: {FileTransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
-                        $"{indentLevel1}Remaining Lockout Time..: {RetryLockoutTimeRemianing}{Environment.NewLine}";
+                        $"{indentLevel1}File Name.................: {FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Attempts.........: {RetryCounter}{Environment.NewLine}" +
+                        $"{indentLevel1}Max Attempts Allowed......: {RemoteServerRetryLimit}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Lockout Expires..: {FileTransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                        $"{indentLevel1}Remaining Lockout Time....: {RetryLockoutTimeRemianing}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ReceivedRetryLimitExceeded:
                     report +=
                         "Maximum # of attempts to complete stalled file transfer reached or exceeded: " +
-                        $"{indentLevel1}File Name...............: {FileName}{Environment.NewLine}" +
-                        $"{indentLevel1}Download Attempts.......: {RetryCounter}{Environment.NewLine}" +
-                        $"{indentLevel1}Max Attempts Allowed....: {RemoteServerRetryLimit}{Environment.NewLine}" +
-                        $"{indentLevel1}Download Lockout Expires: {FileTransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
-                        $"{indentLevel1}Remaining Lockout Time..: {RetryLockoutTimeRemianing}{Environment.NewLine}";
+                        $"{indentLevel1}File Name.................: {FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Attempts.........: {RetryCounter}{Environment.NewLine}" +
+                        $"{indentLevel1}Max Attempts Allowed......: {RemoteServerRetryLimit}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Lockout Expires..: {FileTransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                        $"{indentLevel1}Remaining Lockout Time....: {RetryLockoutTimeRemianing}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.SendNotificationFileDoesNotExistStarted:

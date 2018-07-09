@@ -1,10 +1,10 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenuItems
-{
-    using System;
-    using System.Threading.Tasks;
-    using Common.Console.Menu;
-    using Common.Result;
+﻿using System;
+using System.Threading.Tasks;
+using AaronLuna.Common.Console.Menu;
+using AaronLuna.Common.Result;
 
+namespace AaronLuna.AsyncFileServer.Console.Menus.LocalServerSettingsMenuItems
+{
     class SetLocalServerCidrIpMenuItem : IMenuItem
     {
         readonly AppState _state;

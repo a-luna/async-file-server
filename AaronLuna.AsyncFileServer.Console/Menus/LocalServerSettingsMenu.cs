@@ -1,30 +1,29 @@
-﻿using AaronLuna.AsyncFileServer.Console.Menus.CommonMenuItems;
-
-namespace AaronLuna.AsyncFileServer.Console.Menus
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus
 {
     using System.Collections.Generic;
     using System.Threading.Tasks;
 
+    using CommonMenuItems;
+    using LocalServerSettingsMenuItems;
     using Common.Console.Menu;
     using Common.Result;
-    using UpdateSelectedServerInfoMenuItems;
 
-    class UpdateSelectedServerInfoMenu : IMenu
+    class LocalServerSettingsMenu : IMenu
     {
         readonly AppState _state;
-        public UpdateSelectedServerInfoMenu(AppState state)
+
+        public LocalServerSettingsMenu(AppState state)
         {
             _state = state;
 
             ReturnToParent = false;
-            ItemText = "Edit server info";
-            MenuText = "Select the value you wish to edit from the list below:";
+            ItemText = "Local server settings";
+            MenuText = Resources.Menu_ChangeSettings;
             MenuItems = new List<IMenuItem>
             {
-                new GetIpAddressFromUserMenuItem(state),
-                new GetPortNumberFromUserMenuItem(state, state.SelectedServerInfo, false),
-                new GetServerNameFromUserMenuItem(state),
-                new DeleteSelectedServerInfoMenuItem(state),
+                new GetPortNumberFromUserMenuItem(_state, _state.LocalServer.Info, true),
+                new SetLocalServerCidrIpMenuItem(_state),
+                new DisplayLocalIPv4AddressesMenuItem(),
                 new ReturnToParentMenuItem("Return to main menu")
             };
         }
@@ -44,7 +43,7 @@ namespace AaronLuna.AsyncFileServer.Console.Menus
             {
                 SharedFunctions.DisplayLocalServerInfo(_state);
                 var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state);
-                result = await menuItem.ExecuteAsync();
+                result = await menuItem.ExecuteAsync().ConfigureAwait(false);
 
                 if (result.Success && !(menuItem is ReturnToParentMenuItem))
                 {
@@ -57,6 +56,7 @@ namespace AaronLuna.AsyncFileServer.Console.Menus
                     exit = true;
                     continue;
                 }
+
                 exit = menuItem.ReturnToParent;
                 if (result.Success) continue;
 
@@ -68,15 +68,10 @@ namespace AaronLuna.AsyncFileServer.Console.Menus
 
         Result ApplyChanges()
         {
-            var serverFromFile =
-                SharedFunctions.GetRemoteServer(_state.SelectedServerInfo, _state.Settings.RemoteServers).Value;
-
-            serverFromFile.SessionIpAddress = _state.SelectedServerInfo.SessionIpAddress;
-            serverFromFile.PortNumber = _state.SelectedServerInfo.PortNumber;
-            serverFromFile.Name = _state.SelectedServerInfo.Name;
+            _state.Settings.LocalServerPortNumber = _state.LocalServer.Info.PortNumber;
+            _state.Settings.LocalNetworkCidrIp = _state.UserEntryLocalNetworkCidrIp;
 
             return ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
         }
-
     }
 }

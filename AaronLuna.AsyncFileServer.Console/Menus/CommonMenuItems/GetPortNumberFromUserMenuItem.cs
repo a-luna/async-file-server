@@ -1,13 +1,11 @@
-﻿using AaronLuna.AsyncFileServer.Model;
+﻿using System;
+using System.Threading.Tasks;
+using AaronLuna.AsyncFileServer.Model;
+using AaronLuna.Common.Console.Menu;
+using AaronLuna.Common.Result;
 
-namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenuItems
+namespace AaronLuna.AsyncFileServer.Console.Menus.CommonMenuItems
 {
-    using System;
-    using System.Threading.Tasks;
-
-    using Common.Console.Menu;
-    using Common.Result;
-
     class GetPortNumberFromUserMenuItem : IMenuItem
     {
         readonly AppState _state;

@@ -2,6 +2,10 @@
 {
     static class Resources
     {
+        internal static readonly string MenuTierLabel_PendingRequests = "Pending Requests:";
+        internal static readonly string MenuTierLabel_ViewLogs = "View Logs:";
+        internal static readonly string MenuTierLabel_LocalServerOptions = "Local Server Options:";
+
         internal static readonly string Menu_ChangeSettings =
             "Items marked with an asterisk (*) will cause the server to restart after " +
             "any change is made, current value shown in parantheses for each item.";
@@ -9,9 +13,14 @@
         internal static readonly string Prompt_SetLocalPortNumber =
             "Enter the port number where this server will listen for incoming connections";
 
-        internal static readonly string Prompt_SetLanCidrIp =
+        internal static readonly string Prompt_GetCidrIp =
             "Enter the CIDR IP that describes the configuration of this local network " +
             "(i.e., enter 'a.b.c.d' portion of CIDR IP a.b.c.d/n)";
+
+        internal static readonly string Prompt_GetCidrIpNetworkBitCount =
+            "Enter the number of bits used to identify the network portion " +
+            "of an IP address on your local network (i.e., enter the value " +
+            "of 'n' in CIDR notation a.b.c.d/n)";
 
         internal static readonly string Prompt_SetRemoteServerIp =
             "Enter the IP address of the remote server in IPv4 format (i.e., a.b.c.d):";

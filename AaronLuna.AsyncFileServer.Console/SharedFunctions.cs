@@ -91,27 +91,28 @@
             var prompt = "Found a single IPv4 address assiciated with the only ethernet adapter " +
                          $"on this machine, is it ok to use {cidrIp} as the CIDR IP?";
 
-            return PromptUserYesOrNo(prompt) ? cidrIp : GetCidrIpFromUser();
+            return PromptUserYesOrNo(prompt)
+                ? cidrIp
+                : GetCidrIpFromUser();
         }
 
         public static string GetCidrIpFromUser()
         {
-            var cidrIp = GetIpAddressFromUser(Resources.Prompt_SetLanCidrIp);
+            var cidrIp = GetIpAddressFromUser(Resources.Prompt_GetCidrIp);
             var cidrNetworkBitCount = GetCidrIpNetworkBitCountFromUser();
             return $"{cidrIp}/{cidrNetworkBitCount}";
         }
 
         public static int GetCidrIpNetworkBitCountFromUser()
         {
-            const string prompt = "Enter the number of bits used to identify the network portion " +
-                                  "of an IP address on your local network (i.e., enter the value " +
-                                  "of 'n' in CIDR notation a.b.c.d/n)";
-
             var bitCount = 0;
             while (bitCount is 0)
             {
-                //Console.Clear();
-                Console.WriteLine($"{Environment.NewLine}{prompt} (range {CidrPrefixBitsCountMin}-{CidrPrefixBitsCountMax}):");
+                var prompt =
+                    $"{Environment.NewLine}{Resources.Prompt_GetCidrIpNetworkBitCount} " +
+                    $"(range {CidrPrefixBitsCountMin}-{CidrPrefixBitsCountMax}):";
+
+                Console.WriteLine(prompt);
 
                 var input = Console.ReadLine();
                 var bitCountValidationResult = ValidateNumberIsWithinRange(input, CidrPrefixBitsCountMin, CidrPrefixBitsCountMax);
@@ -127,12 +128,34 @@
             return bitCount;
         }
 
+        public static IPAddress GetIpAddressFromUser(string prompt)
+        {
+            var ipAddress = IPAddress.None;
+
+            while (ipAddress.Equals(IPAddress.None))
+            {
+                Console.WriteLine($"{Environment.NewLine}{prompt}");
+                var input = Console.ReadLine();
+
+                var parseIpResult = NetworkUtilities.ParseSingleIPv4Address(input);
+                if (parseIpResult.Failure)
+                {
+                    var errorMessage = $"Unable tp parse IPv4 address from input string: {parseIpResult.Error}";
+                    Console.WriteLine(errorMessage);
+                    continue;
+                }
+
+                ipAddress = parseIpResult.Value;
+            }
+
+            return ipAddress;
+        }
+
         public static int GetPortNumberFromUser(string prompt, bool allowRandom)
         {
             var portNumber = 0;
             while (portNumber is 0)
             {
-                //Console.Clear();
                 Console.WriteLine($"{Environment.NewLine}{prompt} (range {PortRangeMin}-{PortRangeMax}):");
 
                 if (allowRandom)
@@ -188,28 +211,31 @@
             return Result.Ok(parsedNum);
         }
 
-        public static IPAddress GetIpAddressFromUser(string prompt)
+        public static Result<ServerInfo> GetRemoteServer(
+            ServerInfo lookup,
+            List<ServerInfo> serverInfoList)
         {
-            var ipAddress = IPAddress.None;
-            //Console.Clear();
-
-            while (ipAddress.Equals(IPAddress.None))
+            foreach (var server in serverInfoList)
             {
-                Console.WriteLine($"{Environment.NewLine}{prompt}");
-                var input = Console.ReadLine();
-
-                var parseIpResult = NetworkUtilities.ParseSingleIPv4Address(input);
-                if (parseIpResult.Failure)
-                {
-                    var errorMessage = $"Unable tp parse IPv4 address from input string: {parseIpResult.Error}";
-                    Console.WriteLine(errorMessage);
-                    continue;
-                }
-
-                ipAddress = parseIpResult.Value;
+                if (!server.IsEqualTo(lookup)) continue;
+                return Result.Ok(server);
             }
 
-            return ipAddress;
+            return Result.Fail<ServerInfo>("No server was found matching the details provided");
+        }
+
+        public static bool ServerInfoAlreadyExists(ServerInfo newClient, List<ServerInfo> clients)
+        {
+            var exists = false;
+            foreach (var remoteServer in clients)
+            {
+                if (remoteServer.IsEqualTo(newClient))
+                {
+                    exists = true;
+                    break;
+                }
+            }
+            return exists;
         }
 
         public static string SetSelectedServerName(ServerInfo serverInfo)
@@ -231,7 +257,7 @@
             var remoteServerName = string.Empty;
             while (string.IsNullOrEmpty(remoteServerName))
             {
-                Console.WriteLine($"{Environment.NewLine}{prompt}");
+                Console.WriteLine(Environment.NewLine + prompt);
                 var input = Console.ReadLine();
 
                 var confirm = $"Is \"{input}\" the name you wish to use for this server? Select no if you would like to change this value.";
@@ -246,31 +272,15 @@
             return remoteServerName;
         }
 
-        public static bool ServerInfoAlreadyExists(ServerInfo newClient, List<ServerInfo> clients)
+        public static Result<string> LookupRemoteServerName(ServerInfo lookup, List<ServerInfo> serverInfoList)
         {
-            var exists = false;
-            foreach (var remoteServer in clients)
+            var findMatch = GetRemoteServer(lookup, serverInfoList);
+            if (findMatch.Failure)
             {
-                if (remoteServer.IsEqualTo(newClient))
-                {
-                    exists = true;
-                    break;
-                }
-            }
-            return exists;
-        }
-
-        public static ServerInfo GetRemoteServer(ServerInfo lookup, List<ServerInfo> serverInfoList)
-        {
-            var match = new ServerInfo();
-            foreach (var server in serverInfoList)
-            {
-                if (!server.IsEqualTo(lookup)) continue;
-                match = server;
-                break;
+                return Result.Fail<string>(findMatch.Error);
             }
 
-            return match;
+            return Result.Ok(findMatch.Value.Name);
         }
 
         public static bool PromptUserYesOrNo(string prompt)

@@ -32,6 +32,7 @@
             LocalFolderPath = string.Empty;
             RemoteFilePath = string.Empty;
             RemoteFolderPath = string.Empty;
+            RemoteServerName = string.Empty;
             ErrorMessage = string.Empty;
 
             RetryCounter = 1;
@@ -57,6 +58,7 @@
         public int MyServerPortNumber { get; set; }
         public IPAddress RemoteServerIpAddress { get; set; }
         public int RemoteServerPortNumber { get; set; }
+        public string RemoteServerName { get; set; }
 
         public DateTime RequestInitiatedTime { get; set; }
         public DateTime TransferStartTime { get; set; }
@@ -150,8 +152,12 @@
 
             var attempt = $"Attempt #{RetryCounter}{retryLimit}";
 
+            var initiator = Initiator == FileTransferInitiator.RemoteServer
+                ? "Remote Server"
+                : "Me";
+
             var transferStatus = $"[{Status}] {attempt}{Environment.NewLine}";
-            var requestType = $"{TransferDirection} file transfer initiated by {Initiator}{Environment.NewLine}{Environment.NewLine}";
+            var requestType = $"{TransferDirection} file transfer initiated by {initiator}{Environment.NewLine}{Environment.NewLine}";
             var fileName = $"   File Name........: {FileName}{Environment.NewLine}";
             var fileSize = $"   File Size........: {FileSizeString}{Environment.NewLine}";
             var remoteServerInfo = $"   Remote Server....: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}";

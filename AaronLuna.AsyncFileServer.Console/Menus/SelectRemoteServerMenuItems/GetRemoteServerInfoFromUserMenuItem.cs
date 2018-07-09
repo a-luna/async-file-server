@@ -46,7 +46,8 @@
                 return requestInfoFromServer;
             }
 
-            _state.SelectedServerInfo.Name = SharedFunctions.SetSelectedServerName(_state.SelectedServerInfo);
+            _state.SelectedServerInfo.Name
+                = SharedFunctions.SetSelectedServerName(_state.SelectedServerInfo);
 
             _state.Settings.RemoteServers.Add(_state.SelectedServerInfo);
             var saveSettings = ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
@@ -63,7 +64,10 @@
 
             if (serverInfo.IsEqualTo(_state.LocalServer.Info))
             {
-                var error = $"{clientIp}:{clientPort} is the same IP address and port number used by this server.";
+                var error =
+                    $"{clientIp}:{clientPort} is the same IP address " +
+                    "and port number used by this server.";
+
                 return Result.Fail(error);
             }
 
@@ -73,7 +77,7 @@
             if (serverInfoAlreadyExists)
             {
                 _state.SelectedServerInfo =
-                    SharedFunctions.GetRemoteServer(serverInfo, _state.Settings.RemoteServers);
+                    SharedFunctions.GetRemoteServer(serverInfo, _state.Settings.RemoteServers).Value;
 
                 return Result.Fail("Server is already added, returning to main menu.");
             }

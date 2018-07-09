@@ -1,13 +1,12 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using AaronLuna.AsyncFileServer.Console.Menus.CommonMenuItems;
+using AaronLuna.Common.Console.Menu;
+using AaronLuna.Common.Result;
+
+namespace AaronLuna.AsyncFileServer.Console.Menus.SocketSettingsMenuItems
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Threading.Tasks;
-
-    using ServerConfigurationMenuItems;
-    using Common.Console.Menu;
-    using Common.Result;
-
     class SetSocketListenBacklogSizeMenu : IMenu
     {
         readonly AppState _state;

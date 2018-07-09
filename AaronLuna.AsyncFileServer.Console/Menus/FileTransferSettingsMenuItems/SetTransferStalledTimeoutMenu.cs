@@ -1,24 +1,23 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using AaronLuna.AsyncFileServer.Console.Menus.CommonMenuItems;
+using AaronLuna.Common.Console.Menu;
+using AaronLuna.Common.Result;
+
+namespace AaronLuna.AsyncFileServer.Console.Menus.FileTransferSettingsMenuItems
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Threading.Tasks;
-
-    using ServerConfigurationMenuItems;
-    using Common.Console.Menu;
-    using Common.Result;
-
-    class SetSocketTimeoutMenu : IMenu
+    class SetTransferStalledTimeoutMenu : IMenu
     {
         readonly AppState _state;
         readonly List<int> _timeoutValues;
 
-        public SetSocketTimeoutMenu(AppState state)
+        public SetTransferStalledTimeoutMenu(AppState state)
         {
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Change socket timeout value * ({_state.Settings.SocketSettings.SocketTimeoutInMilliseconds} ms)";
+            ItemText = $"Change file transfer stalled timeout value ({_state.Settings.FileTransferStalledTimeout.TotalSeconds} seconds)";
             MenuText = "Select a value from the list below:";
 
             _timeoutValues = new List<int>
@@ -56,7 +55,7 @@
             var menuIndex = await SharedFunctions.GetUserSelectionIndexAsync(MenuText, MenuItems, _state);
             if (menuIndex > _timeoutValues.Count) return Result.Ok();
 
-            _state.Settings.SocketSettings.SocketTimeoutInMilliseconds = _timeoutValues[menuIndex - 1];
+            _state.Settings.FileTransferStalledTimeout = TimeSpan.FromMilliseconds(_timeoutValues[menuIndex - 1]);
             _state.RestartRequired = true;
 
             return Result.Ok();

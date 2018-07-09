@@ -28,22 +28,20 @@
         public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
 
-        public async Task<Result> ExecuteAsync()
+        public Task<Result> ExecuteAsync()
         {
             var remoteIp = _state.SelectedServerInfo.SessionIpAddress;
             var remotePort = _state.SelectedServerInfo.PortNumber;
+            var serverName = _state.SelectedServerInfo.Name;
 
-            var getFileResult =
-                await _state.LocalServer.GetFileAsync(
+            return
+                _state.LocalServer.GetFileAsync(
                     remoteIp,
                     remotePort,
+                    serverName,
                     _remoteFilePath,
                     _fileSize,
-                    _state.LocalServer.MyTransferFolderPath).ConfigureAwait(false);
-
-            return getFileResult.Success
-                ? Result.Ok()
-                : getFileResult;
+                    _state.LocalServer.MyTransferFolderPath);
         }
     }
 }
