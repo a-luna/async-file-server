@@ -27,7 +27,7 @@
 
         public int BytesReceivedCount { get; set; }
         public int ExpectedByteCount { get; set; }
-        public int UnreadBytesCount { get; set; }        
+        public int UnreadBytesCount { get; set; }
         public byte[] RequestLengthBytes { get; set; }
         public int RequestLengthInBytes { get; set; }
         public int CurrentRequestBytesReceived { get; set; }
@@ -380,7 +380,7 @@
                     break;
 
                 case ServerEventType.MultipleFileWriteAttemptsNeeded:
-                    report += 
+                    report +=
                         $"Last file chunk needed {FileWriteAttempts} attempts to write to disk successfully ({PercentComplete:P2} Complete)";
                     break;
 
@@ -450,7 +450,7 @@
                     break;
 
                 case ServerEventType.RemoteServerConfirmedFileTransferCompleted:
-                    report += 
+                    report +=
                         $"{RemoteServerIpAddress}:{RemoteServerPortNumber} confirmed that the file transfer was received successfully";
                     break;
 

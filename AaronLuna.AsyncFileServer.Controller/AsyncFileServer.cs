@@ -49,7 +49,7 @@
 
         bool ServerIsInitialized
         {
-            get => (Interlocked.CompareExchange(ref _initialized, 1, 1) == 1);
+            get => Interlocked.CompareExchange(ref _initialized, 1, 1) == 1;
             set
             {
                 if (value) Interlocked.CompareExchange(ref _initialized, 1, 0);
@@ -59,7 +59,7 @@
 
         bool ServerIsListening
         {
-            get => (Interlocked.CompareExchange(ref _listening, 1, 1) == 1);
+            get => Interlocked.CompareExchange(ref _listening, 1, 1) == 1;
             set
             {
                 if (value) Interlocked.CompareExchange(ref _listening, 1, 0);
@@ -163,7 +163,7 @@
             Name = string.Empty;
             RemoteServerInfo = new ServerInfo();
             RemoteServerFileList = new FileInfoList();
-            
+
             _textSessionId = 1;
             _requestId = 1;
             _fileTransferId = 1;
@@ -174,7 +174,7 @@
             _fileTransfers = new List<FileTransferController>();
             _textSessions = new List<TextSession>();
         }
-        
+
         public ServerPlatform Platform { get; }
         public float TransferUpdateInterval { get; set; }
         public int TransferRetryLimit { get; set; }
@@ -212,7 +212,7 @@
 
         public bool NoTextSessions => _textSessions.Count == 0;
         public List<int> TextSessionIds => _textSessions.Select(t => t.Id).ToList();
-        
+
         public int UnreadTextMessageCount => GetNumberOfUnreadTextMessages();
         public List<int> TextSessionIdsWithUnreadMessages => GetTextSessionIdsWithUnreadMessages();
 
@@ -223,7 +223,7 @@
             _fileTransfers.Select(t => t)
                 .Where(t => t.TransferStalled)
                 .Select(t => t.FiletransferId).ToList();
-        
+
         public int ListenBacklogSize => SocketSettings.ListenBacklogSize;
         public int BufferSize => SocketSettings.BufferSize;
         public int SocketTimeoutInMilliseconds => SocketSettings.SocketTimeoutInMilliseconds;
@@ -242,7 +242,7 @@
         public bool FileTransferInProgress => TransferInProgress;
         public bool FileTransferCanceled => OutboundFileTransferStalled;
         public bool FileTransferStalled => InboundFileTransferStalled;
-        
+
         public event EventHandler<ServerEvent> EventOccurred;
         public event EventHandler<ServerEvent> SocketEventOccurred;
         public event EventHandler<ServerEvent> FileTransferProgress;
@@ -312,7 +312,7 @@
             {
                 return Result.Fail<TextSession>($"Found {matches.Count} text sessions with the same ID value of {id}");
             }
-            
+
             return Result.Ok(matches[0]);
         }
 
@@ -459,11 +459,11 @@
 
             return sessionIds.Distinct().ToList();
         }
-        
+
         public async Task InitializeAsync(string cidrIp, int port)
         {
             if (ServerIsInitialized) return;
-            
+
             var getLocalIp = NetworkUtilities.GetLocalIPv4Address(cidrIp);
 
             var localIp = getLocalIp.Success
@@ -586,7 +586,7 @@
                 inboundRequest.EventOccurred += HandleEventOccurred;
                 inboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
 
-                var receiveRequest = await inboundRequest.ReceiveServerRequestAsync(socket);
+                var receiveRequest = await inboundRequest.ReceiveServerRequestAsync(socket).ConfigureAwait(false);
                 if (receiveRequest.Failure)
                 {
                     return receiveRequest;
@@ -602,14 +602,14 @@
                 if (inboundRequest.IsInboundFileTransferRequest) continue;
                 if (ServerIsBusy) continue;
 
-                var processRequest = await ProcessRequestAsync(inboundRequest);
+                var processRequest = await ProcessRequestAsync(inboundRequest).ConfigureAwait(false);
                 if (processRequest.Failure)
                 {
                     return processRequest;
                 }
             }
         }
-        
+
         public async Task<Result> ProcessNextRequestInQueueAsync()
         {
             if (NoFileTransfersPending)
@@ -628,7 +628,7 @@
                 return getPendingTransfer;
             }
 
-            return await ProcessRequestAsync(getPendingTransfer.Value);
+            return await ProcessRequestAsync(getPendingTransfer.Value).ConfigureAwait(false);
         }
 
         async Task<Result> ProcessRequestAsync(ServerRequestController inboundRequest)
@@ -647,7 +647,7 @@
             });
 
             EventOccurred?.Invoke(this, _eventLog.Last());
-            
+
             var result = Result.Ok();
 
             switch (inboundRequest.RequestType)
@@ -707,7 +707,7 @@
                 case ServerRequestType.RequestedFolderDoesNotExist:
                     HandleRequestedFolderDoesNotExist(inboundRequest);
                     break;
-                    
+
                 case ServerRequestType.ServerInfoRequest:
                     result = await SendServerInfoAsync(inboundRequest).ConfigureAwait(false);
                     break;
@@ -724,7 +724,7 @@
                     var error = $"Unable to determine transfer type, value of '{inboundRequest.RequestType}' is invalid.";
                     return Result.Fail(error);
             }
-            
+
             _eventLog.Add(new ServerEvent
             {
                 EventType = ServerEventType.ProcessRequestComplete,
@@ -738,12 +738,12 @@
 
             var processRequestEvents =
                 _eventLog.Select(e => e).Where(e => e.RequestId == inboundRequest.Id).ToList();
-            
+
             inboundRequest.EventLog.AddRange(processRequestEvents);
             inboundRequest.Status = ServerRequestStatus.Processed;
             inboundRequest.ShutdownSocket();
-            
-            if (result.Success) return await HandleRemainingRequestsInQueueAsync();
+
+            if (result.Success) return await HandleRemainingRequestsInQueueAsync().ConfigureAwait(false);
 
             EventOccurred?.Invoke(this, new ServerEvent
             {
@@ -772,7 +772,7 @@
             {
                 if (request.IsInboundFileTransferRequest) continue;
 
-                var result = await ProcessRequestAsync(request);
+                var result = await ProcessRequestAsync(request).ConfigureAwait(false);
                 if (result.Failure)
                 {
                     return result;
@@ -813,7 +813,7 @@
 
             var sendRequestCompleteEvent =
                 new ServerEvent {EventType = ServerEventType.SendTextMessageComplete};
-            
+
             var outboundRequest =
                 new ServerRequestController(_requestId, BufferSize, SocketTimeoutInMilliseconds);
 
@@ -832,7 +832,7 @@
                     remoteServerIpAddress,
                     remoteServerPort,
                     sendRequestStartEvent,
-                    sendRequestCompleteEvent);
+                    sendRequestCompleteEvent).ConfigureAwait(false);
 
             if (sendRequest.Failure)
             {
@@ -948,7 +948,7 @@
             }
 
             // TODO: Create logic to check stalled file transfers that are under lockout and if this request matches remoteserver info + localfilepath, send a new filetranserresponse = rejected_retrylimitexceeded. maybe we should penalize them for trying to subvert our lockout policy?
-            
+
             var fileTransferController = new FileTransferController(outboundFileTransfer);
             _fileTransfers.Add(fileTransferController);
 
@@ -1021,13 +1021,13 @@
                 _requestId++;
             }
 
-            var sendRequest = 
+            var sendRequest =
                 await outboundRequest.SendServerRequestAsync(
                     requestBytes,
                     outboundFileTransfer.RemoteServerIpAddress,
                     outboundFileTransfer.RemoteServerPortNumber,
                     sendRequestStartedEvent,
-                    sendRequestCompleteEvent);
+                    sendRequestCompleteEvent).ConfigureAwait(false);
 
             if (sendRequest.Success) return Result.Ok();
 
@@ -1098,7 +1098,7 @@
             }
 
             var outboundFileTransfer = getFileTransfer.Value.FileTransfer;
-            
+
             var getSendSocket = inboundRequest.GetTransferSocket();
             if (getSendSocket.Failure)
             {
@@ -1120,8 +1120,8 @@
 
             EventOccurred?.Invoke(this, _eventLog.Last());
 
-            var sendFileBytes = 
-                await SendFileBytesAsync(outboundFileTransfer, token);
+            var sendFileBytes =
+                await SendFileBytesAsync(outboundFileTransfer, token).ConfigureAwait(false);
 
             if (sendFileBytes.Success) return Result.Ok();
 
@@ -1346,7 +1346,7 @@
                 EventType = ServerEventType.RequestInboundFileTransferComplete,
                 FileTransferId = inboundFileTransfer.Id
             };
-            
+
             var outboundRequest = new ServerRequestController(BufferSize, SocketTimeoutInMilliseconds, _requestId);
             outboundRequest.EventOccurred += HandleEventOccurred;
             outboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
@@ -1364,7 +1364,7 @@
                     remoteServerIpAddress,
                     remoteServerPort,
                     sendRequestStartedEvent,
-                    sendRequestCompleteEvent);
+                    sendRequestCompleteEvent).ConfigureAwait(false);
 
             if (sendRequest.Success) return Result.Ok();
 
@@ -1817,7 +1817,7 @@
                     inboundFileTransfer.Id,
                     inboundFileTransfer.TransferResponseCode,
                     ServerEventType.SendFileTransferStalledStarted,
-                    ServerEventType.SendFileTransferStalledComplete);
+                    ServerEventType.SendFileTransferStalledComplete).ConfigureAwait(false);
         }
 
         Result HandleStalledFileTransfer(ServerRequestController inboundRequest)
@@ -1882,7 +1882,7 @@
                     stalledFileTransfer.FiletransferId,
                     stalledFileTransfer.TransferResponseCode,
                     ServerEventType.RetryOutboundFileTransferStarted,
-                    ServerEventType.RetryOutboundFileTransferComplete);
+                    ServerEventType.RetryOutboundFileTransferComplete).ConfigureAwait(false);
         }
 
         async Task<Result> HandleRetryFileTransferAsync(ServerRequestController inboundRequest)
@@ -1925,7 +1925,7 @@
                 canceledFileTransfer.RetryLockoutExpireTime = DateTime.Now + RetryLimitLockout;
                 canceledFileTransfer.ErrorMessage = retryLImitExceeded;
 
-                return await SendRetryLimitExceededAsync(canceledFileTransfer);
+                return await SendRetryLimitExceededAsync(canceledFileTransfer).ConfigureAwait(false);
             }
 
             canceledFileTransfer.ResetTransferValues();
@@ -1967,7 +1967,7 @@
                 LocalPortNumber = MyServerPortNumber,
                 FileTransferId = outboundFileTransfer.Id
             };
-            
+
             var outboundRequest = new ServerRequestController(_requestId, BufferSize, SocketTimeoutInMilliseconds);
             outboundRequest.EventOccurred += HandleEventOccurred;
             outboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
@@ -1986,7 +1986,6 @@
                     outboundFileTransfer.RemoteServerPortNumber,
                     sendRequestStartedEvent,
                     sendRequestCompleteEvent);
-            
         }
 
         Result HandleRetryLimitExceeded(ServerRequestController inboundRequest)
@@ -2265,7 +2264,7 @@
                     RemoteServerSessionIpAddress,
                     RemoteServerPortNumber,
                     sendRequestStartedEvent,
-                    sendRequestCompleteEvent);
+                    sendRequestCompleteEvent).ConfigureAwait(false);
         }
 
         void HandleRequestedFolderDoesNotExist(ServerRequestController inboundRequest)
@@ -2440,7 +2439,6 @@
             {
                 _requests.Add(outboundRequest);
                 _requestId++;
-
             }
 
             var sendShutdownCommand =

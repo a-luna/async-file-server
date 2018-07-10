@@ -116,5 +116,4 @@
             return sessionIpsMatch || localIpsMatch || publicIpsMatch;
         }
     }
-
 }

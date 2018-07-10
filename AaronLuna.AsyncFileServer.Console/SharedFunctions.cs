@@ -58,7 +58,7 @@
                 if (validationResult.Failure)
                 {
                     Console.WriteLine(Environment.NewLine + validationResult.Error);
-                    await Task.Delay(state.MessageDisplayTime);
+                    await Task.Delay(state.MessageDisplayTime).ConfigureAwait(false);
 
                     DisplayLocalServerInfo(state);
                     continue;
@@ -69,13 +69,13 @@
 
             return userSelection;
         }
-        
+
         public static async Task<IMenuItem> GetUserSelectionAsync(
             string menuText,
             List<IMenuItem> menuItems,
             AppState state)
         {
-            var userSelection = await GetUserSelectionIndexAsync(menuText, menuItems, state);
+            var userSelection = await GetUserSelectionIndexAsync(menuText, menuItems, state).ConfigureAwait(false);
             return menuItems[userSelection - 1];
         }
 

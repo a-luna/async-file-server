@@ -4,10 +4,17 @@
     using System.Collections.Generic;
     using System.Threading.Tasks;
 
-    using MainMenuItems;
     using Common.Console.Menu;
     using Common.Logging;
     using Common.Result;
+
+    using MainMenuItems;
+    using PendingRequestsMenus;
+    using PendingRequestsMenus.PendingRequestsMenuItems;
+    using RemoteServerMenus;
+    using RemoteServerMenus.RemoteServerMenuItems;
+    using ServerConfigurationMenus;
+    using ViewLogsMenus;
 
     class MainMenu : ITieredMenu
     {
@@ -17,7 +24,7 @@
 
         public MainMenu(AppState state)
         {
-            _state = state;            
+            _state = state;
             _shutdownServer = new ShutdownServerMenuItem(state);
 
             ReturnToParent = true;
@@ -30,7 +37,7 @@
         public bool ReturnToParent { get; set; }
         public string MenuText { get; set; }
         public TieredMenu Menu { get; set; }
-        
+
         public Result DisplayMenu()
         {
             if (_state.DoNotRefreshMainMenu) return Result.Ok();
@@ -60,8 +67,8 @@
 
                 SharedFunctions.DisplayLocalServerInfo(_state);
                 PopulateMenu();
-                
-                var menuItem = await GetUserSelectionAsync();
+
+                var menuItem = await GetUserSelectionAsync().ConfigureAwait(false);
                 result = await menuItem.ExecuteAsync().ConfigureAwait(false);
                 exit = menuItem.ReturnToParent;
 
@@ -79,10 +86,11 @@
         {
             Menu.Clear();
 
+            PopulateSelectRemoteServerMenuTier();
             PopulatePendingRequestsMenuTier();
+            PopulateRemoteServerMenuTier();
             PopulateViewLogsMenuTier();
-            PopulateSelectedServerMenuTier();
-            PopulateLocalServerMenuTier();
+            PopulateServerConfigurationMenuTier();
         }
 
         async Task<IMenuItem> GetUserSelectionAsync()
@@ -100,7 +108,7 @@
                 if (validationResult.Failure)
                 {
                     Console.WriteLine(Environment.NewLine + validationResult.Error);
-                    await Task.Delay(_state.MessageDisplayTime);
+                    await Task.Delay(_state.MessageDisplayTime).ConfigureAwait(false);
 
                     SharedFunctions.DisplayLocalServerInfo(_state);
                     continue;
@@ -117,6 +125,22 @@
             return $"Enter a menu item number (valid range 1-{Menu.Count}):";
         }
 
+        void PopulateSelectRemoteServerMenuTier()
+        {
+            var selectRemoteServerTier = new MenuTier
+            {
+                TierLabel = Resources.MenuTierLabel_SelectRemoteServer,
+                MenuItems = new List<IMenuItem>()
+            };
+
+            if (!_state.RemoteServerSelected)
+            {
+                selectRemoteServerTier.MenuItems.Add(new SelectRemoteServerMenu(_state));
+            }
+
+            Menu.Add(selectRemoteServerTier);
+        }
+
         void PopulatePendingRequestsMenuTier()
         {
             var handleRequestsMenuTier =
@@ -125,7 +149,7 @@
                     TierLabel = Resources.MenuTierLabel_PendingRequests,
                     MenuItems = new List<IMenuItem>()
                 };
-            
+
             if (!_state.LocalServer.NoFileTransfersPending)
             {
                 handleRequestsMenuTier.MenuItems.Add(
@@ -148,32 +172,11 @@
                         new ReadTextMessageMenuItem(_state, textSession));
                 }
             }
-            
+
             Menu.Add(handleRequestsMenuTier);
         }
 
-        void PopulateViewLogsMenuTier()
-        {
-            var viewLogsMenuTier = new MenuTier
-            {
-                TierLabel = Resources.MenuTierLabel_ViewLogs,
-                MenuItems = new List<IMenuItem>()
-            };
-
-            if (!_state.LocalServer.NoFileTransfers)
-            {
-                viewLogsMenuTier.MenuItems.Add(new FileTransferLogViewerMenu(_state));
-            }
-
-            if (!_state.LocalServer.NoTextSessions)
-            {
-                viewLogsMenuTier.MenuItems.Add(new TextMessageArchiveMenu(_state));
-            }
-
-            Menu.Add(viewLogsMenuTier);
-        }
-
-        void PopulateSelectedServerMenuTier()
+        void PopulateRemoteServerMenuTier()
         {
             var selectedServerMenuTier = new MenuTier
             {
@@ -186,32 +189,50 @@
                 selectedServerMenuTier.MenuItems.Add(new SendTextMessageMenuItem(_state));
                 selectedServerMenuTier.MenuItems.Add(new SelectFileMenu(_state, true));
                 selectedServerMenuTier.MenuItems.Add(new SelectFileMenu(_state, false));
-                selectedServerMenuTier.MenuItems.Add(new UpdateSelectedServerInfoMenu(_state));
+                selectedServerMenuTier.MenuItems.Add(new EditServerInfoMenu(_state));
+                selectedServerMenuTier.MenuItems.Add(new DeleteServerInfoMenuItem(_state));
                 selectedServerMenuTier.MenuItems.Add(new SelectRemoteServerMenu(_state));
             }
-            
+
             Menu.Add(selectedServerMenuTier);
         }
 
-        void PopulateLocalServerMenuTier()
+        void PopulateViewLogsMenuTier()
         {
-            var localServerMenuTier = new MenuTier
+            var viewLogsMenuTier = new MenuTier
             {
-                TierLabel = Resources.MenuTierLabel_LocalServerOptions,
+                TierLabel = Resources.MenuTierLabel_ViewLogs,
                 MenuItems = new List<IMenuItem>()
             };
 
-            if (!_state.RemoteServerSelected)
+            if (!_state.LocalServer.NoFileTransfers)
             {
-                localServerMenuTier.MenuItems.Add(new SelectRemoteServerMenu(_state));
+                viewLogsMenuTier.MenuItems.Add(new ViewFileTransferEventLogsMenu(_state));
             }
 
-            localServerMenuTier.MenuItems.Add(new LocalServerSettingsMenu(_state));
-            localServerMenuTier.MenuItems.Add(new SocketSettingsMenu(_state));
-            localServerMenuTier.MenuItems.Add(new FileTransferSettingsMenu(_state));
-            localServerMenuTier.MenuItems.Add(_shutdownServer);
+            if (!_state.LocalServer.NoTextSessions)
+            {
+                viewLogsMenuTier.MenuItems.Add(new TextMessageArchiveMenu(_state));
+            }
 
-            Menu.Add(localServerMenuTier);
+            Menu.Add(viewLogsMenuTier);
+        }
+
+        void PopulateServerConfigurationMenuTier()
+        {
+            var serverConfigurationMenuTier = new MenuTier
+            {
+                TierLabel = Resources.MenuTierLabel_ServerConfiguration,
+                MenuItems = new List<IMenuItem>()
+                {
+                    new LocalServerSettingsMenu(_state),
+                    new SocketSettingsMenu(_state),
+                    new FileTransferSettingsMenu(_state),
+                    _shutdownServer
+                }
+            };
+
+            Menu.Add(serverConfigurationMenuTier);
         }
     }
 }

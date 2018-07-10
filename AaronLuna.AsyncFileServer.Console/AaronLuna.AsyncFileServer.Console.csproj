@@ -16,8 +16,4 @@
     <ProjectReference Include="..\console-progress-bar\ConsoleProgressBar\AaronLuna.ConsoleProgressBar.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Menus\ServerConfigurationMenuItems\" />
-  </ItemGroup>
-
 </Project>

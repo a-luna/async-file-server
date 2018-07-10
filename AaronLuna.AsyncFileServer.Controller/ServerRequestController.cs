@@ -24,7 +24,7 @@
 
         IPAddress _remoteServerIpAddress;
         int _remoteServerPortNumber;
-        
+
         int _fileTransferId;
         int _fileTransferRetryCounter;
         int _fileTransferRetryLimit;
@@ -37,7 +37,7 @@
         string _remoteFolderPath;
         string _textMessage;
         FileInfoList _fileInfoList;
-        
+
         public ServerRequestController(int id, int bufferSize, int timeoutMs)
         {
             Id = id;
@@ -46,7 +46,7 @@
             EventLog = new List<ServerEvent>();
             UnreadBytes = new List<byte>();
             RemoteServerInfo = new ServerInfo();
-            
+
             _bufferSize = bufferSize;
             _timeoutMs = timeoutMs;
             _buffer = new byte[bufferSize];
@@ -54,7 +54,7 @@
 
         public int Id { get; }
         public ServerRequestStatus Status { get; set; }
-        public List<ServerEvent> EventLog { get; set; }        
+        public List<ServerEvent> EventLog { get; set; }
         public ServerRequestType RequestType { get; private set; }
         public List<byte> UnreadBytes { get; private set; }
         public ServerInfo RemoteServerInfo { get; private set; }
@@ -108,7 +108,7 @@
             {
                 return connectToServer;
             }
-            
+
             var sendRequest =
                 await SendRequestBytes(requestBytes).ConfigureAwait(false);
 
@@ -195,7 +195,7 @@
                 ? Result.Ok()
                 : sendRequestBytes;
         }
-        
+
         public async Task<Result> ReceiveServerRequestAsync(Socket socket)
         {
             _socket = socket;
@@ -204,7 +204,7 @@
 
             EventLog.Add(new ServerEvent { EventType = ServerEventType.ReceiveRequestFromRemoteServerStarted });
             EventOccurred?.Invoke(this, EventLog.Last());
-            
+
             var receiveRequestLength = await ReceiveLengthOfIncomingRequest().ConfigureAwait(false);
             if (receiveRequestLength.Failure)
             {
@@ -421,7 +421,7 @@
         {
             RemoteServerInfo = ServerRequestDataReader.ReadRemoteServerInfo(requestBytes);
             RequestType = ServerRequestDataReader.ReadRequestType(requestBytes);
-            
+
             (_remoteServerIpAddress,
                 _remoteServerPortNumber,
                 _textMessage,
@@ -438,7 +438,7 @@
                 _fileTransferResponseCode,
                 _lockoutExpireTimeTicks,
                 _fileTransferRetryCounter,
-                _fileTransferRetryLimit) = ServerRequestDataReader.ReadRequestBytes(requestBytes);            
+                _fileTransferRetryLimit) = ServerRequestDataReader.ReadRequestBytes(requestBytes);
         }
 
         public Result<TextMessage> GetTextMessage()

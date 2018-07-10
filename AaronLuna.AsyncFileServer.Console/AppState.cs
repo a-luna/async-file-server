@@ -15,7 +15,7 @@
         {
             LocalServer = new AsyncFileServer();
             SelectedServerInfo = new ServerInfo();
-            
+
             WaitingForServerInfoResponse = true;
             WaitingForFileListResponse = true;
 
@@ -62,7 +62,7 @@
         public FileInfoList RemoteServerFileList => LocalServer.RemoteServerFileList;
         public string ErrorMessage { get; set; }
 
-        public FileTransferProgressBar ProgressBar { get; set; }        
+        public FileTransferProgressBar ProgressBar { get; set; }
         public ProgressEventArgs FileStalledInfo { get; set; }
         public ServerInfo SelectedServerInfo { get; set; }
 
@@ -97,7 +97,7 @@
             var unreadTextMessages = LocalServer.UnreadTextMessageCount == 0
                 ? "No unread messages"
                 : $"{LocalServer.UnreadTextMessageCount} unread {messagePlural}";
-            
+
             return
                 serverIsListening + Environment.NewLine +
                 localServerIp + Environment.NewLine +

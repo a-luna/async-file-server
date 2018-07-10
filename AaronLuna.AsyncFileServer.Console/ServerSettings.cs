@@ -162,7 +162,7 @@
                         server.LocalIpAddress = parseLocalIpResult.Value;
                     }
                 }
-                
+
                 if (!string.IsNullOrEmpty(publicIp))
                 {
                     var parsePublicIpResult = NetworkUtilities.ParseSingleIPv4Address(publicIp);

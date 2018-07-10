@@ -1,11 +1,13 @@
-﻿using System;
-using System.Threading.Tasks;
-using AaronLuna.AsyncFileServer.Model;
-using AaronLuna.Common.Console.Menu;
-using AaronLuna.Common.Result;
-
-namespace AaronLuna.AsyncFileServer.Console.Menus.CommonMenuItems
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.CommonMenuItems
 {
+    using System;
+    using System.Threading.Tasks;
+
+    using Common.Console.Menu;
+    using Common.Result;
+
+    using Model;
+
     class GetPortNumberFromUserMenuItem : IMenuItem
     {
         readonly AppState _state;
@@ -18,7 +20,7 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.CommonMenuItems
             _serverInfo = serverInfo;
             _localPort = localPort;
 
-            ReturnToParent = false;
+            ReturnToParent = localPort;
             ItemText = localPort
                 ? $"Change local server port number * ({_state.Settings.LocalServerPortNumber})"
                 : $"Change port number ({_state.SelectedServerInfo.PortNumber})";
@@ -37,11 +39,12 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.CommonMenuItems
             var prompt = _localPort
                 ? Resources.Prompt_SetLocalPortNumber
                 : Resources.Prompt_ChangeRemoteServerPortNumber;
-            
+
             _serverInfo.PortNumber =
                 SharedFunctions.GetPortNumberFromUser(prompt, _localPort);
 
             _state.RestartRequired = _localPort;
+
             return Result.Ok();
         }
     }

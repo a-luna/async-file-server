@@ -24,7 +24,7 @@
             var shutdown = SharedFunctions.PromptUserYesOrNo("Shutdown server?");
             if (!shutdown) return Result.Ok();
 
-            await _state.LocalServer.ShutdownAsync();
+            await _state.LocalServer.ShutdownAsync().ConfigureAwait(false);
             ReturnToParent = true;
 
             return Result.Ok();

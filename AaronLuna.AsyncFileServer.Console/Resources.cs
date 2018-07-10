@@ -2,8 +2,10 @@
 {
     static class Resources
     {
+        internal static readonly string MenuTierLabel_SelectRemoteServer = "Please select a remote server:";
         internal static readonly string MenuTierLabel_PendingRequests = "Pending Requests:";
         internal static readonly string MenuTierLabel_ViewLogs = "View Logs:";
+        internal static readonly string MenuTierLabel_ServerConfiguration = "Server Configuration:";
         internal static readonly string MenuTierLabel_LocalServerOptions = "Local Server Options:";
 
         internal static readonly string Menu_ChangeSettings =

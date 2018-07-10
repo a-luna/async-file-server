@@ -9,7 +9,6 @@
     {
         static async Task Main()
         {
-
             Logger.LogToConsole = false;
             Logger.Start("server.log");
 
@@ -30,7 +29,7 @@
 
                     if (result.Error.Contains("Restarting"))
                     {
-                        await Task.Delay(AaronLuna.Common.Constants.TwoSecondsInMilliseconds);
+                        await Task.Delay(AaronLuna.Common.Constants.TwoSecondsInMilliseconds).ConfigureAwait(false);
                         continue;
                     }
                 }

@@ -45,7 +45,7 @@ namespace AaronLuna.AsyncFileServer.Console
 
         public async Task<Result> RunAsync()
         {
-            var initializeServerResult = await InitializeServerAsync();
+            var initializeServerResult = await InitializeServerAsync().ConfigureAwait(false);
             if (initializeServerResult.Failure)
             {
                 return initializeServerResult;
@@ -64,7 +64,7 @@ namespace AaronLuna.AsyncFileServer.Console
                 while (!_state.LocalServer.IsListening) { }
 
                 _mainMenu = new MainMenu(_state);
-                var userInterface = await _mainMenu.ExecuteAsync();
+                var userInterface = await _mainMenu.ExecuteAsync().ConfigureAwait(false);
                 if (userInterface.Failure)
                 {
                     Console.WriteLine($"Error: {userInterface.Error}");
@@ -139,7 +139,7 @@ namespace AaronLuna.AsyncFileServer.Console
                     var cidrIpMatch = _state.Settings.LocalNetworkCidrIp == newCidrIp;
                     if (!cidrIpMatch)
                     {
-                        var prompt = 
+                        var prompt =
                             "The current value for CIDR IP is" +
                             $"{_state.Settings.LocalNetworkCidrIp}, however it appears " +
                             $"that {newCidrIp} is the correct value for the current LAN, " +
@@ -158,7 +158,7 @@ namespace AaronLuna.AsyncFileServer.Console
             await
                 _state.LocalServer.InitializeAsync(
                     _state.Settings.LocalNetworkCidrIp,
-                    _state.Settings.LocalServerPortNumber);
+                    _state.Settings.LocalServerPortNumber).ConfigureAwait(false);
 
             _state.LocalServer.SocketSettings = _state.Settings.SocketSettings;
             _state.LocalServer.TransferUpdateInterval = _state.Settings.TransferUpdateInterval;
@@ -170,7 +170,7 @@ namespace AaronLuna.AsyncFileServer.Console
                 ? ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath)
                 : Result.Ok();
         }
-        
+
         void InitializeSettings()
         {
             _state.SettingsFile = new FileInfo(_settingsFilePath);
@@ -203,13 +203,13 @@ namespace AaronLuna.AsyncFileServer.Console
                     RefreshMainMenu(serverEvent);
                     break;
 
-                case ServerEventType.ReceiveRequestFromRemoteServerComplete:                
+                case ServerEventType.ReceiveRequestFromRemoteServerComplete:
                 case ServerEventType.ProcessRequestComplete:
                 case ServerEventType.ReceivedTextMessage:
                 case ServerEventType.QueueContainsUnhandledRequests:
                     RefreshMainMenu(serverEvent);
                     break;
-                
+
                 case ServerEventType.ReceivedServerInfo:
                     ReceivedServerInfo(serverEvent);
                     _state.WaitingForServerInfoResponse = false;
@@ -249,21 +249,21 @@ namespace AaronLuna.AsyncFileServer.Console
                     break;
 
                 case ServerEventType.ReceiveFileBytesComplete:
-                    await ReceiveFileBytesCompleteAsync(serverEvent);
+                    await ReceiveFileBytesCompleteAsync(serverEvent).ConfigureAwait(false);
                     break;
 
                 case ServerEventType.SendFileTransferRejectedStarted:
-                    await RejectFileTransferAsync();
+                    await RejectFileTransferAsync().ConfigureAwait(false);
                     break;
 
                 case ServerEventType.SendFileTransferStalledComplete:
-                    await NotifiedRemoteServerThatFileTransferIsStalledAsync();
+                    await NotifiedRemoteServerThatFileTransferIsStalledAsync().ConfigureAwait(false);
                     break;
 
                 case ServerEventType.ReceivedRetryLimitExceeded:
-                    await HandleRetryLimitExceededAsync(serverEvent);
+                    await HandleRetryLimitExceededAsync(serverEvent).ConfigureAwait(false);
                     break;
-                    
+
                 case ServerEventType.ErrorOccurred:
                     HandleErrorOccurred(serverEvent);
                     break;
@@ -295,7 +295,7 @@ namespace AaronLuna.AsyncFileServer.Console
             Thread.Sleep(Constants.OneHalfSecondInMilliseconds);
             _mainMenu.DisplayMenu();
         }
-        
+
         bool DoNotRefreshMainMenu(ServerRequestType messageType)
         {
             switch (messageType)
@@ -323,8 +323,8 @@ namespace AaronLuna.AsyncFileServer.Console
 
             Console.WriteLine(fileAlreadyExists);
             _state.SignalReturnToMainMenu.Set();
-            
-            await Task.Delay(Constants.OneHalfSecondInMilliseconds);
+
+            await Task.Delay(Constants.OneHalfSecondInMilliseconds).ConfigureAwait(false);
             _state.SignalReturnToMainMenu.WaitOne();
         }
 
@@ -347,7 +347,7 @@ namespace AaronLuna.AsyncFileServer.Console
             var fileName = serverEvent.FileName;
             var fileSize = FileHelper.FileSizeToString(serverEvent.FileSizeInBytes);
             var localFolder = serverEvent.LocalFolder;
-            
+
             var retryLimit = remoteServerRetryLimit == 0
                 ? string.Empty
                 : $"/{remoteServerRetryLimit}{Environment.NewLine}";
@@ -362,7 +362,7 @@ namespace AaronLuna.AsyncFileServer.Console
                 $"File Name..: {fileName}{Environment.NewLine}" +
                 $"File Size..: {fileSize}{Environment.NewLine}" +
                 $"Save To....: {localFolder}{Environment.NewLine}";
-            
+
             Console.WriteLine(remoteServerInfo);
             Console.WriteLine(fileInfo);
         }
@@ -404,21 +404,21 @@ namespace AaronLuna.AsyncFileServer.Console
             _state.ProgressBar.BytesReceived = fileSize;
             _state.ProgressBar.Report(1);
             Thread.Sleep(Constants.OneHalfSecondInMilliseconds);
-            
+
             var report =
                 Environment.NewLine + Environment.NewLine +
                 $"Download Started...: {startTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
                 $"Download Finished..: {completeTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
                 $"Elapsed Time.......: {timeElapsed}{Environment.NewLine}" +
                 $"Transfer Rate......: {transferRate}";
-            
+
             Console.WriteLine(report);
             _state.SignalReturnToMainMenu.Set();
 
             _state.ProgressBar.Dispose();
             _state.ProgressBarInstantiated = false;
 
-            await Task.Delay(Constants.OneHalfSecondInMilliseconds);
+            await Task.Delay(Constants.OneHalfSecondInMilliseconds).ConfigureAwait(false);
             _state.SignalReturnToMainMenu.WaitOne();
         }
 
@@ -429,7 +429,7 @@ namespace AaronLuna.AsyncFileServer.Console
 
             if (getFileTransferResult.Failure)
             {
-                var error = 
+                var error =
                     $"{getFileTransferResult.Error} (ServerApplication.HandleStalledFileTransferAsync)";
 
                 Console.WriteLine(error);
@@ -441,9 +441,9 @@ namespace AaronLuna.AsyncFileServer.Console
             _state.FileStalledInfo = eventArgs;
             _state.ProgressBar.Dispose();
             _state.ProgressBarInstantiated = false;
-            
+
             var notifyStalledResult =
-                await SendFileTransferStalledNotification(inboundFileTransfer.FiletransferId);
+                await SendFileTransferStalledNotification(inboundFileTransfer.FiletransferId).ConfigureAwait(false);
 
             if (notifyStalledResult.Failure)
             {
@@ -459,8 +459,8 @@ namespace AaronLuna.AsyncFileServer.Console
 
             Console.WriteLine(fileStalledMessage);
 
-            var notifyClientResult = 
-                await _state.LocalServer.SendNotificationFileTransferStalledAsync(fileTransferId);
+            var notifyClientResult =
+                await _state.LocalServer.SendNotificationFileTransferStalledAsync(fileTransferId).ConfigureAwait(false);
 
             var notifyClientError =
                 $"{Environment.NewLine}Error occurred when notifying client that file transfer " +
@@ -470,7 +470,7 @@ namespace AaronLuna.AsyncFileServer.Console
                 ? Result.Ok()
                 : Result.Fail(notifyClientError);
         }
-        
+
         async Task NotifiedRemoteServerThatFileTransferIsStalledAsync()
         {
             var getFileTransferResult =
@@ -494,7 +494,7 @@ namespace AaronLuna.AsyncFileServer.Console
             Console.WriteLine(sentFileStalledNotification);
             _state.SignalReturnToMainMenu.Set();
 
-            await Task.Delay(Constants.OneHalfSecondInMilliseconds);
+            await Task.Delay(Constants.OneHalfSecondInMilliseconds).ConfigureAwait(false);
             _state.SignalReturnToMainMenu.WaitOne();
         }
 
@@ -512,8 +512,8 @@ namespace AaronLuna.AsyncFileServer.Console
 
             Console.WriteLine(retryLImitExceeded);
             _state.SignalReturnToMainMenu.Set();
-            
-            await Task.Delay(Constants.OneHalfSecondInMilliseconds);
+
+            await Task.Delay(Constants.OneHalfSecondInMilliseconds).ConfigureAwait(false);
             _mainMenu.DisplayMenu();
         }
 

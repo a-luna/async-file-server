@@ -81,7 +81,7 @@ namespace AaronLuna.AsyncFileServer.Test
             }
 
             _serverSocket = acceptResult.Value;
-            
+
             Assert.IsTrue(_serverSocket.Connected);
             Assert.IsTrue(_serverSocket.IsBound);
             Assert.IsNotNull(_serverSocket.LocalEndPoint);
