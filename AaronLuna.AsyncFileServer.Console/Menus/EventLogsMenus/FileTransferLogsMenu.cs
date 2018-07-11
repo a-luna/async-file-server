@@ -1,28 +1,27 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ViewLogsMenus
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.EventLogsMenus
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Threading.Tasks;
 
     using Common.Console.Menu;
     using Common.Result;
 
     using Model;
-    using ViewFileTransferEventLogsMenuItems;
+    using FileTransferLogsMenuItems;
 
-    class ViewFileTransferEventLogsMenu : IMenu
+    class FileTransferLogsMenu : IMenu
     {
         readonly AppState _state;
         readonly List<int> _fileTransferIds;
 
-        public ViewFileTransferEventLogsMenu(AppState state)
+        public FileTransferLogsMenu(AppState state)
         {
             _state = state;
             _fileTransferIds = _state.LocalServer.FileTransferIds;
 
             ReturnToParent = false;
-            ItemText = "View file transfer event logs";
+            ItemText = "File transfer logs";
             MenuText = "Select a file transfer from the list below:";
             MenuItems = new List<IMenuItem>();
         }
@@ -61,19 +60,19 @@
         {
             if (_state.LocalServer.NoFileTransfers)
             {
-                Console.WriteLine("There are no file transfer event logs available");
+                Console.WriteLine("There are no file transfer logs available");
                 Console.WriteLine($"{Environment.NewLine}Press enter to return to the previous menu.");
                 Console.ReadLine();
 
                 return true;
             }
 
-            var lastTransferId = _fileTransferIds.Last();
+            var lastTransferId = _state.LocalServer.MostRecentFileTransferId;
             if (lastTransferId > _state.LogViewerFileTransferId) return false;
 
             const string prompt =
                 "No file transfers have occurred since this list was cleared, would you like to view " +
-                "event logs for all file transfers?";
+                "event logs for all transfers?";
 
             var restoreLogEntries = SharedFunctions.PromptUserYesOrNo(prompt);
             if (!restoreLogEntries)
@@ -94,20 +93,22 @@
                 if (id <= _state.LogViewerFileTransferId) continue;
 
                 var fileTransferController = _state.LocalServer.GetFileTransferById(id).Value;
-                var eventLog = _state.LocalServer.GetEventLogForFileTransfer(id);
+                var eventLog = _state.LocalServer.GetEventLogForFileTransfer(id, _state.Settings.LogLevel);
 
-                if (_state.LogLevel == FileTransferLogLevel.Normal)
+                if (_state.Settings.LogLevel == LogLevel.Normal)
                 {
                     eventLog.RemoveAll(LogLevelIsDebugOnly);
                 }
 
                 MenuItems.Add(
                     new FileTransferLogViewerMenuItem(
+                        _state,
                         fileTransferController,
                         eventLog,
-                        _state.LogLevel));
+                        _state.Settings.LogLevel));
             }
 
+            MenuItems.Reverse();
             MenuItems.Add(new ClearFileTransferEventLogsMenuItem(_state));
             MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));
         }

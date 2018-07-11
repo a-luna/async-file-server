@@ -8,13 +8,14 @@
     using Common.Logging;
     using Common.Result;
 
+    using EventLogsMenus;
+    using EventLogsMenus.EventLogsMenuItems;
     using MainMenuItems;
     using PendingRequestsMenus;
     using PendingRequestsMenus.PendingRequestsMenuItems;
     using RemoteServerMenus;
     using RemoteServerMenus.RemoteServerMenuItems;
     using ServerConfigurationMenus;
-    using ViewLogsMenus;
 
     class MainMenu : ITieredMenu
     {
@@ -74,8 +75,8 @@
 
                 if (result.Success) continue;
 
-                Console.WriteLine($"{Environment.NewLine}Error: {result.Error}");
-                Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
+                Console.WriteLine(Environment.NewLine + result.Error + Environment.NewLine);
+                Console.WriteLine("Press enter to return to the main menu.");
                 Console.ReadLine();
             }
 
@@ -86,8 +87,8 @@
         {
             Menu.Clear();
 
-            PopulateSelectRemoteServerMenuTier();
             PopulatePendingRequestsMenuTier();
+            PopulateSelectRemoteServerMenuTier();            
             PopulateRemoteServerMenuTier();
             PopulateViewLogsMenuTier();
             PopulateServerConfigurationMenuTier();
@@ -207,13 +208,21 @@
 
             if (!_state.LocalServer.NoFileTransfers)
             {
-                viewLogsMenuTier.MenuItems.Add(new ViewFileTransferEventLogsMenu(_state));
+                viewLogsMenuTier.MenuItems.Add(new FileTransferLogsMenu(_state));
             }
 
             if (!_state.LocalServer.NoTextSessions)
             {
-                viewLogsMenuTier.MenuItems.Add(new TextMessageArchiveMenu(_state));
+                viewLogsMenuTier.MenuItems.Add(new TextMessageLogsMenu(_state));
             }
+
+            if (!_state.LocalServer.NoRequests)
+            {
+                viewLogsMenuTier.MenuItems.Add(new ServerRequestLogsMenu(_state));
+            }
+
+            viewLogsMenuTier.MenuItems.Add(new ViewAllEventsMenuItem(_state));
+            viewLogsMenuTier.MenuItems.Add(new SetLogLevelMenu(_state));
 
             Menu.Add(viewLogsMenuTier);
         }

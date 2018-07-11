@@ -1,4 +1,4 @@
-﻿//TODO: Bring back functionality where when ServerInfo is requested, the server receiving the request checks if the requesting server exists in its list of remote servers. If it is not known, prompt user yes/no if they would like to add it, and if yes, ServerInfoRequest is sent. 
+﻿//TODO: Figure out best eay to prompt user to provide a name for a server that was added automatically following request server info
 //TODO: Update AsyncFileServer.ToString() to be more useful when debugging. New format should incorporate the Name and OperatingSystem properties
 
 namespace AaronLuna.AsyncFileServer.Console
@@ -113,7 +113,8 @@ namespace AaronLuna.AsyncFileServer.Console
         async Task<Result> InitializeServerAsync()
         {
             InitializeSettings();
-            var settingsChanged = false;
+            var portNumberHasChanged = false;
+            bool cidrIpHasChanged;
 
             if (_state.Settings.LocalServerPortNumber == 0)
             {
@@ -122,37 +123,17 @@ namespace AaronLuna.AsyncFileServer.Console
                         Resources.Prompt_SetLocalPortNumber,
                         true);
 
-                settingsChanged = true;
+                portNumberHasChanged = true;
             }
 
             if (string.IsNullOrEmpty(_state.Settings.LocalNetworkCidrIp))
             {
                 _state.Settings.LocalNetworkCidrIp = SharedFunctions.InitializeLanCidrIp();
-                settingsChanged = true;
+                cidrIpHasChanged = true;
             }
             else
             {
-                var getCidrIp = NetworkUtilities.AttemptToDetermineLanCidrIp();
-                if (getCidrIp.Success)
-                {
-                    var newCidrIp = getCidrIp.Value;
-                    var cidrIpMatch = _state.Settings.LocalNetworkCidrIp == newCidrIp;
-                    if (!cidrIpMatch)
-                    {
-                        var prompt =
-                            "The current value for CIDR IP is" +
-                            $"{_state.Settings.LocalNetworkCidrIp}, however it appears " +
-                            $"that {newCidrIp} is the correct value for the current LAN, " +
-                            "would you like to use this value?";
-
-                        var updateCidrIp = SharedFunctions.PromptUserYesOrNo(prompt);
-                        if (updateCidrIp)
-                        {
-                            _state.Settings.LocalNetworkCidrIp = newCidrIp;
-                            settingsChanged = true;
-                        }
-                    }
-                }
+                cidrIpHasChanged = SharedFunctions.CidrIpHasChanged(_state);
             }
 
             await
@@ -166,7 +147,9 @@ namespace AaronLuna.AsyncFileServer.Console
             _state.LocalServer.RetryLimitLockout = _state.Settings.RetryLimitLockout;
             _state.LocalServer.Info.TransferFolder = _state.Settings.LocalServerFolderPath;
 
-            return settingsChanged
+            var anySettingWasChanged = portNumberHasChanged || cidrIpHasChanged;
+
+            return anySettingWasChanged
                 ? ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath)
                 : Result.Ok();
         }
@@ -194,17 +177,16 @@ namespace AaronLuna.AsyncFileServer.Console
 
         async void HandleServerEventAsync(object sender, ServerEvent serverEvent)
         {
-            _log.Info(serverEvent.ToString());
+            _log.Info(serverEvent.GetLogFileEntry());
 
             switch (serverEvent.EventType)
             {
-                case ServerEventType.ProcessRequestStarted:
-                    LookupRemoteServerName();
+                case ServerEventType.ProcessRequestComplete:
+                    await CheckIfRemoteServerAlreadySavedAsync();
                     RefreshMainMenu(serverEvent);
                     break;
 
                 case ServerEventType.ReceiveRequestFromRemoteServerComplete:
-                case ServerEventType.ProcessRequestComplete:
                 case ServerEventType.ReceivedTextMessage:
                 case ServerEventType.QueueContainsUnhandledRequests:
                     RefreshMainMenu(serverEvent);
@@ -273,6 +255,24 @@ namespace AaronLuna.AsyncFileServer.Console
             }
         }
 
+        private async Task CheckIfRemoteServerAlreadySavedAsync()
+        {
+            if (_state.DoNotRequestServerInfo) return;
+
+            var exists =
+                SharedFunctions.ServerInfoAlreadyExists(
+                    _state.LocalServer.RemoteServerInfo,
+                    _state.Settings.RemoteServers);
+
+            if (exists)
+            {
+                LookupRemoteServerName();
+                return;
+            }
+
+            await RequestServerInfoAsync();
+        }
+
         private void LookupRemoteServerName()
         {
             if (!string.IsNullOrEmpty(_state.LocalServer.RemoteServerInfo.Name)) return;
@@ -285,6 +285,41 @@ namespace AaronLuna.AsyncFileServer.Console
             if (foundName.Failure) return;
 
             _state.LocalServer.RemoteServerInfo.Name = foundName.Value;
+        }
+
+        async Task RequestServerInfoAsync()
+        {
+            _state.DoNotRequestServerInfo = true;
+            _state.DoNotRefreshMainMenu = true;
+
+            var ipAddress = _state.LocalServer.RemoteServerSessionIpAddress;
+            var port = _state.LocalServer.RemoteServerPortNumber;
+
+            var requestServerInfoTask =
+                Task.Run(() =>
+                    SharedFunctions.RequestServerInfoAsync(_state, ipAddress, port));
+
+            if (requestServerInfoTask
+                == await Task.WhenAny(
+                        requestServerInfoTask,
+                        Task.Delay(Constants.FiveSecondsInMilliseconds))
+                    .ConfigureAwait(false))
+            {
+                await requestServerInfoTask;
+
+                _state.Settings.RemoteServers.Add(_state.LocalServer.RemoteServerInfo);
+                ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
+
+                _state.DoNotRefreshMainMenu = false;
+                return;
+            }
+
+            Console.WriteLine("Request for server info timed out before receiving a response");
+            Console.WriteLine($"{Environment.NewLine}Press Enter to return to the main menu");
+            Console.ReadLine();
+
+            _state.DoNotRequestServerInfo = false;
+            _state.DoNotRefreshMainMenu = false;
         }
 
         void RefreshMainMenu(ServerEvent serverEvent)

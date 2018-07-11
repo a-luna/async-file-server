@@ -62,6 +62,7 @@
                 : XmlConvert.ToTimeSpan(value);
         }
 
+        public LogLevel LogLevel { get; set; }
         public int TransferRetryLimit { get; set; }
         public string LocalServerFolderPath { get; set; }
         public int LocalServerPortNumber { get; set; }

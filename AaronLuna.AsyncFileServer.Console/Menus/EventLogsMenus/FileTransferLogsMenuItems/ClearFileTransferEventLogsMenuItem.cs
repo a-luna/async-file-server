@@ -1,4 +1,4 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ViewLogsMenus.ViewFileTransferEventLogsMenuItems
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.EventLogsMenus.FileTransferLogsMenuItems
 {
     using System;
     using System.Collections.Generic;

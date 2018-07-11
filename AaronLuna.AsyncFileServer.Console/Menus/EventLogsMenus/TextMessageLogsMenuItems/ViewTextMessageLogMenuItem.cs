@@ -1,19 +1,20 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ViewLogsMenus.ViewTextSessionsMenuItems
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.EventLogsMenus.TextMessageLogsMenuItems
 {
     using System;
     using System.Threading.Tasks;
 
+    using Model;
     using Common.Console.Menu;
     using Common.Result;
 
-    using Model;
-
-    class ViewTextSessionMenuItem : IMenuItem
+    class ViewTextMessageLogMenuItem : IMenuItem
     {
+        readonly AppState _state;
         readonly TextSession _textSession;
 
-        public ViewTextSessionMenuItem(TextSession textSession)
+        public ViewTextMessageLogMenuItem(AppState state, TextSession textSession)
         {
+            _state = state;
             _textSession = textSession;
 
             ReturnToParent = false;
@@ -30,6 +31,7 @@
 
         Result Execute()
         {
+            SharedFunctions.DisplayLocalServerInfo(_state);
             Console.WriteLine(Environment.NewLine);
 
             foreach (var textMessage in _textSession.Messages)

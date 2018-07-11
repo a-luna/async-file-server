@@ -72,6 +72,7 @@
         public string ConfirmationMessage { get; set; }
         public string ErrorMessage { get; set; }
 
+        public bool DoNotDisplayInLog => EventType.DoNotDisplayInLog();
         public bool LogLevelIsDebugOnly => EventType.LogLevelIsDebugOnly();
 
         public string GetLogFileEntry()
@@ -81,14 +82,14 @@
 
         public override string ToString()
         {
-            return Report(true);
+            return $"[{TimeStamp:MM/dd/yyyy HH:mm:ss.fff}] {Report(true)}";
         }
 
         string Report(bool logToScreen)
         {
             var indentLevel1 = logToScreen
                 ? string.Empty
-                : "\t\t\t\t\t\t\t\t\t\t";
+                : "\t\t\t\t\t\t\t\t\t\t\t\t\t";
 
             var report = string.Empty;
             switch (EventType)
@@ -115,11 +116,11 @@
                     break;
 
                 case ServerEventType.ReceiveRequestFromRemoteServerStarted:
-                    report += $"START PROCESS: RECEIVE MESSAGE FROM CLIENT: {RemoteServerIpAddress}";
+                    report += "START PROCESS: RECEIVE SERVER REQUEST";
                     break;
 
                 case ServerEventType.ReceiveRequestFromRemoteServerComplete:
-                    report += $"PROCESS COMPLETE: RECEIVE MESSAGE FROM CLIENT: {RemoteServerIpAddress}";
+                    report += $"PROCESS COMPLETE: RECEIVE SERVER REQUEST{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ReceiveRequestLengthStarted:
@@ -127,7 +128,11 @@
                     break;
 
                 case ServerEventType.ReceiveRequestLengthComplete:
-                    report += $"Incoming request length: {RequestLengthInBytes:N0} bytes ({RequestLengthBytes.ToHexString()})";
+                    report += 
+                        $"First 4 bytes received: [{RequestLengthBytes.ToHexString()}] is " +
+                        $"{RequestLengthInBytes:N0} encoded as Int32 " +
+                        $"(Length of incoming request is {RequestLengthInBytes:N0} bytes)" +
+                        Environment.NewLine;
                     break;
 
                 case ServerEventType.ReceivedRequestLengthBytesFromSocket:
@@ -169,7 +174,16 @@
                     break;
 
                 case ServerEventType.ReceiveRequestBytesComplete:
-                    report += "Successfully received all request bytes";
+                    report += $"Successfully received all request bytes{Environment.NewLine}";
+                    break;
+
+                case ServerEventType.DetermineRequestTypeStarted:
+                    report += "Step 3: Determine request type";
+                    break;
+
+                case ServerEventType.DetermineRequestTypeComplete:
+                    report +=
+                        $"Successfully determined type of incoming request: {RequestType.Name()}";
                     break;
 
                 case ServerEventType.ProcessRequestStarted:
@@ -219,7 +233,7 @@
                     break;
 
                 case ServerEventType.RequestServerInfoStarted:
-                    report += $"Sending request for server connection info to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+                    report += $"Sending request for additional server info to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 
                 case ServerEventType.RequestServerInfoComplete:
@@ -231,20 +245,43 @@
                     break;
 
                 case ServerEventType.ReceivedServerInfoRequest:
+                    report += $"Received request for additional server info from: {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+                    break;
+                    
                 case ServerEventType.ReceivedRetryOutboundFileTransferRequest:
-                    report += $"Requested by: {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+                    report +=
+                        $"Received request to retry a failed outbound file transfer:{Environment.NewLine}{Environment.NewLine}" +
+                        $"{indentLevel1}Send File To...: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
+                        $"{indentLevel1}File Name......: {FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}File Size......: {FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
+                        $"{indentLevel1}File Location..: {LocalFolder}{Environment.NewLine}" +
+                        $"{indentLevel1}Target Folder..: {RemoteFolder}{Environment.NewLine}" +
+                        $"{indentLevel1}Retry Counter..: {RetryCounter}{Environment.NewLine}" +
+                        $"{indentLevel1}Retry Limit....: {RemoteServerRetryLimit}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.SendServerInfoStarted:
-                    report += $"Sending server connection info to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}";
+                    report += $"Sending additional server info to: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +                             
+                              $"{indentLevel1}Local IP.........: {LocalIpAddress}{Environment.NewLine}" +
+                              $"{indentLevel1}Public IP........: {PublicIpAddress}{Environment.NewLine}" +
+                              $"{indentLevel1}Port Number......: {LocalPortNumber}{Environment.NewLine}" +
+                              $"{indentLevel1}Platform.........: {RemoteServerPlatform}{Environment.NewLine}" +
+                              $"{indentLevel1}Transfer Folder..: {LocalFolder}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.SendServerInfoComplete:
-                    report += "Server connection info was successfully sent";
+                    report += $"Server info was successfully sent{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ReceivedServerInfo:
-                    report += $"Received server connection info from {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}";
+                    report +=
+                        $"Received additional server info from: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
+                        $"{indentLevel1}Session IP.......: {RemoteServerIpAddress}{Environment.NewLine}" +
+                        $"{indentLevel1}Local IP.........: {LocalIpAddress}{Environment.NewLine}" +
+                        $"{indentLevel1}Public IP........: {PublicIpAddress}{Environment.NewLine}" +
+                        $"{indentLevel1}Port Number......: {RemoteServerPortNumber}{Environment.NewLine}" +
+                        $"{indentLevel1}Platform.........: {RemoteServerPlatform}{Environment.NewLine}" +
+                        $"{indentLevel1}Transfer Folder..: {RemoteFolder}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.RequestFileListStarted:
@@ -266,12 +303,13 @@
                     break;
 
                 case ServerEventType.SendFileListComplete:
-                    report += "File information was successfully sent";
+                    report += $"File information was successfully sent{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ReceivedFileList:
                     report +=
-                        $"File list received from {RemoteServerIpAddress}:{RemoteServerPortNumber}, {RemoteServerFileList.Count} files available";
+                        $"File list received from {RemoteServerIpAddress}:{RemoteServerPortNumber}, " +
+                        $"{RemoteServerFileList.Count} files available{Environment.NewLine}";
                     break;
 
                 case ServerEventType.RequestInboundFileTransferStarted:
@@ -285,7 +323,7 @@
 
                 case ServerEventType.ReceivedInboundFileTransferRequest:
                     report +=
-                        $"Received inbound file transfer request:{Environment.NewLine}{Environment.NewLine}" +
+                        $"Started processing inbound file transfer request:{Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}File Sender....: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
                         $"{indentLevel1}File Name......: {FileName}{Environment.NewLine}" +
                         $"{indentLevel1}File Size......: {FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
@@ -451,7 +489,8 @@
 
                 case ServerEventType.RemoteServerConfirmedFileTransferCompleted:
                     report +=
-                        $"{RemoteServerIpAddress}:{RemoteServerPortNumber} confirmed that the file transfer was received successfully";
+                        $"{RemoteServerIpAddress}:{RemoteServerPortNumber} confirmed that " +
+                        $"the file transfer was received successfully{Environment.NewLine}";
                     break;
 
                 case ServerEventType.SendRetryLimitExceededStarted:

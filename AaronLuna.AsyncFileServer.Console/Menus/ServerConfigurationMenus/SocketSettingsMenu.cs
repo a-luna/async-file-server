@@ -19,13 +19,7 @@
             ReturnToParent = false;
             ItemText = "Socket settings";
             MenuText = Resources.Menu_ChangeSettings;
-            MenuItems = new List<IMenuItem>
-            {
-                new SetSocketBufferSizeMenu(_state),
-                new SetSocketListenBacklogSizeMenu(_state),
-                new SetSocketTimeoutMenu(_state),
-                new ReturnToParentMenuItem("Return to main menu")
-            };
+            MenuItems = new List<IMenuItem>();
         }
 
         public string ItemText { get; set; }
@@ -42,6 +36,7 @@
             while (!exit)
             {
                 SharedFunctions.DisplayLocalServerInfo(_state);
+                PopulateMenu();
 
                 var menuItem =
                     await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
@@ -69,6 +64,15 @@
             }
 
             return result;
+        }
+
+        void PopulateMenu()
+        {
+            MenuItems.Clear();
+            MenuItems.Add(new SetSocketBufferSizeMenu(_state));
+            MenuItems.Add(new SetSocketListenBacklogSizeMenu(_state));
+            MenuItems.Add(new SetSocketTimeoutMenu(_state));
+            MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));
         }
     }
 }

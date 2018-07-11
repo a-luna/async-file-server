@@ -20,13 +20,7 @@
             ReturnToParent = false;
             ItemText = "Local server settings";
             MenuText = Resources.Menu_ChangeSettings;
-            MenuItems = new List<IMenuItem>
-            {
-                new GetPortNumberFromUserMenuItem(_state, _state.LocalServer.Info, true),
-                new SetLocalServerCidrIpMenuItem(_state),
-                new DisplayLocalIPv4AddressesMenuItem(),
-                new ReturnToParentMenuItem("Return to main menu")
-            };
+            MenuItems = new List<IMenuItem>();
         }
 
         public string ItemText { get; set; }
@@ -43,6 +37,7 @@
             while (!exit)
             {
                 SharedFunctions.DisplayLocalServerInfo(_state);
+                PopulateMenu();
 
                 var menuItem =
                     await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
@@ -68,6 +63,15 @@
             }
 
             return result;
+        }
+
+        void PopulateMenu()
+        {
+            MenuItems.Clear();
+            MenuItems.Add(new GetPortNumberFromUserMenuItem(_state, _state.LocalServer.Info, true));
+            MenuItems.Add(new SetLocalServerCidrIpMenuItem(_state));
+            MenuItems.Add(new DisplayLocalIPv4AddressesMenuItem());
+            MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));
         }
 
         Result ApplyChanges()

@@ -1,4 +1,4 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus.FileTransferSettingsMenuItems
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.EventLogsMenus.EventLogsMenuItems
 {
     using System;
     using System.Collections.Generic;
@@ -7,32 +7,32 @@
     using Common.Console.Menu;
     using Common.Result;
 
-    using Model;
     using CommonMenuItems;
+    using Model;
 
     class SetLogLevelMenu : IMenu
     {
         readonly AppState _state;
-        readonly List<FileTransferLogLevel> _logLevels;
+        readonly List<LogLevel> _logLevels;
 
         public SetLogLevelMenu(AppState state)
         {
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Change file transfer event log level ({_state.LogLevel}){Environment.NewLine}";
-            MenuText = "Select the appropriate log level from the list below:";
+            ItemText = $"Change log level ({_state.Settings.LogLevel})";
+            MenuText = "Select the log level from the list below:";
 
-            _logLevels = new List<FileTransferLogLevel>
+            _logLevels = new List<LogLevel>
             {
-                FileTransferLogLevel.Normal,
-                FileTransferLogLevel.Debug
+                LogLevel.Normal,
+                LogLevel.Debug
             };
 
             MenuItems = new List<IMenuItem>
             {
-                new SelectDummyValueMenuItem(nameof(FileTransferLogLevel.Normal)),
-                new SelectDummyValueMenuItem($"{FileTransferLogLevel.Debug}{Environment.NewLine}"),
+                new SelectDummyValueMenuItem(nameof(LogLevel.Normal)),
+                new SelectDummyValueMenuItem($"{LogLevel.Debug}{Environment.NewLine}"),
                 new ReturnToParentMenuItem("Return to previous menu")
             };
         }
@@ -50,9 +50,9 @@
             var menuIndex = await SharedFunctions.GetUserSelectionIndexAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
             if (menuIndex > _logLevels.Count) return Result.Ok();
 
-            _state.LogLevel = _logLevels[menuIndex - 1];
+            _state.Settings.LogLevel = _logLevels[menuIndex - 1];
 
-            return Result.Ok();
+            return ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
         }
     }
 }

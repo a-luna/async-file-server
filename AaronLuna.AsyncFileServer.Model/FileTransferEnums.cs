@@ -28,14 +28,7 @@
         RetryLimitExceeded,
         Error
     }
-
-    public enum FileTransferLogLevel
-    {
-        None,
-        Normal,
-        Debug
-    }
-
+    
     public static class FileTransferInitiatorExtensions
     {
         public static string ToString(this FileTransferInitiator initiator)

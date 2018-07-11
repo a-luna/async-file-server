@@ -19,15 +19,7 @@
             ReturnToParent = false;
             ItemText = "File transfer settings";
             MenuText = Resources.Menu_ChangeSettings;
-            MenuItems = new List<IMenuItem>
-            {
-                new SetUpdateIntervalMenu(_state),
-                new SetTransferStalledTimeoutMenu(_state),
-                new SetRetryLimitMenu(_state),
-                new SetRetryLockoutTimeSpanMenu(_state),
-                new SetLogLevelMenu(_state),
-                new ReturnToParentMenuItem("Return to main menu")
-            };
+            MenuItems = new List<IMenuItem>();
         }
 
         public string ItemText { get; set; }
@@ -44,6 +36,8 @@
             while (!exit)
             {
                 SharedFunctions.DisplayLocalServerInfo(_state);
+                PopulateMenu();
+
                 var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
                 result = await menuItem.ExecuteAsync().ConfigureAwait(false);
 
@@ -68,6 +62,16 @@
             }
 
             return result;
+        }
+
+        void PopulateMenu()
+        {
+            MenuItems.Clear();
+            MenuItems.Add(new SetUpdateIntervalMenu(_state));
+            MenuItems.Add(new SetTransferStalledTimeoutMenu(_state));
+            MenuItems.Add(new SetRetryLimitMenu(_state));
+            MenuItems.Add(new SetRetryLockoutTimeSpanMenu(_state));
+            MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));
         }
     }
 }

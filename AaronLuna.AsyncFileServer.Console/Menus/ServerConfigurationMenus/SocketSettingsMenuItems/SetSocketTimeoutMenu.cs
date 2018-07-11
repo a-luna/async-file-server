@@ -19,7 +19,11 @@
             _state = state;
 
             ReturnToParent = true;
-            ItemText = $"Change socket timeout value * ({_state.Settings.SocketSettings.SocketTimeoutInMilliseconds} ms)";
+            ItemText =
+                "Change socket timeout value * " +
+                $"({_state.Settings.SocketSettings.SocketTimeoutInMilliseconds} ms)" +
+                Environment.NewLine;
+
             MenuText = $"Select a value from the list below:{Environment.NewLine}";
 
             _timeoutValues = new List<int>

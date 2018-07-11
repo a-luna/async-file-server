@@ -30,7 +30,7 @@ namespace AaronLuna.AsyncFileServer.Test
         Task<Result> _runServerTask;
         Task<Result> _runClientTask;
         List<string> _clientLogMessages;
-         List<string> _serverLogMessages;
+        List<string> _serverLogMessages;
         string _clientLogFilePath;
         string _serverLogFilePath;
 

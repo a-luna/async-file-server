@@ -27,11 +27,11 @@
 
         public async Task<Result> ExecuteAsync()
         {
-            System.Console.WriteLine(Environment.NewLine);
+            Console.WriteLine(Environment.NewLine);
 
             foreach (var textMessage in _textSession.UnreadMessages)
             {
-                System.Console.WriteLine(textMessage + Environment.NewLine);
+                Console.WriteLine(textMessage + Environment.NewLine);
                 textMessage.Unread = false;
             }
 

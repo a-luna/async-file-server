@@ -19,8 +19,11 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = "Change length of time to reject transfers after retry limit exceeded " +
-                       $"({_state.Settings.RetryLimitLockout.Minutes} minutes)";
+
+            ItemText =
+                "Change length of time to reject transfers after retry limit exceeded " +
+                $"({_state.Settings.RetryLimitLockout.Minutes} minutes){Environment.NewLine}";
+
             MenuText = "Select a value from the list below:";
 
             _timeoutValues = new List<int>

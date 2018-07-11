@@ -24,8 +24,6 @@
             UserEntryRemoteServerName = string.Empty;
             UserEntryIpAddress = IPAddress.None;
             UserEntryPortNumber = 0;
-
-            LogLevel = FileTransferLogLevel.Normal;
         }
 
         public ServerSettings Settings { get; set; }
@@ -42,10 +40,12 @@
         public bool RequestedFolderDoesNotExist { get; set; }
         public bool NoFilesAvailableForDownload { get; set; }
         public bool DoNotRefreshMainMenu { get; set; }
+        public bool DoNotRequestServerInfo { get; set; }
         public bool RestartRequired { get; set; }
 
         public int InboundFileTransferId { get; set; }
         public int LogViewerFileTransferId { get; set; }
+        public int LogViewerRequestId { get; set; }
         public bool FileTransferRejected => LocalServer.FileTransferRejected;
         public bool FileTransferInProgress { get; set; }
         public bool FileTransferStalled => LocalServer.FileTransferStalled;
@@ -65,8 +65,6 @@
         public FileTransferProgressBar ProgressBar { get; set; }
         public ProgressEventArgs FileStalledInfo { get; set; }
         public ServerInfo SelectedServerInfo { get; set; }
-
-        public FileTransferLogLevel LogLevel { get; set; }
 
         public string LocalServerInfo()
         {

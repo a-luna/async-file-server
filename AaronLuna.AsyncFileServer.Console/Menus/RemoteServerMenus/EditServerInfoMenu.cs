@@ -20,13 +20,7 @@
             ReturnToParent = false;
             ItemText = "Edit server info";
             MenuText = "Select the value you wish to edit from the list below:";
-            MenuItems = new List<IMenuItem>
-            {
-                new GetIpAddressFromUserMenuItem(state),
-                new GetPortNumberFromUserMenuItem(state, state.SelectedServerInfo, false),
-                new GetServerNameFromUserMenuItem(state),
-                new ReturnToParentMenuItem("Return to main menu")
-            };
+            MenuItems = new List<IMenuItem>();
         }
 
         public string ItemText { get; set; }
@@ -43,6 +37,7 @@
             while (!exit)
             {
                 SharedFunctions.DisplayLocalServerInfo(_state);
+                PopulateMenu();
 
                 var menuItem =
                     await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
@@ -68,6 +63,15 @@
             }
 
             return result;
+        }
+
+        void PopulateMenu()
+        {
+            MenuItems.Clear();
+            MenuItems.Add(new GetIpAddressFromUserMenuItem(_state));
+            MenuItems.Add(new GetPortNumberFromUserMenuItem(_state, _state.SelectedServerInfo, false));
+            MenuItems.Add(new GetServerNameFromUserMenuItem(_state));
+            MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));
         }
 
         Result ApplyChanges()

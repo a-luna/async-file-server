@@ -1,5 +1,12 @@
 ﻿namespace AaronLuna.AsyncFileServer.Model
 {
+    public enum LogLevel
+    {
+        None,
+        Normal,
+        Debug
+    }
+
     public enum ServerEventType
     {
         None,
@@ -28,6 +35,9 @@
 
         SaveUnreadBytesAfterAllRequestBytesReceived,
         CopySavedBytesToIncomingFile,
+
+        DetermineRequestTypeStarted,
+        DetermineRequestTypeComplete,
 
         QueueContainsUnhandledRequests,
         ProcessRequestStarted,
@@ -124,6 +134,21 @@
 
     public static class ServerEventTypeExtensions
     {
+        public static bool DoNotDisplayInLog(this ServerEventType eventType)
+        {
+            switch (eventType)
+            {
+                case ServerEventType.ProcessRequestStarted:
+                case ServerEventType.ProcessRequestComplete:
+                case ServerEventType.ConnectToRemoteServerStarted:
+                case ServerEventType.ConnectToRemoteServerComplete:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
         public static bool LogLevelIsDebugOnly(this ServerEventType eventType)
         {
             switch (eventType)
@@ -138,6 +163,8 @@
                 case ServerEventType.ReceiveRequestLengthComplete:
                 case ServerEventType.ReceiveRequestBytesStarted:
                 case ServerEventType.CopySavedBytesToRequestData:
+                case ServerEventType.DetermineRequestTypeStarted:
+                case ServerEventType.DetermineRequestTypeComplete:
                 case ServerEventType.ReceivedRequestBytesFromSocket:
                 case ServerEventType.ReceiveRequestBytesComplete:
                 case ServerEventType.SaveUnreadBytesAfterAllRequestBytesReceived:

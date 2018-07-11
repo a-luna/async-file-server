@@ -43,6 +43,33 @@
                 : sendMessageResult;
         }
 
+        public static async Task<Result> RequestServerInfoAsync(
+            AppState state,
+            IPAddress ipAddress,
+            int port)
+        {
+            state.WaitingForServerInfoResponse = true;
+
+            var requestServerInfoResult =
+                await state.LocalServer.RequestServerInfoAsync(
+                        ipAddress,
+                        port)
+                    .ConfigureAwait(false);
+
+            if (requestServerInfoResult.Failure)
+            {
+                var error =
+                    "Error requesting additional info from remote server:" +
+                    Environment.NewLine + requestServerInfoResult.Error;
+
+                return Result.Fail(error);
+            }
+
+            while (state.WaitingForServerInfoResponse) { }
+
+            return Result.Ok();
+        }
+
         public static async Task<int> GetUserSelectionIndexAsync(
             string menuText,
             List<IMenuItem> menuItems,
@@ -79,9 +106,31 @@
             return menuItems[userSelection - 1];
         }
 
+        public static bool CidrIpHasChanged(AppState state)
+        {
+            var getCidrIp = NetworkUtilities.GetCidrIp();
+            if (getCidrIp.Failure) return false;
+
+            var newCidrIp = getCidrIp.Value;
+            var cidrIpMatch = state.Settings.LocalNetworkCidrIp == newCidrIp;
+            if (cidrIpMatch) return false;
+
+            var prompt =
+                "The current value for CIDR IP is " +
+                $"{state.Settings.LocalNetworkCidrIp}, however it appears " +
+                $"that {newCidrIp} is the correct value for the current LAN, " +
+                "would you like to use this value?";
+
+            var updateCidrIp = PromptUserYesOrNo(prompt);
+            if (!updateCidrIp) return false;
+
+            state.Settings.LocalNetworkCidrIp = newCidrIp;
+            return true;
+        }
+
         public static string InitializeLanCidrIp()
         {
-            var getCidrIp = NetworkUtilities.AttemptToDetermineLanCidrIp();
+            var getCidrIp = NetworkUtilities.GetCidrIp();
             if (getCidrIp.Failure)
             {
                 return GetCidrIpFromUser();
@@ -224,16 +273,16 @@
             return Result.Fail<ServerInfo>("No server was found matching the details provided");
         }
 
-        public static bool ServerInfoAlreadyExists(ServerInfo newClient, List<ServerInfo> clients)
+        public static bool ServerInfoAlreadyExists(
+            ServerInfo lookup,
+            List<ServerInfo> serverInfoList)
         {
             var exists = false;
-            foreach (var remoteServer in clients)
+            foreach (var remoteServer in serverInfoList)
             {
-                if (remoteServer.IsEqualTo(newClient))
-                {
-                    exists = true;
-                    break;
-                }
+                if (!remoteServer.IsEqualTo(lookup)) continue;
+                exists = true;
+                break;
             }
             return exists;
         }

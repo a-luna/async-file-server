@@ -57,7 +57,7 @@
         public List<ServerEvent> EventLog { get; set; }
         public ServerRequestType RequestType { get; private set; }
         public List<byte> UnreadBytes { get; private set; }
-        public ServerInfo RemoteServerInfo { get; private set; }
+        public ServerInfo RemoteServerInfo { get; set; }
         public int FileTransferId { get; set; }
 
         public bool IsInboundFileTransferRequest => RequestType == ServerRequestType.InboundFileTransferRequest;
@@ -85,8 +85,9 @@
                 direction = "Received from:";
             }
 
-            return RequestType.Name() + Environment.NewLine +
-                   $"{direction} {RemoteServerInfo} at {_request.TimeStamp:MM/dd/yyyy hh:mm tt}";
+            return $" {RequestType.Name()} [{Status}]{Environment.NewLine}" +
+                   $"    {direction} {RemoteServerInfo}{Environment.NewLine}" +
+                   $"    At: {_request.TimeStamp:MM/dd/yyyy hh:mm tt}{Environment.NewLine}";
         }
 
         public async Task<Result> SendServerRequestAsync(
@@ -212,7 +213,7 @@
             }
 
             var requestLengthInBytes = receiveRequestLength.Value;
-
+            
             var receiveRequestBytes = await ReceiveRequestBytesAsync(requestLengthInBytes).ConfigureAwait(false);
             if (receiveRequestBytes.Failure)
             {
@@ -220,6 +221,19 @@
             }
 
             _request.RequestBytes = receiveRequestBytes.Value;
+            
+            EventLog.Add(new ServerEvent { EventType = ServerEventType.DetermineRequestTypeStarted });
+            EventOccurred?.Invoke(this, EventLog.Last());
+
+            ReadRequestBytes(_request.RequestBytes);
+
+            EventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.DetermineRequestTypeComplete,
+                RequestType = RequestType
+            });
+
+            EventOccurred?.Invoke(this, EventLog.Last());
 
             EventLog.Add(new ServerEvent
             {
@@ -388,9 +402,7 @@
 
                 SocketEventOccurred?.Invoke(this, EventLog.Last());
             }
-
-            ReadRequestBytes(requestBytes.ToArray());
-
+            
             EventLog.Add(new ServerEvent
             {
                 EventType = ServerEventType.ReceiveRequestBytesComplete,
@@ -419,7 +431,11 @@
 
         void ReadRequestBytes(byte[] requestBytes)
         {
-            RemoteServerInfo = ServerRequestDataReader.ReadRemoteServerInfo(requestBytes);
+            if (_request.Direction == ServerRequestDirection.Received)
+            {
+                RemoteServerInfo = ServerRequestDataReader.ReadRemoteServerInfo(requestBytes);
+            }
+            
             RequestType = ServerRequestDataReader.ReadRequestType(requestBytes);
 
             (_remoteServerIpAddress,

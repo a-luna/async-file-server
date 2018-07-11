@@ -1,4 +1,4 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ViewLogsMenus
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.EventLogsMenus
 {
     using System.Collections.Generic;
     using System.Threading.Tasks;
@@ -6,18 +6,18 @@
     using Common.Console.Menu;
     using Common.Result;
 
-    using ViewTextSessionsMenuItems;
+    using TextMessageLogsMenuItems;
 
-    class TextMessageArchiveMenu : IMenu
+    class TextMessageLogsMenu : IMenu
     {
         readonly AppState _state;
 
-        public TextMessageArchiveMenu(AppState state)
+        public TextMessageLogsMenu(AppState state)
         {
             _state = state;
 
             ReturnToParent = false;
-            ItemText = "View archived text messages";
+            ItemText = "Text message logs";
             MenuText = "Select a remote server from the list below:";
             MenuItems = new List<IMenuItem>();
         }
@@ -47,12 +47,12 @@
 
         void PopulateMenu()
         {
-            MenuItems.Clear();
+            MenuItems.Clear(); 
 
             foreach (var id in _state.LocalServer.TextSessionIds)
             {
                 var textSession = _state.LocalServer.GetTextSessionById(id).Value;
-                MenuItems.Add(new ViewTextSessionMenuItem(textSession));
+                MenuItems.Add(new ViewTextMessageLogMenuItem(_state, textSession));
             }
 
             MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));
