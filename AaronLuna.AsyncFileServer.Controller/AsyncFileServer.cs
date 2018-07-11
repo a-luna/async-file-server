@@ -278,18 +278,28 @@
 
         bool QueueIsEmpty()
         {
-            var pendingRequests =
-                _requests.Select(r => r).Where(r => r.Status == ServerRequestStatus.Pending).ToList();
+            List<ServerRequestController> pendingRequests;
+
+            lock (QueueLock)
+            {
+                pendingRequests =
+                    _requests.Select(r => r).Where(r => r.Status == ServerRequestStatus.Pending).ToList();
+            }
 
             return pendingRequests.Count == 0;
         }
 
         int PendingTransferCount()
         {
-            var pendingTransfers =
-                _requests.Select(r => r)
-                    .Where(r => r.IsInboundFileTransferRequest && r.Status == ServerRequestStatus.Pending)
-                    .ToList();
+            List<ServerRequestController> pendingTransfers;
+
+            lock (QueueLock)
+            {
+                pendingTransfers =
+                    _requests.Select(r => r)
+                        .Where(r => r.IsInboundFileTransferRequest && r.Status == ServerRequestStatus.Pending)
+                        .ToList();
+            }
 
             return pendingTransfers.Count;
         }
