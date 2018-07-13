@@ -297,7 +297,8 @@
             {
                 pendingTransfers =
                     _requests.Select(r => r)
-                        .Where(r => r.IsInboundFileTransferRequest && r.Status == ServerRequestStatus.Pending)
+                        .Where(r => r.IsInboundFileTransferRequest
+                                    && r.Status == ServerRequestStatus.Pending)
                         .ToList();
             }
 
@@ -306,8 +307,16 @@
 
         Result<ServerRequestController> GetNextFileTransferInQueue()
         {
-            var pendingTransfers = _requests.Select(r => r)
-                .Where(r => r.IsInboundFileTransferRequest && r.Status == ServerRequestStatus.Pending).ToList();
+            List<ServerRequestController> pendingTransfers;
+
+            lock (QueueLock)
+            {
+                pendingTransfers =
+                    _requests.Select(r => r)
+                        .Where(r => r.IsInboundFileTransferRequest
+                                    && r.Status == ServerRequestStatus.Pending)
+                        .ToList();
+            }
 
             return pendingTransfers.Count > 0
                 ? Result.Ok(pendingTransfers[0])
@@ -361,7 +370,10 @@
 
         public Result<ServerRequestController> GetRequestControllerById(int id)
         {
-            var matches = _requests.Select(r => r).Where(r => r.Id == id).ToList();
+            var matches =
+                _requests.Select(r => r)
+                    .Where(r => r.Id == id)
+                    .ToList();
 
             if (matches.Count == 0)
             {
@@ -377,7 +389,10 @@
 
         public Result<FileTransferController> GetFileTransferById(int id)
         {
-            var matches = _fileTransfers.Select(t => t).Where(t => t.FiletransferId == id).ToList();
+            var matches =
+                _fileTransfers.Select(t => t)
+                    .Where(t => t.FiletransferId == id)
+                    .ToList();
 
             if (matches.Count == 0)
             {

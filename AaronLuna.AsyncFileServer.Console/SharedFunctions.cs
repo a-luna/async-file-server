@@ -78,7 +78,7 @@
             var userSelection = 0;
             while (userSelection == 0)
             {
-                Menu.DisplayMenu(menuText, menuItems);
+                ConsoleMenu.DisplayMenu(menuText, menuItems);
                 var input = Console.ReadLine();
 
                 var validationResult = ValidateNumberIsWithinRange(input, 1, menuItems.Count);

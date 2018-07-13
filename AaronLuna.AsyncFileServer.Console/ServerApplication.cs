@@ -171,7 +171,7 @@ namespace AaronLuna.AsyncFileServer.Console
 
         void HandleException(Exception ex)
         {
-            _log.Error("Exception cought:", ex);
+            _log.Error("Exception caught:", ex);
             Console.WriteLine(Environment.NewLine + ex.GetReport());
         }
 

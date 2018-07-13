@@ -97,9 +97,16 @@
             ServerEvent sendRequestStartedEvent,
             ServerEvent sendRequestCompleteEvent)
         {
-            _request = new ServerRequest {Direction = ServerRequestDirection.Sent, RequestBytes = requestBytes};
+            _request = new ServerRequest
+            {
+                Direction = ServerRequestDirection.Sent,
+                RequestBytes = requestBytes
+            };
+
+            sendRequestStartedEvent.UpdateTimeStamp();
             EventLog.Add(sendRequestStartedEvent);
             EventOccurred?.Invoke(this, sendRequestStartedEvent);
+
             ReadRequestBytes(requestBytes);
 
             var connectToServer =
@@ -124,8 +131,10 @@
                 _socket.Close();
             }
 
+            sendRequestCompleteEvent.UpdateTimeStamp();
             EventLog.Add(sendRequestCompleteEvent);
             EventOccurred?.Invoke(this, sendRequestCompleteEvent);
+
             Status = ServerRequestStatus.Sent;
 
             return Result.Ok();

@@ -15,7 +15,7 @@
             TimeStamp = DateTime.Now;
         }
 
-        public DateTime TimeStamp { get; }
+        public DateTime TimeStamp { get; private set; }
         public ServerEventType EventType { get; set; }
 
         public IPAddress RemoteServerIpAddress { get; set; }
@@ -74,6 +74,11 @@
 
         public bool DoNotDisplayInLog => EventType.DoNotDisplayInLog();
         public bool LogLevelIsDebugOnly => EventType.LogLevelIsDebugOnly();
+
+        public void UpdateTimeStamp()
+        {
+            TimeStamp = DateTime.Now;
+        }
 
         public string GetLogFileEntry()
         {
