@@ -7,6 +7,7 @@
     using System.Threading.Tasks;
 
     using Common.Console.Menu;
+    using Common.Extensions;
     using Common.Result;
 
     using Model;
@@ -71,9 +72,11 @@
                 return Result.Fail(getFileListResult.Error);
             }
 
-            foreach (var file in getFileListResult.Value)
+            var fileInfoList = getFileListResult.Value;
+            foreach (var i in Enumerable.Range(0, fileInfoList.Count))
             {
-                MenuItems.Add(new SendFileMenuItem(_state, file));
+                var isLastMenuItem = i.IsLastIteration(fileInfoList.Count);
+                MenuItems.Add(new SendFileMenuItem(_state, fileInfoList[i], isLastMenuItem));
             }
 
             MenuItems.Add(new ReturnToParentMenuItem("Return to previous menu"));
@@ -85,12 +88,12 @@
         {
             var emptyFolderError =
                 "Transfer folder is empty, please place files in the path below:" +
-                $"{Environment.NewLine}{_state.LocalServer.MyTransferFolderPath}";
+                $"{Environment.NewLine}{_state.LocalServer.MyInfo.TransferFolder}";
 
             List<string> listOfFiles;
             try
             {
-                listOfFiles = Directory.GetFiles(_state.LocalServer.MyTransferFolderPath).ToList();
+                listOfFiles = Directory.GetFiles(_state.LocalServer.MyInfo.TransferFolder).ToList();
             }
             catch (IOException ex)
             {
@@ -110,9 +113,14 @@
                 return Result.Fail(getFileListResult.Error);
             }
 
-            foreach (var (filePath, fileSizeBytes) in getFileListResult.Value)
+            var fileInfoList = getFileListResult.Value;
+            foreach (var i in Enumerable.Range(0, fileInfoList.Count))
             {
-                MenuItems.Add(new GetFileMenuItem(_state, filePath, fileSizeBytes));
+                var filePath = fileInfoList[i].filePath;
+                var fileSize = fileInfoList[i].fileSizeBytes;
+                var isLastMenuItem = i.IsLastIteration(fileInfoList.Count);
+
+                MenuItems.Add(new GetFileMenuItem(_state, filePath, fileSize, isLastMenuItem));
             }
 
             MenuItems.Add(new ReturnToParentMenuItem("Return to previous menu"));

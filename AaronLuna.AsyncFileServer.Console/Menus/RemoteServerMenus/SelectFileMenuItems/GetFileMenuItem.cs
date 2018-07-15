@@ -1,5 +1,6 @@
 ﻿namespace AaronLuna.AsyncFileServer.Console.Menus.RemoteServerMenus.SelectFileMenuItems
 {
+    using System;
     using System.IO;
     using System.Threading.Tasks;
 
@@ -13,7 +14,7 @@
         readonly string _remoteFilePath;
         readonly long _fileSize;
 
-        public GetFileMenuItem(AppState state, string remoteFilePath, long fileSize)
+        public GetFileMenuItem(AppState state, string remoteFilePath, long fileSize, bool isLastMenuItem)
         {
             _state = state;
             _remoteFilePath = remoteFilePath;
@@ -22,7 +23,11 @@
             ReturnToParent = false;
 
             var fileName = Path.GetFileName(remoteFilePath);
-            ItemText = $"{fileName} ({FileHelper.FileSizeToString(fileSize)})";
+            var menuItem = $"{fileName} ({FileHelper.FileSizeToString(fileSize)})";
+
+            ItemText = isLastMenuItem
+                ? menuItem + Environment.NewLine
+                : menuItem;
         }
 
         public string ItemText { get; set; }
@@ -41,7 +46,7 @@
                     serverName,
                     _remoteFilePath,
                     _fileSize,
-                    _state.LocalServer.MyTransferFolderPath);
+                    _state.LocalServer.MyInfo.TransferFolder);
         }
     }
 }

@@ -10,15 +10,15 @@
     class RetryStalledFileTransferMenuItem : IMenuItem
     {
         readonly AppState _state;
-        readonly FileTransfer _fileTransfer;
+        readonly int _fileTransferId;
 
-        public RetryStalledFileTransferMenuItem(AppState state, FileTransfer fileTransfer)
+        public RetryStalledFileTransferMenuItem(AppState state, int fileTransferId)
         {
             _state = state;
-            _fileTransfer = fileTransfer;
+            _fileTransferId = fileTransferId;
 
             ReturnToParent = false;
-            ItemText = fileTransfer.ToString();
+            ItemText = fileTransferId.ToString();
         }
 
         public string ItemText { get; set; }
@@ -27,7 +27,7 @@
         public async Task<Result> ExecuteAsync()
         {
             var retryFileTransferesult = await _state.LocalServer.RetryFileTransferAsync(
-                _fileTransfer.Id,
+                _fileTransferId,
                 _state.SelectedServerInfo.SessionIpAddress,
                 _state.SelectedServerInfo.PortNumber).ConfigureAwait(false);
 

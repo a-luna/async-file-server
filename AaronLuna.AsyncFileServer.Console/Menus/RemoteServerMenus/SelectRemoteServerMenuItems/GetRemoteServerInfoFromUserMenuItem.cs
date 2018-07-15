@@ -67,7 +67,7 @@
             var clientIp = serverInfo.SessionIpAddress;
             var clientPort = serverInfo.PortNumber;
 
-            if (serverInfo.IsEqualTo(_state.LocalServer.Info))
+            if (serverInfo.IsEqualTo(_state.LocalServer.MyInfo))
             {
                 var error =
                     $"{clientIp}:{clientPort} is the same IP address " +

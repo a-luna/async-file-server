@@ -14,7 +14,7 @@ namespace AaronLuna.AsyncFileServer.Test
     using System.Threading.Tasks;
 
     [TestClass]
-    public class TplSocketTestFixture
+    public class TplSocketExtensionsTestFixture
     {
         const int BufferSize = 8 * 1024;
         const int ConnectTimeoutMs = 3000;

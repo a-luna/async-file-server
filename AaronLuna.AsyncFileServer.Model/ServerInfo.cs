@@ -15,32 +15,47 @@
 
         public ServerInfo()
         {
+            Name = string.Empty;
             TransferFolder = string.Empty;
             PortNumber = 0;
 
             SessionIpAddress = IPAddress.Loopback;
             LocalIpAddress = IPAddress.Loopback;
             PublicIpAddress = IPAddress.Loopback;
+
+            SessionIpString = string.Empty;
+            LocalIpString = string.Empty;
+            PublicIpString = string.Empty;
         }
 
         public ServerInfo(IPAddress ipAddress, int portNumber)
         {
+            Name = string.Empty;
             TransferFolder = string.Empty;
             PortNumber = portNumber;
 
             SessionIpAddress = ipAddress;
             LocalIpAddress = IPAddress.Loopback;
             PublicIpAddress = IPAddress.Loopback;
+
+            SessionIpString = string.Empty;
+            LocalIpString = string.Empty;
+            PublicIpString = string.Empty;
         }
 
         public ServerInfo(string ipAddress, int portNumber)
         {
+            Name = string.Empty;
             TransferFolder = string.Empty;
             PortNumber = portNumber;
 
             SessionIpAddress = NetworkUtilities.ParseSingleIPv4Address(ipAddress).Value;
             LocalIpAddress = IPAddress.Loopback;
             PublicIpAddress = IPAddress.Loopback;
+
+            SessionIpString = string.Empty;
+            LocalIpString = string.Empty;
+            PublicIpString = string.Empty;
         }
 
         public string TransferFolder { get; set; }
@@ -96,10 +111,10 @@
         }
 
         public string ItemText =>
-            $"Name......: {Name}{Environment.NewLine}" +
-            $"   IP........: {SessionIpAddress}{Environment.NewLine}" +
-            $"   Port......: {PortNumber}{Environment.NewLine}" +
-            $"   Platform..: {Platform}{Environment.NewLine}";
+        $"Name......: {Name}{Environment.NewLine}" +
+        $"   IP........: {SessionIpAddress}{Environment.NewLine}" +
+        $"   Port......: {PortNumber}{Environment.NewLine}" +
+        $"   Platform..: {Platform}{Environment.NewLine}";
     }
 
     public static class ServerInfoExtensions

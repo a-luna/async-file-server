@@ -6,11 +6,11 @@
     using Common.Console.Menu;
     using Common.Result;
 
-    class ProcessNextRequestInQueueMenuItem : IMenuItem
+    class ProcessInboundFileTransferMenuItem : IMenuItem
     {
         readonly AppState _state;
 
-        public ProcessNextRequestInQueueMenuItem(AppState state)
+        public ProcessInboundFileTransferMenuItem(AppState state)
         {
             _state = state;
 
@@ -28,7 +28,7 @@
                 return Result.Ok();
             }
 
-            var result = await _state.LocalServer.ProcessNextRequestInQueueAsync().ConfigureAwait(false);
+            var result = await _state.LocalServer.ProcessNextFileTransferInQueueAsync().ConfigureAwait(false);
             if (result.Failure)
             {
                 return result;

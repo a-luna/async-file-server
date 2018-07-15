@@ -1,7 +1,6 @@
 ﻿namespace AaronLuna.AsyncFileServer.Model
 {
     using System;
-    using System.IO;
     using System.Net;
 
     using Common.Extensions;
@@ -59,7 +58,7 @@
         public string RetryLockoutTimeRemianing => (RetryLockoutExpireTime - DateTime.Now).ToFormattedString();
         public TimeSpan FileTransferDuration => FileTransferCompleteTime - FileTransferStartTime;
         public string FileTransferDurationTimeString => FileTransferDuration.ToFormattedString();
-        public string FileTransferRate => FileTransfer.GetTransferRate(FileTransferDuration, FileSizeInBytes);
+        public string FileTransferRate { get; set; }
         public int CurrentFileBytesReceived { get; set; }
         public long TotalFileBytesReceived { get; set; }
         public int CurrentFileBytesSent { get; set; }
@@ -94,13 +93,13 @@
         {
             var indentLevel1 = logToScreen
                 ? string.Empty
-                : "\t\t\t\t\t\t\t\t\t\t\t\t\t";
+                : "\t\t\t\t\t\t\t\t\t";
 
             var report = string.Empty;
             switch (EventType)
             {
                 case ServerEventType.ServerStartedListening:
-                    report += $"NOW ACCEPTING CONNECTIONS ON PORT {LocalPortNumber}";
+                    report += $"NOW ACCEPTING CONNECTIONS ON PORT {LocalPortNumber}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ServerStoppedListening:
@@ -196,7 +195,7 @@
                     break;
 
                 case ServerEventType.ProcessRequestComplete:
-                    report += $"PROCESS COMPLETE: {RequestType.Name()}";
+                    report += $"PROCESS COMPLETE: {RequestType.Name()}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.QueueContainsUnhandledRequests:
@@ -223,7 +222,7 @@
                     break;
 
                 case ServerEventType.SendTextMessageComplete:
-                    report += "Text message was successfully sent";
+                    report += $"Text message was successfully sent{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ReceivedTextMessage:
@@ -291,29 +290,29 @@
 
                 case ServerEventType.RequestFileListStarted:
                     report +=
-                        $"Sending request for available file information to {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}{Environment.NewLine}" +
+                        $"Sending request to {RemoteServerIpAddress}:{RemoteServerPortNumber} for list of files available to download{Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}Requested By...: {LocalIpAddress}:{LocalPortNumber}{Environment.NewLine}" +
                         $"{indentLevel1}Target Folder..: {RemoteFolder}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ReceivedFileListRequest:
-                    report += $"File list request details{Environment.NewLine}{Environment.NewLine}" +
+                    report += $"Received request for list of files available to download:{Environment.NewLine}{Environment.NewLine}" +
                               $"{indentLevel1}Send Response To..: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
                               $"{indentLevel1}Target Folder.....: {LocalFolder}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.SendFileListStarted:
                     report +=
-                        $"Sending requested file information to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+                        $"Sending list of files available to download to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 
                 case ServerEventType.SendFileListComplete:
-                    report += $"File information was successfully sent{Environment.NewLine}";
+                    report += $"File list was successfully sent{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ReceivedFileList:
                     report +=
-                        $"File list received from {RemoteServerIpAddress}:{RemoteServerPortNumber}, " +
+                        $"List of files available to download received from {RemoteServerIpAddress}:{RemoteServerPortNumber}, " +
                         $"{RemoteServerFileList.Count} files available{Environment.NewLine}";
                     break;
 
@@ -376,7 +375,7 @@
                 case ServerEventType.SendFileTransferRejectedStarted:
                     report +=
                         $"Notifying {RemoteServerIpAddress}:{RemoteServerPortNumber} that file transfer has been rejected, " +
-                        $"file with same name already exists at location {LocalFolder}{Path.DirectorySeparatorChar}{FileName}";
+                        "file with same name already exists in the local server's transfer folder";
                     break;
 
                 case ServerEventType.RemoteServerRejectedFileTransfer:
@@ -473,7 +472,7 @@
                     break;
 
                 case ServerEventType.SendShutdownServerCommandComplete:
-                    report += "PROCESS COMPLETE: INITIATE SERVER SHUTDOWN";
+                    report += $"PROCESS COMPLETE: INITIATE SERVER SHUTDOWN{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ReceivedShutdownServerCommand:

@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
     using System.Net;
     using System.Net.Sockets;
@@ -31,6 +30,7 @@
         long _fileSizeBytes;
         long _fileTransferResponseCode;
         long _lockoutExpireTimeTicks;
+        string _fileName;
         string _requestedFilePath;
         string _localFilePath;
         string _localFolderPath;
@@ -454,6 +454,7 @@
                 _,
                 _,
                 _,
+                _fileName,
                 _requestedFilePath,
                 _localFilePath,
                 _localFolderPath,
@@ -486,72 +487,68 @@
                 : Result.Fail<TextMessage>($"Request received is not valid for this operation ({RequestType}).");
         }
 
-        public Result<FileTransfer> GetInboundFileTransfer(ServerInfo localServerInfo, int fileTransferId)
+        public Result<FileTransferController> GetInboundFileTransfer(
+            ServerInfo localServerInfo,
+            int fileTransferId,
+            float updateInterval)
         {
             if (Status == ServerRequestStatus.NoData)
             {
-                return Result.Fail<FileTransfer>("Request from remote server has not been received.");
+                return Result.Fail<FileTransferController>("Request from remote server has not been received.");
             }
 
             FileTransferId = fileTransferId;
 
-            var inboundFileTransfer = new FileTransfer(_bufferSize)
+            var inboundFileTransfer =
+                new FileTransferController(fileTransferId, _bufferSize, _timeoutMs, updateInterval)
             {
-                Id = fileTransferId,
-                TransferDirection = FileTransferDirection.Inbound,
-                Initiator = FileTransferInitiator.RemoteServer,
-                Status = FileTransferStatus.AwaitingResponse,
                 TransferResponseCode = _fileTransferResponseCode,
-                RemoteServerRetryLimit = _fileTransferRetryLimit,
-                MyLocalIpAddress = localServerInfo.LocalIpAddress,
-                MyPublicIpAddress = localServerInfo.PublicIpAddress,
-                MyServerPortNumber = localServerInfo.PortNumber,
-                RemoteServerIpAddress = _remoteServerIpAddress,
-                RemoteServerPortNumber = _remoteServerPortNumber,
-                LocalFilePath = _localFilePath,
-                LocalFolderPath = _localFolderPath,
-                FileSizeInBytes = _fileSizeBytes,
-                RequestInitiatedTime = DateTime.Now
+                RemoteServerRetryLimit = _fileTransferRetryLimit
             };
 
+            inboundFileTransfer.InitializeInboundFileTransfer(
+                FileTransferInitiator.RemoteServer,
+                localServerInfo,
+                RemoteServerInfo,
+                _fileName,
+                _fileSizeBytes,
+                _localFolderPath,
+                _remoteFolderPath);
+            
             return RequestType == ServerRequestType.InboundFileTransferRequest
                 ? Result.Ok(inboundFileTransfer)
-                : Result.Fail<FileTransfer>($"Request received is not valid for this operation ({RequestType}).");
+                : Result.Fail<FileTransferController>($"Request received is not valid for this operation ({RequestType}).");
         }
 
-        public Result<FileTransfer> GetOutboundFileTransfer(ServerInfo localServerInfo, int fileTransferId)
+        public Result<FileTransferController> GetOutboundFileTransfer(
+            ServerInfo localServerInfo,
+            int fileTransferId,
+            float updateInterval)
         {
             if (Status == ServerRequestStatus.NoData)
             {
-                return Result.Fail<FileTransfer>("Request from remote server has not been received.");
+                return Result.Fail<FileTransferController>("Request from remote server has not been received.");
             }
 
             FileTransferId = fileTransferId;
 
-            var outboundFileTransfer = new FileTransfer(_bufferSize)
-            {
-                Id = fileTransferId,
-                RemoteServerTransferId = _fileTransferId,
-                TransferDirection = FileTransferDirection.Outbound,
-                Initiator = FileTransferInitiator.RemoteServer,
-                Status = FileTransferStatus.AwaitingResponse,
-                TransferResponseCode = DateTime.Now.Ticks,
-                MyLocalIpAddress = localServerInfo.LocalIpAddress,
-                MyPublicIpAddress = localServerInfo.PublicIpAddress,
-                MyServerPortNumber = localServerInfo.PortNumber,
-                RemoteServerIpAddress = _remoteServerIpAddress,
-                RemoteServerPortNumber = _remoteServerPortNumber,
-                LocalFilePath = _requestedFilePath,
-                LocalFolderPath = Path.GetDirectoryName(_requestedFilePath),
-                RemoteFolderPath = _remoteFolderPath,
-                RemoteFilePath = Path.Combine(_remoteFolderPath, Path.GetFileName(_requestedFilePath)),
-                FileSizeInBytes = new FileInfo(_requestedFilePath).Length,
-                RequestInitiatedTime = DateTime.Now
-            };
+            var fileTransferController =
+                new FileTransferController(fileTransferId, _bufferSize, _timeoutMs, updateInterval)
+                {
+                    RemoteServerTransferId = _fileTransferId
+                };
+
+            fileTransferController.InitializeOutboundFileTransfer(
+                FileTransferInitiator.RemoteServer,
+                localServerInfo,
+                RemoteServerInfo,
+                _requestedFilePath,
+                _remoteFolderPath);
 
             return RequestType == ServerRequestType.OutboundFileTransferRequest
-                ? Result.Ok(outboundFileTransfer)
-                : Result.Fail<FileTransfer>($"Request received is not valid for this operation ({RequestType}).");
+                ? Result.Ok(fileTransferController)
+                : Result.Fail<FileTransferController>(
+                    $"Request received is not valid for this operation ({RequestType}).");
         }
 
         public Result<long> GetFileTransferResponseCode()
@@ -599,19 +596,20 @@
                 : Result.Fail<int>(error);
         }
 
-        public Result<FileTransfer> UpdateInboundFileTransfer(FileTransfer fileTransfer)
+        public Result<FileTransferController> UpdateInboundFileTransfer(FileTransferController fileTransfer)
         {
             if (Status == ServerRequestStatus.NoData)
             {
-                return Result.Fail<FileTransfer>("Request from remote server has not been received.");
+                return Result.Fail<FileTransferController>("Request from remote server has not been received.");
             }
 
             return RequestType == ServerRequestType.InboundFileTransferRequest
                 ? Result.Ok(UpdateTransferDetails(fileTransfer))
-                : Result.Fail<FileTransfer>($"Request received is not valid for this operation ({RequestType}).");
+                : Result.Fail<FileTransferController>(
+                    $"Request received is not valid for this operation ({RequestType}).");
         }
 
-        FileTransfer UpdateTransferDetails(FileTransfer fileTransfer)
+        FileTransferController UpdateTransferDetails(FileTransferController fileTransfer)
         {
             FileTransferId = fileTransfer.Id;
 
@@ -649,19 +647,19 @@
                 : Result.Fail<Socket>($"Request received is not valid for this operation ({RequestType}).");
         }
 
-        public Result<FileTransfer> GetRetryLockoutDetails(FileTransfer fileTransfer)
+        public Result<FileTransferController> GetRetryLockoutDetails(FileTransferController fileTransfer)
         {
             if (Status == ServerRequestStatus.NoData)
             {
-                return Result.Fail<FileTransfer>("Request from remote server has not been received.");
+                return Result.Fail<FileTransferController>("Request from remote server has not been received.");
             }
 
             return RequestType == ServerRequestType.RetryLimitExceeded
                 ? Result.Ok(ApplyRetryLockoutDetails(fileTransfer))
-                : Result.Fail<FileTransfer>($"Request received is not valid for this operation ({RequestType}).");
+                : Result.Fail<FileTransferController>($"Request received is not valid for this operation ({RequestType}).");
         }
 
-        FileTransfer ApplyRetryLockoutDetails(FileTransfer fileTransfer)
+        FileTransferController ApplyRetryLockoutDetails(FileTransferController fileTransfer)
         {
             fileTransfer.RemoteServerRetryLimit = _fileTransferRetryLimit;
             fileTransfer.RetryLockoutExpireTime = new DateTime(_lockoutExpireTimeTicks);

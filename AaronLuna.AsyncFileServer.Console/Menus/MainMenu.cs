@@ -125,27 +125,15 @@
         {
             return $"Enter a menu item number (valid range 1-{TieredMenu.ItemCount}):";
         }
-
-        void PopulateSelectRemoteServerMenuTier()
-        {
-            var selectRemoteServerTier = new MenuTier(string.Empty);
-
-            if (!_state.RemoteServerSelected)
-            {
-                selectRemoteServerTier.MenuItems.Add(new SelectRemoteServerMenu(_state));
-            }
-
-            TieredMenu.AddTier(selectRemoteServerTier);
-        }
-
+        
         void PopulatePendingRequestsMenuTier()
         {
             var handleRequestsMenuTier = new MenuTier(Resources.MenuTierLabel_PendingRequests);
 
-            if (!_state.LocalServer.NoFileTransfersPending)
+            if (_state.LocalServer.FileTransferPending)
             {
                 handleRequestsMenuTier.MenuItems.Add(
-                    new ProcessNextRequestInQueueMenuItem(_state));
+                    new ProcessInboundFileTransferMenuItem(_state));
             }
 
             if (_state.LocalServer.StalledTransferIds.Count > 0)
@@ -166,6 +154,18 @@
             }
 
             TieredMenu.AddTier(handleRequestsMenuTier);
+        }
+
+        void PopulateSelectRemoteServerMenuTier()
+        {
+            var selectRemoteServerTier = new MenuTier(string.Empty);
+
+            if (!_state.RemoteServerSelected)
+            {
+                selectRemoteServerTier.MenuItems.Add(new SelectRemoteServerMenu(_state));
+            }
+
+            TieredMenu.AddTier(selectRemoteServerTier);
         }
 
         void PopulateRemoteServerMenuTier()

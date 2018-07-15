@@ -124,12 +124,10 @@
         public static byte[] ConstructInboundFileTransferRequest(
             string localIpAddress,
             int localPort,
-            FileTransfer fileTransfer)
+            int fileTransferId,
+            string remoteFilePath,
+            string localFolderPath)
         {
-            var fileTransferId = fileTransfer.Id;
-            var remoteFilePath = fileTransfer.RemoteFilePath;
-            var localFolderPath = fileTransfer.LocalFolderPath;
-
             var requestType = BitConverter.GetBytes((int)ServerRequestType.OutboundFileTransferRequest);
 
             var fileTransferIdData = BitConverter.GetBytes(fileTransferId);
@@ -166,22 +164,20 @@
         public static byte[] ConstructOutboundFileTransferRequest(
             string localIpAddress,
             int localPort,
-            FileTransfer fileTransfer)
+            long responseCode,
+            int remoteServerFileTransferId,
+            int retryCounter,
+            int retryLimit,
+            string localFilePath,
+            long fileSizeBytes,
+            string remoteFolderPath)
         {
-            var responseCode = fileTransfer.TransferResponseCode;
-            var remoteServerTransferId = fileTransfer.RemoteServerTransferId;
-            var retryCounter = fileTransfer.RetryCounter;
-            var retryLimit = fileTransfer.RemoteServerRetryLimit;
-            var localFilePath = fileTransfer.LocalFilePath;
-            var fileSizeBytes = fileTransfer.FileSizeInBytes;
-            var remoteFolderPath = fileTransfer.RemoteFolderPath;
-
             var requestType = BitConverter.GetBytes((int)ServerRequestType.InboundFileTransferRequest);
 
             var responseCodeData = BitConverter.GetBytes(responseCode);
             var responseCodeLen = BitConverter.GetBytes(Constants.SizeOfInt64InBytes);
 
-            var remoteServerTransferIdData = BitConverter.GetBytes(remoteServerTransferId);
+            var remoteServerTransferIdData = BitConverter.GetBytes(remoteServerFileTransferId);
             var remoteServerTransferIdLen = BitConverter.GetBytes(Constants.SizeOfInt32InBytes);
 
             var retryCounterData = BitConverter.GetBytes(retryCounter);
@@ -193,6 +189,10 @@
             var fileName = Path.GetFileName(localFilePath);
             var fileNameData = Encoding.UTF8.GetBytes(fileName);
             var fileNameLen = BitConverter.GetBytes(fileNameData.Length);
+
+            var localFolderPath = Path.GetDirectoryName(localFilePath);
+            var localFolderData = Encoding.UTF8.GetBytes(localFolderPath);
+            var localFolderLen = BitConverter.GetBytes(localFolderData.Length);
 
             var sizeBytesData = BitConverter.GetBytes(fileSizeBytes);
             var sizeBytesLen = BitConverter.GetBytes(Constants.SizeOfInt64InBytes);
@@ -218,6 +218,8 @@
             wrappedRequest.AddRange(retryLimitData);
             wrappedRequest.AddRange(fileNameLen);
             wrappedRequest.AddRange(fileNameData);
+            wrappedRequest.AddRange(localFolderLen);
+            wrappedRequest.AddRange(localFolderData);
             wrappedRequest.AddRange(sizeBytesLen);
             wrappedRequest.AddRange(sizeBytesData);
             wrappedRequest.AddRange(remoteIpLen);

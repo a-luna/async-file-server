@@ -14,19 +14,15 @@
     {
         readonly AppState _state;
         readonly List<ServerEvent> _eventLog;
-        readonly FileTransfer _fileTransfer;
-        readonly LogLevel _logLevel;
+        readonly FileTransferController _fileTransfer;
 
-        public FileTransferLogViewerMenuItem(
-            AppState state,
+        public FileTransferLogViewerMenuItem(AppState state,
             FileTransferController fileTransferController,
-            List<ServerEvent> eventLog,
-            LogLevel logLevel)
+            List<ServerEvent> eventLog)
         {
             _state = state;
-            _fileTransfer = fileTransferController.FileTransfer;
+            _fileTransfer = fileTransferController;
             _eventLog = eventLog;
-            _logLevel = logLevel;
 
             ReturnToParent = false;
             ItemText = _fileTransfer.ToString();

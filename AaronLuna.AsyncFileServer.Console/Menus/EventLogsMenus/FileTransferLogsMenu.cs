@@ -104,8 +104,7 @@
                     new FileTransferLogViewerMenuItem(
                         _state,
                         fileTransferController,
-                        eventLog,
-                        _state.Settings.LogLevel));
+                        eventLog));
             }
 
             MenuItems.Reverse();

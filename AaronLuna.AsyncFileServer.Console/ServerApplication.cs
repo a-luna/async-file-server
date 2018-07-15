@@ -15,14 +15,13 @@ namespace AaronLuna.AsyncFileServer.Console
     using Common.Extensions;
     using Common.IO;
     using Common.Logging;
-    using Common.Network;
     using Common.Result;
     using ConsoleProgressBar;
 
     public class ServerApplication
     {
         const string SettingsFileName = "settings.xml";
-        readonly int _displayMessageDelay = Constants.TwoSecondsInMilliseconds;
+        readonly int _messageDisplayTime = Constants.TwoSecondsInMilliseconds;
 
         readonly Logger _log = new Logger(typeof(ServerApplication));
         readonly string _settingsFilePath;
@@ -37,7 +36,7 @@ namespace AaronLuna.AsyncFileServer.Console
                 $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}";
 
             _cts = new CancellationTokenSource();
-            _state = new AppState {MessageDisplayTime = _displayMessageDelay};
+            _state = new AppState {MessageDisplayTime = _messageDisplayTime};
             _state.LocalServer.EventOccurred += HandleServerEventAsync;
             _state.LocalServer.SocketEventOccurred += HandleServerEventAsync;
             _state.LocalServer.FileTransferProgress += HandleFileTransferProgress;
@@ -145,7 +144,7 @@ namespace AaronLuna.AsyncFileServer.Console
             _state.LocalServer.TransferUpdateInterval = _state.Settings.TransferUpdateInterval;
             _state.LocalServer.TransferRetryLimit = _state.Settings.TransferRetryLimit;
             _state.LocalServer.RetryLimitLockout = _state.Settings.RetryLimitLockout;
-            _state.LocalServer.Info.TransferFolder = _state.Settings.LocalServerFolderPath;
+            _state.LocalServer.MyInfo.TransferFolder = _state.Settings.LocalServerFolderPath;
 
             var anySettingWasChanged = portNumberHasChanged || cidrIpHasChanged;
 
@@ -411,10 +410,10 @@ namespace AaronLuna.AsyncFileServer.Console
                 new FileTransferProgressBar(fileSize, transferTimeout)
                 {
                     NumberOfBlocks = 20,
-                    StartBracket = " |",
-                    EndBracket = "|",
-                    CompletedBlock = "|",
-                    IncompleteBlock = "\u00a0",
+                    StartBracket = string.Empty,
+                    EndBracket = string.Empty,
+                    CompletedBlock = "\u2022",
+                    IncompleteBlock = "·",
                     DisplayAnimation = false
                 };
 
@@ -434,7 +433,7 @@ namespace AaronLuna.AsyncFileServer.Console
             var startTime = serverEvent.FileTransferStartTime;
             var completeTime = serverEvent.FileTransferCompleteTime;
             var timeElapsed = (completeTime - startTime).ToFormattedString();
-            var transferRate = FileTransfer.GetTransferRate(completeTime - startTime, fileSize);
+            var transferRate = serverEvent.FileTransferRate;
 
             _state.ProgressBar.BytesReceived = fileSize;
             _state.ProgressBar.Report(1);
@@ -478,7 +477,7 @@ namespace AaronLuna.AsyncFileServer.Console
             _state.ProgressBarInstantiated = false;
 
             var notifyStalledResult =
-                await SendFileTransferStalledNotification(inboundFileTransfer.FiletransferId).ConfigureAwait(false);
+                await SendFileTransferStalledNotification(inboundFileTransfer.Id).ConfigureAwait(false);
 
             if (notifyStalledResult.Failure)
             {
@@ -516,7 +515,7 @@ namespace AaronLuna.AsyncFileServer.Console
                 var inboundFileTransfer = getFileTransferResult.Value;
 
                 FileHelper.DeleteFileIfAlreadyExists(
-                    inboundFileTransfer.FileTransfer.LocalFilePath,
+                    inboundFileTransfer.LocalFilePath,
                     3);
             }
 

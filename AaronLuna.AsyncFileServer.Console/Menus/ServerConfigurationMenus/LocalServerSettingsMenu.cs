@@ -68,7 +68,7 @@
         void PopulateMenu()
         {
             MenuItems.Clear();
-            MenuItems.Add(new GetPortNumberFromUserMenuItem(_state, _state.LocalServer.Info, true));
+            MenuItems.Add(new GetPortNumberFromUserMenuItem(_state, _state.LocalServer.MyInfo, true));
             MenuItems.Add(new SetLocalServerCidrIpMenuItem(_state));
             MenuItems.Add(new DisplayLocalIPv4AddressesMenuItem());
             MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));
@@ -76,7 +76,7 @@
 
         Result ApplyChanges()
         {
-            _state.Settings.LocalServerPortNumber = _state.LocalServer.Info.PortNumber;
+            _state.Settings.LocalServerPortNumber = _state.LocalServer.MyInfo.PortNumber;
             _state.Settings.LocalNetworkCidrIp = _state.UserEntryLocalNetworkCidrIp;
 
             return ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);

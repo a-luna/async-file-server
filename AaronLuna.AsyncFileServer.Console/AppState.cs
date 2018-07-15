@@ -46,11 +46,7 @@
         public int InboundFileTransferId { get; set; }
         public int LogViewerFileTransferId { get; set; }
         public int LogViewerRequestId { get; set; }
-        public bool FileTransferRejected => LocalServer.FileTransferRejected;
         public bool FileTransferInProgress { get; set; }
-        public bool FileTransferStalled => LocalServer.FileTransferStalled;
-        public bool FileTransferAccepted => LocalServer.FileTransferAccepted;
-        public bool FileTransferCanceled => LocalServer.FileTransferCanceled;
 
         public string UserEntryLocalNetworkCidrIp { get; set; }
         public IPAddress UserEntryIpAddress { get; set; }
@@ -69,20 +65,20 @@
         public string LocalServerInfo()
         {
             var serverIsListening = LocalServer.IsListening
-                ? $"Server is listening on port {LocalServer.Info.PortNumber}"
+                ? $"Server is listening on port {LocalServer.MyInfo.PortNumber}"
                 : "Server is currently not listening for incoming connections";
 
             var localServerIp =
-                $"Local IP:  {LocalServer.Info.LocalIpAddress}{Environment.NewLine}" +
-                $"Public IP: {LocalServer.Info.PublicIpAddress}{Environment.NewLine}";
+                $"Local IP:  {LocalServer.MyInfo.LocalIpAddress}{Environment.NewLine}" +
+                $"Public IP: {LocalServer.MyInfo.PublicIpAddress}{Environment.NewLine}";
 
             var filePlural = LocalServer.PendingFileTransferCount > 1
                 ? "requests"
                 : "request";
 
-            var fileTransferQueue = LocalServer.NoFileTransfersPending
-                ? "No pending file transfers"
-                : $"{LocalServer.PendingFileTransferCount} pending file transfer {filePlural}";
+            var fileTransferQueue = LocalServer.FileTransferPending
+                ? $"{LocalServer.PendingFileTransferCount} pending file transfer {filePlural}"
+                : "No pending file transfers";
 
             var transferInProgress = LocalServer.FileTransferInProgress
                 ? "FILE TRANSFER IN PROGRESS"

@@ -48,7 +48,7 @@
             foreach (var id in _state.LocalServer.StalledTransferIds)
             {
                 var fileTransfer = _state.LocalServer.GetFileTransferById(id).Value;
-                MenuItems.Add(new RetryStalledFileTransferMenuItem(_state, fileTransfer.FileTransfer));
+                MenuItems.Add(new RetryStalledFileTransferMenuItem(_state, fileTransfer.Id));
             }
 
             MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));

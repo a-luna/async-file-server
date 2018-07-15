@@ -32,8 +32,7 @@
         Result Execute()
         {
             SharedFunctions.DisplayLocalServerInfo(_state);
-            Console.WriteLine(Environment.NewLine);
-
+            Console.WriteLine($"{Environment.NewLine}############# TEXT MESSAGE EVENT LOG #############{Environment.NewLine}");
             foreach (var textMessage in _textSession.Messages)
             {
                 Console.WriteLine(textMessage + Environment.NewLine);

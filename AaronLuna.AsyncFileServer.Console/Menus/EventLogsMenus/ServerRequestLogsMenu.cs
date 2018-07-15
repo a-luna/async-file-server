@@ -91,7 +91,7 @@
             {
                 if (id <= _state.LogViewerRequestId) continue;
 
-                var request = _state.LocalServer.GetRequestControllerById(id).Value;
+                var request = _state.LocalServer.GetRequestById(id).Value;
                 var eventLog = _state.LocalServer.GetEventLogForRequest(id);
 
                 MenuItems.Add(
