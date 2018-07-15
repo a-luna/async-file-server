@@ -168,14 +168,22 @@ namespace AaronLuna.AsyncFileServer.Test
                 SocketTimeoutInMilliseconds = 5000
             };
 
-            _server = new AsyncFileServer("Server");
-            _client = new AsyncFileServer("Client");
+            var clientSettings = new ServerSettings
+            {
+                LocalServerFolderPath = _localFolder,
+                LocalNetworkCidrIp = _cidrIp,
+                SocketSettings = _socketSettings
+            };
 
-            //_server = new AsyncFileServer();
-            //_server.MyInfo.Name = "Server";
+            var serverSettings = new ServerSettings
+            {
+                LocalServerFolderPath = _remoteFolder,
+                LocalNetworkCidrIp = _cidrIp,
+                SocketSettings = _socketSettings
+            };
 
-            //_client = new AsyncFileServer();
-            //_client.MyInfo.Name = "Client";
+            _server = new AsyncFileServer("Server", serverSettings);
+            _client = new AsyncFileServer("Client", clientSettings);
 
         }
 
@@ -237,14 +245,10 @@ namespace AaronLuna.AsyncFileServer.Test
             const string messageForClient = "I don't know who or what you are referring to. I am a normal human, sir, and most definitely NOT some type of server. Good day.";
 
             await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
-            _server.SocketSettings = _socketSettings;
-            _server.MyInfo.TransferFolder = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
             await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
-            _client.SocketSettings = _socketSettings;
-            _client.MyInfo.TransferFolder = _localFolder;
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
@@ -315,14 +319,10 @@ namespace AaronLuna.AsyncFileServer.Test
             var receiveFolderPath = _remoteFolder;
 
             await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
-            _server.SocketSettings = _socketSettings;
-            _server.MyInfo.TransferFolder = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
             await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
-            _client.SocketSettings = _socketSettings;
-            _client.MyInfo.TransferFolder = _localFolder;
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
@@ -400,14 +400,10 @@ namespace AaronLuna.AsyncFileServer.Test
             var receivedFilePath = _localFilePath;
 
             await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
-            _server.SocketSettings = _socketSettings;
-            _server.MyInfo.TransferFolder = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
             await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
-            _client.SocketSettings = _socketSettings;
-            _client.MyInfo.TransferFolder = _localFolder;
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
@@ -474,14 +470,10 @@ namespace AaronLuna.AsyncFileServer.Test
             const int remoteServerPort = 8022;
 
             await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
-            _server.SocketSettings = _socketSettings;
-            _server.MyInfo.TransferFolder = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
             await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
-            _client.SocketSettings = _socketSettings;
-            _client.MyInfo.TransferFolder = _localFolder;
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
@@ -532,14 +524,10 @@ namespace AaronLuna.AsyncFileServer.Test
             const int remoteServerPort = 8012;
 
             await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
-            _server.SocketSettings = _socketSettings;
-            _server.MyInfo.TransferFolder = _testFilesFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
             await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
-            _client.SocketSettings = _socketSettings;
-            _client.MyInfo.TransferFolder = _localFolder;
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
@@ -613,14 +601,10 @@ namespace AaronLuna.AsyncFileServer.Test
             const int localPort = 8014;
 
             await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
-            _server.SocketSettings = _socketSettings;
-            _server.MyInfo.TransferFolder = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
             await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
-            _client.SocketSettings = _socketSettings;
-            _client.MyInfo.TransferFolder = _localFolder;
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
@@ -674,14 +658,10 @@ namespace AaronLuna.AsyncFileServer.Test
             var receivedFilePath = _localFilePath;
 
             await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
-            _server.SocketSettings = _socketSettings;
-            _server.MyInfo.TransferFolder = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
             await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
-            _client.SocketSettings = _socketSettings;
-            _client.MyInfo.TransferFolder = _localFolder;
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
@@ -731,14 +711,10 @@ namespace AaronLuna.AsyncFileServer.Test
             const int remoteServerPort = 8018;
 
             await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
-            _server.SocketSettings = _socketSettings;
-            _server.MyInfo.TransferFolder = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
             await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
-            _client.SocketSettings = _socketSettings;
-            _client.MyInfo.TransferFolder = _localFolder;
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
@@ -828,16 +804,10 @@ namespace AaronLuna.AsyncFileServer.Test
             const int remoteServerPort = 8020;
 
             await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
-
-            _server.SocketSettings = _socketSettings;
-            _server.MyInfo.TransferFolder = _remoteFolder;
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
             await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
-
-            _client.SocketSettings = _socketSettings;
-            _client.MyInfo.TransferFolder = _localFolder;
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 

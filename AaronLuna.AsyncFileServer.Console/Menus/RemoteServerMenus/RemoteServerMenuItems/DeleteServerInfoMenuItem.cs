@@ -3,6 +3,7 @@
     using System;
     using System.Threading.Tasks;
 
+    using Model;
     using Common.Console.Menu;
     using Common.Result;
 

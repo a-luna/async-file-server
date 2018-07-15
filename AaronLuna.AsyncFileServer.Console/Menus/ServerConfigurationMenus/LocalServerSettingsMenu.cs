@@ -6,6 +6,7 @@
     using Common.Console.Menu;
     using Common.Result;
 
+    using Model;
     using CommonMenuItems;
     using LocalServerSettingsMenuItems;
 

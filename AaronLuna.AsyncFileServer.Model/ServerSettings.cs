@@ -1,4 +1,4 @@
-﻿namespace AaronLuna.AsyncFileServer.Console
+﻿ namespace AaronLuna.AsyncFileServer.Model
 {
     using System;
     using System.Collections.Generic;
@@ -8,7 +8,6 @@
     using System.Xml;
     using System.Xml.Serialization;
 
-    using Model;
     using Common.Network;
     using Common.Result;
 
@@ -191,11 +190,16 @@
 
             return new ServerSettings
             {
+                LogLevel = LogLevel.Normal,
                 TransferRetryLimit = 3,
+                RetryLimitLockout = TimeSpan.FromMinutes(10),
                 LocalServerFolderPath = defaultTransferFolderPath,
                 TransferUpdateInterval = 0.0025f,
+                FileTransferStalledTimeout = TimeSpan.FromSeconds(5),
                 LocalNetworkCidrIp = string.Empty,
-                LocalServerPortNumber = 0
+                LocalServerPortNumber = 0,
+                SocketSettings = new SocketSettings(),
+                RemoteServers = new List<ServerInfo>()
             };
         }
     }

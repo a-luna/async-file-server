@@ -58,7 +58,7 @@
             if (menuIndex > _updateFrequencyValues.Count) return Result.Ok();
 
             _state.Settings.TransferUpdateInterval = _updateFrequencyValues[menuIndex - 1];
-            _state.LocalServer.TransferUpdateInterval = _state.Settings.TransferUpdateInterval;
+            _state.LocalServer.Settings.TransferUpdateInterval = _state.Settings.TransferUpdateInterval;
 
             return Result.Ok();
         }

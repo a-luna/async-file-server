@@ -140,10 +140,10 @@ namespace AaronLuna.AsyncFileServer.Console
                     _state.Settings.LocalNetworkCidrIp,
                     _state.Settings.LocalServerPortNumber).ConfigureAwait(false);
 
-            _state.LocalServer.SocketSettings = _state.Settings.SocketSettings;
-            _state.LocalServer.TransferUpdateInterval = _state.Settings.TransferUpdateInterval;
-            _state.LocalServer.TransferRetryLimit = _state.Settings.TransferRetryLimit;
-            _state.LocalServer.RetryLimitLockout = _state.Settings.RetryLimitLockout;
+            _state.LocalServer.Settings.SocketSettings = _state.Settings.SocketSettings;
+            _state.LocalServer.Settings.TransferUpdateInterval = _state.Settings.TransferUpdateInterval;
+            _state.LocalServer.Settings.TransferRetryLimit = _state.Settings.TransferRetryLimit;
+            _state.LocalServer.Settings.RetryLimitLockout = _state.Settings.RetryLimitLockout;
             _state.LocalServer.MyInfo.TransferFolder = _state.Settings.LocalServerFolderPath;
 
             var anySettingWasChanged = portNumberHasChanged || cidrIpHasChanged;
@@ -291,8 +291,8 @@ namespace AaronLuna.AsyncFileServer.Console
             _state.DoNotRequestServerInfo = true;
             _state.DoNotRefreshMainMenu = true;
 
-            var ipAddress = _state.LocalServer.RemoteServerSessionIpAddress;
-            var port = _state.LocalServer.RemoteServerPortNumber;
+            var ipAddress = _state.LocalServer.RemoteServerInfo.SessionIpAddress;
+            var port = _state.LocalServer.RemoteServerInfo.PortNumber;
 
             var requestServerInfoTask =
                 Task.Run(() =>
