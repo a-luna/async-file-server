@@ -1,7 +1,6 @@
 ﻿namespace AaronLuna.AsyncFileServer.Utilities
 {
     using System;
-    using System.IO;
     using System.Net;
     using System.Text;
 
@@ -26,7 +25,6 @@
                 remoteServerLocalIpAddress,
                 remoteServerPublicIpAddress,
                 platform,
-                _,
                 _,
                 _,
                 _,
@@ -61,16 +59,16 @@
             };
         }
 
-        public static (IPAddress remoteServerIpAddress,
+        public static (
+            IPAddress remoteServerIpAddress,
             int remoteServerPortNumber,
             string textMessage,
             int fileTransferId,
             IPAddress remoteServerLocalIpAddress,
             IPAddress remoteServerPublicIpAddress,
-            ServerPlatform _platform,
+            ServerPlatform platform,
             string fileName,
             string requestedFilePath,
-            string localFilePath,
             string localFolderPath,
             string remoteFolderPath,
             FileInfoList fileInfoList,
@@ -89,7 +87,6 @@
             var platform = ServerPlatform.None;
             var fileName = string.Empty;
             var requestedFilePath = string.Empty;
-            var localFilePath = string.Empty;
             var localFolderPath = string.Empty;
             var remoteFolderPath = string.Empty;
             var fileInfoList = new FileInfoList();
@@ -236,7 +233,6 @@
                 platform,
                 fileName,
                 requestedFilePath,
-                localFilePath,
                 localFolderPath,
                 remoteFolderPath,
                 fileInfoList,
@@ -334,7 +330,7 @@
 
         static (
             string requestorIpAddress,
-            int requestortPort,
+            int requestorPort,
             string targetFolder,
             FileInfoList fileInfo) ReadFileListResponse(byte[] requestData)
         {

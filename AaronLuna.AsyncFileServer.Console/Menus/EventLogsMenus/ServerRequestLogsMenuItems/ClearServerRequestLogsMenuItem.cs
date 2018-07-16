@@ -19,7 +19,7 @@
             _requestIds = _state.LocalServer.RequestIds;
 
             ReturnToParent = true;
-            ItemText = "Clear server request list";
+            ItemText = $"Clear server request list{Environment.NewLine}";
         }
 
         public string ItemText { get; set; }

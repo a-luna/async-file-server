@@ -25,7 +25,7 @@
                 case PlatformID.Unix:
                 case PlatformID.MacOSX:
                     return ServerPlatform.Unix;
-                    
+
                 default:
                     return ServerPlatform.None;
             }

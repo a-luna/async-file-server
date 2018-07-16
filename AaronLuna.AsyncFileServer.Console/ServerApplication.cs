@@ -1,5 +1,7 @@
 ﻿//TODO: Figure out best eay to prompt user to provide a name for a server that was added automatically following request server info
 //TODO: Update AsyncFileServer.ToString() to be more useful when debugging. New format should incorporate the Name and OperatingSystem properties
+//TODO: Validate server name provided by user after new server is added or name is changed, use IsValidFileName() extension method.
+//TODO: Determine if it will be simple or difficult to show deconstructed request bytes and how each region maps to fileNameLen, fileName, portNumLen, portNum, etc
 
 namespace AaronLuna.AsyncFileServer.Console
 {
@@ -414,7 +416,7 @@ namespace AaronLuna.AsyncFileServer.Console
                     EndBracket = string.Empty,
                     CompletedBlock = "\u2022",
                     IncompleteBlock = "·",
-                    DisplayAnimation = false
+                    AnimationSequence = ProgressAnimations.RotatingPipe
                 };
 
             _state.ProgressBar.FileTransferStalled += HandleStalledFileTransferAsync;

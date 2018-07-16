@@ -19,7 +19,7 @@
             _fileTransferIds = _state.LocalServer.FileTransferIds;
 
             ReturnToParent = true;
-            ItemText = "Clear file transfer list";
+            ItemText = $"Clear file transfer list{Environment.NewLine}";
         }
 
         public string ItemText { get; set; }

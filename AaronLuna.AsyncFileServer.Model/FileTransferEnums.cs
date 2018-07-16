@@ -28,7 +28,7 @@
         RetryLimitExceeded,
         Error
     }
-    
+
     public static class FileTransferInitiatorExtensions
     {
         public static string ToString(this FileTransferInitiator initiator)

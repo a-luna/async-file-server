@@ -18,5 +18,9 @@
     <ProjectReference Include="..\AaronLuna.AsyncFileServer.Model\AaronLuna.AsyncFileServer.Model.csproj" />
     <ProjectReference Include="..\AaronLuna.AsyncFileServer.Utilities\AaronLuna.AsyncFileServer.Utilities.csproj" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <DotNetCliToolReference Include="Microsoft.DotNet.Watcher.Tools" Version="2.0.2" />
+  </ItemGroup> 
 
 </Project>

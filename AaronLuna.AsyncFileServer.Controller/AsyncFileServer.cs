@@ -1,4 +1,6 @@
-﻿namespace AaronLuna.AsyncFileServer.Controller
+﻿using AaronLuna.Common.Linq;
+
+namespace AaronLuna.AsyncFileServer.Controller
 {
     using System;
     using System.Collections.Generic;
@@ -131,7 +133,7 @@
             Settings = settings;
             _myLanCidrIp = settings.LocalNetworkCidrIp;
         }
-        
+
         public ServerInfo MyInfo { get; set; }
         public ServerInfo RemoteServerInfo { get; set; }
         public FileInfoList RemoteServerFileList { get; set; }
@@ -172,7 +174,7 @@
             _fileTransfers.Select(t => t)
                 .Where(t => t.TransferStalled)
                 .Select(t => t.Id).ToList();
-        
+
         public event EventHandler<ServerEvent> EventOccurred;
         public event EventHandler<ServerEvent> SocketEventOccurred;
         public event EventHandler<ServerEvent> FileTransferProgress;
@@ -336,22 +338,35 @@
 
             var matchingRequests =
                 _requests.Select(r => r)
-                    .Where(r => r.FileTransferId == fileTransferId)
-                    .Select(r => r.EventLog);
+                    .Where(r => r.FileTransferId == fileTransferId);
 
-            foreach (var matchingEvents in matchingRequests)
+            foreach (var request in matchingRequests)
             {
-                eventLog.AddRange(matchingEvents);
+                eventLog.AddRange(request.EventLog);
+
+                var matchingFileTransfers =
+                    _fileTransfers.Select(t => t)
+                        .Where(t => t.RequestId == request.Id);
+
+                foreach (var fileTransfer in matchingFileTransfers)
+                {
+                    eventLog.AddRange(fileTransfer.EventLog);
+                }
             }
 
             eventLog.RemoveAll(DoNotDisplayInLog);
 
             if (logLevel == LogLevel.Normal)
             {
-                eventLog.RemoveAll(LogLevelIsDebugOnly);
+                eventLog.RemoveAll(DoNotDisplayWithNormalLogLevel);
             }
 
-            return eventLog.OrderBy(e => e.TimeStamp).ToList();
+            var distinctEvents =
+                eventLog.DistinctBy(e => new {e.TimeStamp, e.EventType})
+                    .OrderBy(e => e.TimeStamp)
+                    .ToList();
+
+            return distinctEvents;
         }
 
         public List<ServerEvent> GetEventLogForRequest(int requestId)
@@ -375,7 +390,8 @@
 
         public List<ServerEvent> GetCompleteEventLog(LogLevel logLevel)
         {
-            var eventLog = new List<ServerEvent>();
+            var eventLog = new List<ServerEvent>()
+                ;
             foreach (var request in _requests)
             {
                 eventLog.AddRange(request.EventLog);
@@ -386,7 +402,7 @@
 
             if (logLevel == LogLevel.Normal)
             {
-                eventLog.RemoveAll(LogLevelIsDebugOnly);
+                eventLog.RemoveAll(DoNotDisplayWithNormalLogLevel);
             }
 
             return eventLog.OrderBy(e => e.TimeStamp).ToList();
@@ -397,7 +413,7 @@
             return serverEvent.DoNotDisplayInLog;
         }
 
-        static bool LogLevelIsDebugOnly(ServerEvent serverEvent)
+        static bool DoNotDisplayWithNormalLogLevel(ServerEvent serverEvent)
         {
             return serverEvent.LogLevelIsDebugOnly;
         }
@@ -415,13 +431,8 @@
             {
                 return Result.Fail<FileTransferController>($"Found {matches.Count} file transfers with the same response code value of {responseCode}");
             }
-
-            var requestedFileTransfer = matches[0];
-
-            requestedFileTransfer.EventLog =
-                _eventLog.Select(e => e).Where(e => e.FileTransferId == requestedFileTransfer.Id).ToList();
-
-            return Result.Ok(requestedFileTransfer);
+            
+            return Result.Ok(matches[0]);
         }
 
         int GetNumberOfUnreadTextMessages()
@@ -577,7 +588,7 @@
                     });
 
                 var inboundRequest =
-                    new ServerRequestController(_requestId, BufferSize, SocketTimeoutInMilliseconds);
+                    new ServerRequestController(_requestId, Settings);
 
                 inboundRequest.EventOccurred += HandleEventOccurred;
                 inboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
@@ -820,7 +831,7 @@
                 new ServerEvent {EventType = ServerEventType.SendTextMessageComplete};
 
             var outboundRequest =
-                new ServerRequestController(_requestId, BufferSize, SocketTimeoutInMilliseconds)
+                new ServerRequestController(_requestId, Settings)
                 {
                     RemoteServerInfo = RemoteServerInfo
                 };
@@ -912,10 +923,7 @@
 
             var outboundFileTransfer =
                 new FileTransferController(
-                    _fileTransferId,
-                    BufferSize,
-                    SocketTimeoutInMilliseconds,
-                    Settings.TransferUpdateInterval);
+                    _fileTransferId, Settings);
 
             outboundFileTransfer.EventOccurred += HandleEventOccurred;
             outboundFileTransfer.SocketEventOccurred += HandleSocketEventOccurred;
@@ -940,7 +948,7 @@
         async Task<Result> HandleOutboundFileTransferRequestAsync(ServerRequestController inboundRequest)
         {
             var getFileTransfer =
-                inboundRequest.GetOutboundFileTransfer(MyInfo, _fileTransferId, Settings.TransferUpdateInterval);
+                inboundRequest.GetOutboundFileTransfer(_fileTransferId, MyInfo, Settings);
 
             if (getFileTransfer.Failure)
             {
@@ -968,7 +976,7 @@
                     ServerEventType.SendNotificationFileDoesNotExistStarted,
                     ServerEventType.SendNotificationFileDoesNotExistComplete).ConfigureAwait(false);
             }
-            
+
             _eventLog.Add(new ServerEvent
             {
                 EventType = ServerEventType.ReceivedOutboundFileTransferRequest,
@@ -1029,7 +1037,7 @@
             };
 
             var outboundRequest =
-                new ServerRequestController(_requestId, BufferSize, SocketTimeoutInMilliseconds)
+                new ServerRequestController(_requestId, Settings)
                 {
                     RemoteServerInfo = RemoteServerInfo
                 };
@@ -1121,7 +1129,7 @@
             outboundFileTransfer.Status = FileTransferStatus.Accepted;
             outboundFileTransfer.RequestId = inboundRequest.Id;
             inboundRequest.FileTransferId = outboundFileTransfer.Id;
-            
+
             _eventLog.Add(new ServerEvent
             {
                 EventType = ServerEventType.RemoteServerAcceptedFileTransfer,
@@ -1214,10 +1222,7 @@
 
             var inboundFileTransfer =
                 new FileTransferController(
-                    _fileTransferId,
-                    BufferSize,
-                    SocketTimeoutInMilliseconds,
-                    Settings.TransferUpdateInterval);
+                    _fileTransferId, Settings);
 
             inboundFileTransfer.EventOccurred += HandleEventOccurred;
             inboundFileTransfer.SocketEventOccurred += HandleSocketEventOccurred;
@@ -1267,7 +1272,7 @@
             };
 
             var outboundRequest =
-                new ServerRequestController(BufferSize, SocketTimeoutInMilliseconds, _requestId)
+                new ServerRequestController(BufferSize, Settings)
                 {
                     RemoteServerInfo = RemoteServerInfo
                 };
@@ -1465,7 +1470,7 @@
             else
             {
                 var getFileTransfer =
-                    inboundRequest.GetInboundFileTransfer(MyInfo, _fileTransferId, Settings.TransferUpdateInterval);
+                    inboundRequest.GetInboundFileTransfer(_fileTransferId, MyInfo, Settings);
 
                 if (getFileTransfer.Failure)
                 {
@@ -1714,7 +1719,7 @@
             };
 
             var outboundRequest =
-                new ServerRequestController(_requestId, BufferSize, SocketTimeoutInMilliseconds)
+                new ServerRequestController(_requestId, Settings)
                 {
                     RemoteServerInfo = RemoteServerInfo
                 };
@@ -1822,7 +1827,7 @@
             };
 
             var outboundRequest =
-                new ServerRequestController(_requestId, BufferSize, SocketTimeoutInMilliseconds)
+                new ServerRequestController(_requestId, Settings)
                 {
                     RemoteServerInfo = RemoteServerInfo
                 };
@@ -1876,7 +1881,7 @@
             };
 
             var outboundRequest =
-                new ServerRequestController(_requestId, BufferSize, SocketTimeoutInMilliseconds)
+                new ServerRequestController(_requestId, Settings)
                 {
                     RemoteServerInfo = RemoteServerInfo
                 };
@@ -1930,7 +1935,7 @@
                 new ServerEvent {EventType = ServerEventType.RequestFileListComplete};
 
             var outboundRequest =
-                new ServerRequestController(_requestId, BufferSize, SocketTimeoutInMilliseconds)
+                new ServerRequestController(_requestId, Settings)
                 {
                     RemoteServerInfo = RemoteServerInfo
                 };
@@ -2017,7 +2022,7 @@
                 new ServerEvent {EventType = ServerEventType.SendFileListComplete};
 
             var outboundRequest =
-                new ServerRequestController(_requestId, BufferSize, SocketTimeoutInMilliseconds)
+                new ServerRequestController(_requestId, Settings)
                 {
                     RemoteServerInfo = RemoteServerInfo
                 };
@@ -2135,7 +2140,7 @@
                 new ServerEvent {EventType = ServerEventType.SendServerInfoComplete};
 
             var outboundRequest =
-                new ServerRequestController(_requestId, BufferSize, SocketTimeoutInMilliseconds)
+                new ServerRequestController(_requestId, Settings)
                 {
                     RemoteServerInfo = RemoteServerInfo
                 };

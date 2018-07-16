@@ -83,10 +83,10 @@
 
                 case ServerRequestType.RequestedFolderDoesNotExist:
                     return "REQUESTED FOLDER DOES NOT EXIST";
-                    
+
                 case ServerRequestType.ShutdownServerCommand:
                     return "SHUTDOWN SERVER";
-                    
+
                 case ServerRequestType.FileTransferComplete:
                     return "FILE TRANSFER COMPLETE";
 
@@ -103,7 +103,7 @@
                     return string.Empty;
             }
         }
-        
+
         public static bool IsFileTransferResponse(this ServerRequestType responseType)
         {
             switch (responseType)

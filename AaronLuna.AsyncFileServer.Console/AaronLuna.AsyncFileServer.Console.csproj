@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="server.log" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\aaronluna-common\AaronLuna.Common\AaronLuna.Common.csproj" />
     <ProjectReference Include="..\AaronLuna.AsyncFileServer.Controller\AaronLuna.AsyncFileServer.Controller.csproj" />
     <ProjectReference Include="..\AaronLuna.AsyncFileServer.Model\AaronLuna.AsyncFileServer.Model.csproj" />

@@ -32,13 +32,12 @@
         long _lockoutExpireTimeTicks;
         string _fileName;
         string _requestedFilePath;
-        string _localFilePath;
         string _localFolderPath;
         string _remoteFolderPath;
         string _textMessage;
         FileInfoList _fileInfoList;
 
-        public ServerRequestController(int id, int bufferSize, int timeoutMs)
+        public ServerRequestController(int id, ServerSettings settings)
         {
             Id = id;
             Status = ServerRequestStatus.NoData;
@@ -47,9 +46,9 @@
             UnreadBytes = new List<byte>();
             RemoteServerInfo = new ServerInfo();
 
-            _bufferSize = bufferSize;
-            _timeoutMs = timeoutMs;
-            _buffer = new byte[bufferSize];
+            _bufferSize = settings.SocketSettings.BufferSize;
+            _timeoutMs = settings.SocketSettings.SocketTimeoutInMilliseconds;
+            _buffer = new byte[_bufferSize];
         }
 
         public int Id { get; }
@@ -456,7 +455,6 @@
                 _,
                 _fileName,
                 _requestedFilePath,
-                _localFilePath,
                 _localFolderPath,
                 _remoteFolderPath,
                 _fileInfoList,
@@ -488,9 +486,9 @@
         }
 
         public Result<FileTransferController> GetInboundFileTransfer(
-            ServerInfo localServerInfo,
             int fileTransferId,
-            float updateInterval)
+            ServerInfo localServerInfo,
+            ServerSettings settings)
         {
             if (Status == ServerRequestStatus.NoData)
             {
@@ -500,7 +498,7 @@
             FileTransferId = fileTransferId;
 
             var inboundFileTransfer =
-                new FileTransferController(fileTransferId, _bufferSize, _timeoutMs, updateInterval)
+                new FileTransferController(fileTransferId, settings)
             {
                 TransferResponseCode = _fileTransferResponseCode,
                 RemoteServerRetryLimit = _fileTransferRetryLimit
@@ -521,9 +519,9 @@
         }
 
         public Result<FileTransferController> GetOutboundFileTransfer(
-            ServerInfo localServerInfo,
             int fileTransferId,
-            float updateInterval)
+            ServerInfo localServerInfo,
+            ServerSettings settings)
         {
             if (Status == ServerRequestStatus.NoData)
             {
@@ -533,7 +531,7 @@
             FileTransferId = fileTransferId;
 
             var fileTransferController =
-                new FileTransferController(fileTransferId, _bufferSize, _timeoutMs, updateInterval)
+                new FileTransferController(fileTransferId, settings)
                 {
                     RemoteServerTransferId = _fileTransferId
                 };

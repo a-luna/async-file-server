@@ -7,7 +7,7 @@
     using System.Net.Sockets;
     using System.Threading;
     using System.Threading.Tasks;
-    
+
     using Common.Extensions;
     using Common.IO;
     using Common.Logging;
@@ -22,12 +22,12 @@
         readonly int _bufferSize;
         readonly int _timeoutMs;
         readonly float _updateInterval;
-        byte[] _buffer;        
+        byte[] _buffer;
         Socket _socket;
         FileTransfer _fileTransfer;
         static readonly object FileLock = new object();
 
-        public FileTransferController(int id, int bufferSize, int timeoutMs, float updateInterval)
+        public FileTransferController(int id, ServerSettings settings)
         {
             Id = id;
             EventLog = new List<ServerEvent>();
@@ -49,10 +49,10 @@
             RemoteServerTransferId = 0;
             TransferResponseCode = 0;
 
-            _bufferSize = bufferSize;
-            _timeoutMs = timeoutMs;
-            _updateInterval = updateInterval;
-            _buffer = new byte[bufferSize];
+            _bufferSize = settings.SocketSettings.BufferSize;
+            _timeoutMs = settings.SocketSettings.SocketTimeoutInMilliseconds;
+            _updateInterval = settings.TransferUpdateInterval;
+            _buffer = new byte[_bufferSize];
             _fileTransfer = new FileTransfer();
         }
 
@@ -81,7 +81,7 @@
         public string RemoteFilePath => _fileTransfer.RemoteFilePath;
         public string RemoteFolderPath => _fileTransfer.RemoteFolderPath;
         public string FileName => GetFileName();
-        
+
         public DateTime RequestInitiatedTime { get; set; }
         public DateTime TransferStartTime { get; set; }
         public DateTime TransferCompleteTime { get; set; }
@@ -171,7 +171,7 @@
                 FileSizeInBytes = fileSizeBytes
             };
         }
-        
+
         public void ResetTransferValues()
         {
             RetryCounter++;
@@ -489,7 +489,7 @@
             BytesRemaining = FileSizeInBytes;
             PercentComplete = 0;
             InboundFileTransferStalled = false;
-            
+
             if (unreadBytes.Length > 0)
             {
                 TotalBytesReceived += unreadBytes.Length;
@@ -666,6 +666,7 @@
             return Result.Ok();
         }
 
+        // TODO: I have a feeling that this is no longer necessary (it may even be incorrect and I should always be using either remote or local)
         string GetFileName()
         {
             switch (TransferDirection)
