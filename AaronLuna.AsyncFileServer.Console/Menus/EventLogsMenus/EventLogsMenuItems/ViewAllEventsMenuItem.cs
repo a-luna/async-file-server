@@ -31,12 +31,7 @@
             var eventLog = _state.LocalServer.GetCompleteEventLog(_state.Settings.LogLevel);
             if (eventLog.Count == 0)
             {
-                var error =
-                    $"{Environment.NewLine}There are currently no events in the log, " +
-                    "press enter to return to the main menu";
-
-                Console.WriteLine(error);
-                Console.ReadLine();
+                SharedFunctions.NotifyUserErrorOccurred("There are currently no events in the log");
                 return Result.Ok();
             }
 

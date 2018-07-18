@@ -69,8 +69,9 @@
                 : "Server is currently not listening for incoming connections";
 
             var localServerIp =
-                $"Local IP:  {LocalServer.MyInfo.LocalIpAddress}{Environment.NewLine}" +
-                $"Public IP: {LocalServer.MyInfo.PublicIpAddress}{Environment.NewLine}";
+                $"LAN CIDR IP..: {Settings.LocalNetworkCidrIp}{Environment.NewLine}" +
+                $"Local IP.....: {LocalServer.MyInfo.LocalIpAddress}{Environment.NewLine}" +
+                $"Public IP....: {LocalServer.MyInfo.PublicIpAddress}{Environment.NewLine}";
 
             var filePlural = LocalServer.PendingFileTransferCount > 1
                 ? "requests"

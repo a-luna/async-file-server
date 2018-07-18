@@ -25,6 +25,7 @@
 
         Result Execute()
         {
+            Console.Clear();
             NetworkUtilities.DisplayLocalIPv4AddressInfo();
 
             Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");

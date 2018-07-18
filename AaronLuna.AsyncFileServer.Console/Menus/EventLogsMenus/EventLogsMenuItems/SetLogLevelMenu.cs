@@ -25,13 +25,13 @@
 
             _logLevels = new List<LogLevel>
             {
-                LogLevel.Normal,
+                LogLevel.Info,
                 LogLevel.Debug
             };
 
             MenuItems = new List<IMenuItem>
             {
-                new SelectDummyValueMenuItem(nameof(LogLevel.Normal)),
+                new SelectDummyValueMenuItem(nameof(LogLevel.Info)),
                 new SelectDummyValueMenuItem($"{LogLevel.Debug}{Environment.NewLine}"),
                 new ReturnToParentMenuItem("Return to previous menu")
             };

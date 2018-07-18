@@ -60,10 +60,7 @@
         {
             if (_state.LocalServer.NoFileTransfers)
             {
-                Console.WriteLine("There are no file transfer logs available");
-                Console.WriteLine($"{Environment.NewLine}Press enter to return to the previous menu.");
-                Console.ReadLine();
-
+                SharedFunctions.NotifyUserErrorOccurred("There are no file transfer logs available");
                 return true;
             }
 
@@ -95,7 +92,7 @@
                 var fileTransferController = _state.LocalServer.GetFileTransferById(id).Value;
                 var eventLog = _state.LocalServer.GetEventLogForFileTransfer(id, _state.Settings.LogLevel);
 
-                if (_state.Settings.LogLevel == LogLevel.Normal)
+                if (_state.Settings.LogLevel == LogLevel.Info)
                 {
                     eventLog.RemoveAll(LogLevelIsDebugOnly);
                 }

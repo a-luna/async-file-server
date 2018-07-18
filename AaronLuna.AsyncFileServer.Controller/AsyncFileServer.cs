@@ -1,6 +1,4 @@
-﻿using AaronLuna.Common.Linq;
-
-namespace AaronLuna.AsyncFileServer.Controller
+﻿namespace AaronLuna.AsyncFileServer.Controller
 {
     using System;
     using System.Collections.Generic;
@@ -334,39 +332,37 @@ namespace AaronLuna.AsyncFileServer.Controller
         public List<ServerEvent> GetEventLogForFileTransfer(int fileTransferId, LogLevel logLevel)
         {
             var eventLog = new List<ServerEvent>();
-            eventLog.AddRange(_eventLog.Select(e => e).Where(e => e.FileTransferId == fileTransferId));
+
+            var eventsMatchingFileTransferId =
+                _eventLog.Select(e => e)
+                    .Where(e => e.FileTransferId == fileTransferId).ToList();
+
+            eventLog.AddRange(eventsMatchingFileTransferId);
 
             var matchingRequests =
                 _requests.Select(r => r)
-                    .Where(r => r.FileTransferId == fileTransferId);
+                    .Where(r => r.FileTransferId == fileTransferId).ToList();
 
             foreach (var request in matchingRequests)
             {
+                var eventsMatchingRequestId =
+                    _eventLog.Select(e => e)
+                        .Where(e => e.RequestId == request.Id).ToList();
+
                 eventLog.AddRange(request.EventLog);
-
-                var matchingFileTransfers =
-                    _fileTransfers.Select(t => t)
-                        .Where(t => t.RequestId == request.Id);
-
-                foreach (var fileTransfer in matchingFileTransfers)
-                {
-                    eventLog.AddRange(fileTransfer.EventLog);
-                }
+                eventLog.AddRange(eventsMatchingRequestId);                
             }
 
-            eventLog.RemoveAll(DoNotDisplayInLog);
+            var matchingFileTransfers =
+                _fileTransfers.Select(t => t)
+                    .Where(t => t.Id == fileTransferId).ToList();
 
-            if (logLevel == LogLevel.Normal)
+            foreach (var fileTransfer in matchingFileTransfers)
             {
-                eventLog.RemoveAll(DoNotDisplayWithNormalLogLevel);
+                eventLog.AddRange(fileTransfer.EventLog);
             }
 
-            var distinctEvents =
-                eventLog.DistinctBy(e => new {e.TimeStamp, e.EventType})
-                    .OrderBy(e => e.TimeStamp)
-                    .ToList();
-
-            return distinctEvents;
+            return eventLog.ApplyFilter(logLevel);
         }
 
         public List<ServerEvent> GetEventLogForRequest(int requestId)
@@ -383,39 +379,26 @@ namespace AaronLuna.AsyncFileServer.Controller
                 eventLog.AddRange(request.EventLog);
             }
 
-            eventLog.RemoveAll(DoNotDisplayInLog);
-
-            return eventLog.OrderBy(e => e.TimeStamp).ToList();
+            return eventLog.ApplyFilter(LogLevel.Debug);
         }
 
         public List<ServerEvent> GetCompleteEventLog(LogLevel logLevel)
         {
-            var eventLog = new List<ServerEvent>()
-                ;
+            var eventLog = new List<ServerEvent>();
+            eventLog.AddRange(_eventLog);
+
             foreach (var request in _requests)
             {
                 eventLog.AddRange(request.EventLog);
             }
 
-            eventLog.AddRange(_eventLog);
-            eventLog.RemoveAll(DoNotDisplayInLog);
-
-            if (logLevel == LogLevel.Normal)
+            foreach (var fileTransfer in _fileTransfers)
             {
-                eventLog.RemoveAll(DoNotDisplayWithNormalLogLevel);
+                eventLog.AddRange(fileTransfer.EventLog);
             }
 
-            return eventLog.OrderBy(e => e.TimeStamp).ToList();
-        }
+            return eventLog.ApplyFilter(logLevel);
 
-        static bool DoNotDisplayInLog(ServerEvent serverEvent)
-        {
-            return serverEvent.DoNotDisplayInLog;
-        }
-
-        static bool DoNotDisplayWithNormalLogLevel(ServerEvent serverEvent)
-        {
-            return serverEvent.LogLevelIsDebugOnly;
         }
 
         Result<FileTransferController> GetFileTransferByResponseCode(long responseCode)

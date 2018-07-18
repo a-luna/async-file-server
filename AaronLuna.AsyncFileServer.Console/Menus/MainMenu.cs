@@ -72,12 +72,13 @@
                 result = await menuItem.ExecuteAsync().ConfigureAwait(false);
                 exit = menuItem.ReturnToParent;
 
-                if (result.Success) continue;
+                //if (result.Success) continue;
+                //_state.DoNotRefreshMainMenu = true;
 
-                _log.Error($"Error: {result.Error}");
-                Console.WriteLine(Environment.NewLine + result.Error + Environment.NewLine);
-                Console.WriteLine("Press enter to return to the main menu.");
-                Console.ReadLine();
+                //_log.Error($"Error: {result.Error}");
+                //Console.WriteLine(Environment.NewLine + result.Error + Environment.NewLine);
+                //Console.WriteLine("Press enter to return to the main menu.");
+                //Console.ReadLine();
             }
 
             return result;

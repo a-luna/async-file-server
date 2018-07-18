@@ -7,6 +7,7 @@
 
     using Model;
     using Common.Console.Menu;
+    using Common.Extensions;
     using Common.Network;
     using Common.Result;
 
@@ -24,23 +25,34 @@
             Console.WriteLine(state.LocalServerInfo());
         }
 
+        public static void NotifyUserErrorOccurred(string error)
+        {
+            Console.WriteLine(Environment.NewLine + error + Environment.NewLine);
+            Console.WriteLine("Press enter to return to the main menu.");
+            Console.ReadLine();
+        }
+
         public static async Task<Result> SendTextMessageAsync(AppState state)
         {
             var ipAddress = state.SelectedServerInfo.SessionIpAddress;
             var port = state.SelectedServerInfo.PortNumber;
 
+            Console.Clear();
             Console.WriteLine($"{Environment.NewLine}Please enter a text message to send to {ipAddress}:{port}");
             var message = Console.ReadLine();
 
-            var sendMessageResult =
+            var sendMessage =
                 await state.LocalServer.SendTextMessageAsync(
                     message,
                     ipAddress,
                     port).ConfigureAwait(false);
 
-            return sendMessageResult.Success
-                ? Result.Ok()
-                : sendMessageResult;
+            if (sendMessage.Failure)
+            {
+                NotifyUserErrorOccurred(sendMessage.Error);
+            }
+
+            return sendMessage;
         }
 
         public static async Task<Result> RequestServerInfoAsync(
@@ -309,7 +321,20 @@
                 Console.WriteLine(Environment.NewLine + prompt);
                 var input = Console.ReadLine();
 
-                var confirm = $"Is \"{input}\" the name you wish to use for this server? Select no if you would like to change this value.";
+                var nameIsValid = input.IsValidFileName();
+                if (!nameIsValid)
+                {
+                    var error =
+                        $"\"{input}\" contains invalid characters, only a-z, A-Z, 0-9 " +
+                        "and \'.\' (period) \'_\' (underscore) \'-\' (hyphen) are allowed.";
+
+                    NotifyUserErrorOccurred(error);
+                    continue;
+                }
+
+                var confirm =
+                    $"Is \"{input}\" the name you wish to use for this server? " +
+                    "Select no if you would like to change this value.";
 
                 var useThisName = PromptUserYesOrNo(confirm);
                 if (useThisName)
@@ -324,12 +349,10 @@
         public static Result<string> LookupRemoteServerName(ServerInfo lookup, List<ServerInfo> serverInfoList)
         {
             var findMatch = GetRemoteServer(lookup, serverInfoList);
-            if (findMatch.Failure)
-            {
-                return Result.Fail<string>(findMatch.Error);
-            }
 
-            return Result.Ok(findMatch.Value.Name);
+            return findMatch.Success
+                ? Result.Ok(findMatch.Value.Name)
+                : Result.Fail<string>(findMatch.Error);
         }
 
         public static bool PromptUserYesOrNo(string prompt)

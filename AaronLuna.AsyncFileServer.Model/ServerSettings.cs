@@ -190,7 +190,7 @@
 
             return new ServerSettings
             {
-                LogLevel = LogLevel.Normal,
+                LogLevel = LogLevel.Info,
                 TransferRetryLimit = 3,
                 RetryLimitLockout = TimeSpan.FromMinutes(10),
                 LocalServerFolderPath = defaultTransferFolderPath,

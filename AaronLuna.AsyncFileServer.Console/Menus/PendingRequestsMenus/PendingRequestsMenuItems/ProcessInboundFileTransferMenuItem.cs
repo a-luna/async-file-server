@@ -31,6 +31,7 @@
             var result = await _state.LocalServer.ProcessNextFileTransferInQueueAsync().ConfigureAwait(false);
             if (result.Failure)
             {
+                SharedFunctions.NotifyUserErrorOccurred(result.Error);
                 return result;
             }
 

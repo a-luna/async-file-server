@@ -59,10 +59,7 @@
         {
             if (_state.LocalServer.NoRequests)
             {
-                Console.WriteLine("There are no server request logs available");
-                Console.WriteLine($"{Environment.NewLine}Press enter to return to the previous menu.");
-                Console.ReadLine();
-
+                SharedFunctions.NotifyUserErrorOccurred("There are no server request logs available");
                 return true;
             }
 

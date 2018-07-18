@@ -3,8 +3,9 @@
     public enum LogLevel
     {
         None,
-        Normal,
-        Debug
+        Info,
+        Debug,
+        Trace
     }
 
     public enum ServerEventType
