@@ -27,6 +27,8 @@
 
         public async Task<Result> ExecuteAsync()
         {
+            Console.Clear();
+            SharedFunctions.DisplayLocalServerInfo(_state);
             Console.WriteLine(Environment.NewLine);
 
             foreach (var textMessage in _textSession.UnreadMessages)
@@ -38,7 +40,11 @@
             var replyToMessage = SharedFunctions.PromptUserYesOrNo("Reply?");
             if (!replyToMessage) return Result.Ok();
 
-            return await SharedFunctions.SendTextMessageAsync(_state).ConfigureAwait(false);
+            return await
+                SharedFunctions.SendTextMessageAsync(
+                    _state,
+                    _textSession.RemoteServerInfo)
+                    .ConfigureAwait(false);
         }
     }
 }

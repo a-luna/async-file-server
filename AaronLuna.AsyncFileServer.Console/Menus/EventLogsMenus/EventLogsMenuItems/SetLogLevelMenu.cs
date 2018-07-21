@@ -26,13 +26,15 @@
             _logLevels = new List<LogLevel>
             {
                 LogLevel.Info,
-                LogLevel.Debug
+                LogLevel.Debug,
+                LogLevel.Trace
             };
 
             MenuItems = new List<IMenuItem>
             {
                 new SelectDummyValueMenuItem(nameof(LogLevel.Info)),
-                new SelectDummyValueMenuItem($"{LogLevel.Debug}{Environment.NewLine}"),
+                new SelectDummyValueMenuItem(nameof(LogLevel.Debug)),
+                new SelectDummyValueMenuItem($"{LogLevel.Trace}{Environment.NewLine}"),
                 new ReturnToParentMenuItem("Return to previous menu")
             };
         }
@@ -42,12 +44,17 @@
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
 
-        public async Task<Result> ExecuteAsync()
+        public Task<Result> ExecuteAsync()
+        {
+            return Task.Run((Func<Result>)Execute);
+        }
+
+        Result Execute()
         {
             _state.DoNotRefreshMainMenu = true;
             SharedFunctions.DisplayLocalServerInfo(_state);
 
-            var menuIndex = await SharedFunctions.GetUserSelectionIndexAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
+            var menuIndex = SharedFunctions.GetUserSelectionIndex(MenuText, MenuItems, _state);
             if (menuIndex > _logLevels.Count) return Result.Ok();
 
             _state.Settings.LogLevel = _logLevels[menuIndex - 1];

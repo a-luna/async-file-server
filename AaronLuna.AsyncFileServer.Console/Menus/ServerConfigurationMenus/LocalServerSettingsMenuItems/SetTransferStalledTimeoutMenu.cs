@@ -1,30 +1,27 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus.SocketSettingsMenuItems
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus.LocalServerSettingsMenuItems
 {
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-
+    
     using Common.Console.Menu;
     using Common.Result;
 
     using CommonMenuItems;
 
-    class SetSocketTimeoutMenu : IMenu
+    class SetTransferStalledTimeoutMenu : IMenu
     {
         readonly AppState _state;
         readonly List<int> _timeoutValues;
 
-        public SetSocketTimeoutMenu(AppState state)
+        public SetTransferStalledTimeoutMenu(AppState state)
         {
             _state = state;
 
-            ReturnToParent = true;
-            ItemText =
-                "Change socket timeout value * " +
-                $"({_state.Settings.SocketSettings.SocketTimeoutInMilliseconds} ms)" +
-                Environment.NewLine;
-
-            MenuText = $"Select a value from the list below:{Environment.NewLine}";
+            ReturnToParent = false;
+            ItemText = " Consider File Transfer Stalled After....: " +
+                       $"{_state.Settings.FileTransferStalledTimeout.TotalSeconds} seconds";
+            MenuText = "Select a value from the list below:";
 
             _timeoutValues = new List<int>
             {
@@ -53,15 +50,20 @@
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
 
-        public async Task<Result> ExecuteAsync()
+        public Task<Result> ExecuteAsync()
+        {
+            return Task.Run((Func<Result>)Execute);
+        }
+
+        Result Execute()
         {
             _state.DoNotRefreshMainMenu = true;
             SharedFunctions.DisplayLocalServerInfo(_state);
 
-            var menuIndex = await SharedFunctions.GetUserSelectionIndexAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
+            var menuIndex = SharedFunctions.GetUserSelectionIndex(MenuText, MenuItems, _state);
             if (menuIndex > _timeoutValues.Count) return Result.Ok();
 
-            _state.Settings.SocketSettings.SocketTimeoutInMilliseconds = _timeoutValues[menuIndex - 1];
+            _state.Settings.FileTransferStalledTimeout = TimeSpan.FromMilliseconds(_timeoutValues[menuIndex - 1]);
             _state.RestartRequired = true;
 
             return Result.Ok();

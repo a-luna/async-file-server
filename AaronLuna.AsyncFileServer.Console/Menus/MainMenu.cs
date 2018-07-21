@@ -68,17 +68,14 @@
                 SharedFunctions.DisplayLocalServerInfo(_state);
                 PopulateMenu();
 
-                var menuItem = await GetUserSelectionAsync().ConfigureAwait(false);
+                var menuItem = GetUserSelection();
                 result = await menuItem.ExecuteAsync().ConfigureAwait(false);
                 exit = menuItem.ReturnToParent;
 
-                //if (result.Success) continue;
-                //_state.DoNotRefreshMainMenu = true;
+                if (result.Success) continue;
+                _state.DoNotRefreshMainMenu = true;
 
-                //_log.Error($"Error: {result.Error}");
-                //Console.WriteLine(Environment.NewLine + result.Error + Environment.NewLine);
-                //Console.WriteLine("Press enter to return to the main menu.");
-                //Console.ReadLine();
+                SharedFunctions.NotifyUserErrorOccurred(result.Error);
             }
 
             return result;
@@ -95,7 +92,7 @@
             PopulateServerConfigurationMenuTier();
         }
 
-        async Task<IMenuItem> GetUserSelectionAsync()
+        IMenuItem GetUserSelection()
         {
             var userSelection = 0;
             while (userSelection == 0)
@@ -109,9 +106,7 @@
 
                 if (inputValidation.Failure)
                 {
-                    Console.WriteLine(Environment.NewLine + inputValidation.Error);
-                    await Task.Delay(_state.MessageDisplayTime).ConfigureAwait(false);
-
+                    SharedFunctions.NotifyUserErrorOccurred(inputValidation.Error);
                     SharedFunctions.DisplayLocalServerInfo(_state);
                     continue;
                 }
@@ -217,8 +212,7 @@
                 new MenuTier(Resources.MenuTierLabel_ServerConfiguration);
 
             serverConfigurationMenuTier.MenuItems.Add(new LocalServerSettingsMenu(_state));
-            serverConfigurationMenuTier.MenuItems.Add(new SocketSettingsMenu(_state));
-            serverConfigurationMenuTier.MenuItems.Add(new FileTransferSettingsMenu(_state));
+            serverConfigurationMenuTier.MenuItems.Add(new LocalServerNetworkPropertiesMenu(_state));
             serverConfigurationMenuTier.MenuItems.Add(_shutdownServer);
 
             TieredMenu.AddTier(serverConfigurationMenuTier);

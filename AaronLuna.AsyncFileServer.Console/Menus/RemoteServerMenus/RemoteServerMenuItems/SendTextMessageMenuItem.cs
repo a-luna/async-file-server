@@ -22,7 +22,7 @@
 
         public Task<Result> ExecuteAsync()
         {
-            return SharedFunctions.SendTextMessageAsync(_state);
+            return SharedFunctions.SendTextMessageAsync(_state, _state.SelectedServerInfo);
         }
     }
 }

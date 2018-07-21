@@ -15,7 +15,7 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Change IP address ({_state.SelectedServerInfo.SessionIpAddress})";
+            ItemText = $"IP Address..: {_state.SelectedServerInfo.SessionIpAddress}";
         }
 
         public string ItemText { get; set; }

@@ -5,6 +5,8 @@
     using System.Net;
     using System.Threading;
 
+    using Common.Result;
+
     using Controller;
     using Model;
     using ConsoleProgressBar;
@@ -109,6 +111,11 @@
             return FileTransferInProgress
                 ? $"SENDING FILE TO {LocalServer.RemoteServerInfo}..."
                 : selectedServerStatus;
+        }
+
+        public Result SaveSettingsToFile()
+        {
+            return ServerSettings.SaveToFile(Settings, SettingsFilePath);
         }
     }
 }

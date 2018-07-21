@@ -158,7 +158,7 @@
         public List<int> RequestIds => _requests.Select(r => r.Id).ToList();
         public int MostRecentRequestId => _requestId - 1;
 
-        public bool NoTextSessions => _textSessionId == 1;
+        public bool NoTextSessions => NoValidTextSessions();
         public List<int> TextSessionIds => _textSessions.Select(t => t.Id).ToList();
 
         public int UnreadTextMessageCount => GetNumberOfUnreadTextMessages();
@@ -248,6 +248,16 @@
             return pendingTransfers.Count > 0
                 ? Result.Ok(pendingTransfers[0])
                 : Result.Fail<ServerRequestController>("Queue contains no pending file transfers");
+        }
+
+        public bool NoValidTextSessions()
+        {
+            if (_textSessionId == 1) return true;
+
+            var validTextSessions =
+                _textSessions.Select(ts => ts).Where(ts => ts.MessageCount > 0).ToList();
+
+            return validTextSessions.Count == 0;
         }
 
         public Result<TextSession> GetTextSessionById(int id)

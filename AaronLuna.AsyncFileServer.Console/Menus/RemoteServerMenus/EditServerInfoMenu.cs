@@ -40,8 +40,7 @@
                 SharedFunctions.DisplayLocalServerInfo(_state);
                 PopulateMenu();
 
-                var menuItem =
-                    await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
+                var menuItem = SharedFunctions.GetUserSelection(MenuText, MenuItems, _state);
 
                 exit = menuItem.ReturnToParent;
                 result = await menuItem.ExecuteAsync().ConfigureAwait(false);
@@ -69,9 +68,9 @@
         void PopulateMenu()
         {
             MenuItems.Clear();
+            MenuItems.Add(new GetServerNameFromUserMenuItem(_state));
             MenuItems.Add(new GetIpAddressFromUserMenuItem(_state));
             MenuItems.Add(new GetPortNumberFromUserMenuItem(_state, _state.SelectedServerInfo, false));
-            MenuItems.Add(new GetServerNameFromUserMenuItem(_state));
             MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));
         }
 

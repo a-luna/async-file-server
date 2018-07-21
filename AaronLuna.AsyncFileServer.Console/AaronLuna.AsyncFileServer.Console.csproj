@@ -10,6 +10,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="transfer\**" />
+    <EmbeddedResource Remove="transfer\**" />
+    <None Remove="transfer\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="server.log" />
   </ItemGroup>
 

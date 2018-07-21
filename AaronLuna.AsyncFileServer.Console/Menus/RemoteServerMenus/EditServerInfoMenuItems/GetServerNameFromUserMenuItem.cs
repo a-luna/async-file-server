@@ -15,7 +15,7 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Change the name ({_state.SelectedServerInfo.Name}){Environment.NewLine}";
+            ItemText = $"Name........: {_state.SelectedServerInfo.Name}";
         }
 
         public string ItemText { get; set; }

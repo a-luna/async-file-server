@@ -28,14 +28,14 @@
 
         Result Execute()
         {
+            SharedFunctions.DisplayLocalServerInfo(_state);
+
             var eventLog = _state.LocalServer.GetCompleteEventLog(_state.Settings.LogLevel);
             if (eventLog.Count == 0)
             {
-                SharedFunctions.NotifyUserErrorOccurred("There are currently no events in the log");
-                return Result.Ok();
+                return Result.Fail("There are currently no events in the log");
             }
-
-            SharedFunctions.DisplayLocalServerInfo(_state);
+            
             Console.WriteLine($"################### EVENT LOG ###################{Environment.NewLine}");
             foreach (var serverEvent in eventLog)
             {

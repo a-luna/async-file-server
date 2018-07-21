@@ -1,6 +1,7 @@
 ﻿//TODO: Figure out best eay to prompt user to provide a name for a server that was added automatically following request server info
 //TODO: Update AsyncFileServer.ToString() to be more useful when debugging. New format should incorporate the Name and OperatingSystem properties
 //TODO: Determine if it will be simple or difficult to show deconstructed request bytes and how each region maps to fileNameLen, fileName, portNumLen, portNum, etc
+//TODO: To avoid crashes, when there is an error reading settings from xml, handle exception, create default settings object and proceed. Rename the offending xml file and write new settings.xml to file.
 
 namespace AaronLuna.AsyncFileServer.Console
 {
@@ -266,55 +267,21 @@ namespace AaronLuna.AsyncFileServer.Console
 
             if (exists)
             {
-                LookupRemoteServerName();
-                return;
-            }
-
-            await RequestServerInfoAsync();
-        }
-
-        private void LookupRemoteServerName()
-        {
-            if (!string.IsNullOrEmpty(_state.LocalServer.RemoteServerInfo.Name)) return;
-
-            var foundName =
                 SharedFunctions.LookupRemoteServerName(
                     _state.LocalServer.RemoteServerInfo,
                     _state.Settings.RemoteServers);
 
-            if (foundName.Failure) return;
+                return;
+            }
 
-            _state.LocalServer.RemoteServerInfo.Name = foundName.Value;
-        }
-
-        async Task RequestServerInfoAsync()
-        {
             _state.DoNotRequestServerInfo = true;
             _state.DoNotRefreshMainMenu = true;
 
-            var ipAddress = _state.LocalServer.RemoteServerInfo.SessionIpAddress;
-            var port = _state.LocalServer.RemoteServerInfo.PortNumber;
-
-            var requestServerInfoTask =
-                Task.Run(() =>
-                    SharedFunctions.RequestServerInfoAsync(_state, ipAddress, port));
-
-            if (requestServerInfoTask
-                == await Task.WhenAny(
-                        requestServerInfoTask,
-                        Task.Delay(Constants.FiveSecondsInMilliseconds))
-                    .ConfigureAwait(false))
-            {
-                await requestServerInfoTask;
-
-                _state.Settings.RemoteServers.Add(_state.LocalServer.RemoteServerInfo);
-                ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
-
-                _state.DoNotRefreshMainMenu = false;
-                return;
-            }
-            
-            SharedFunctions.NotifyUserErrorOccurred(Resources.Error_ServerInfoRequestTimedout);
+            await
+                SharedFunctions.RequestServerInfoAsync(
+                    _state,
+                    _state.LocalServer.RemoteServerInfo,
+                    false);
 
             _state.DoNotRequestServerInfo = false;
             _state.DoNotRefreshMainMenu = false;

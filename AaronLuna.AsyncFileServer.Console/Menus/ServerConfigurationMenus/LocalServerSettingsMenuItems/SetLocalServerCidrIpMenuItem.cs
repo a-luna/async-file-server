@@ -15,7 +15,8 @@
             _state = state;
 
             ReturnToParent = true;
-            ItemText = $"Change CIDR IP for this LAN * ({_state.Settings.LocalNetworkCidrIp})";
+            ItemText = "*LAN CIDR IP.............................: " +
+                       _state.Settings.LocalNetworkCidrIp + Environment.NewLine;
         }
 
         public string ItemText { get; set; }

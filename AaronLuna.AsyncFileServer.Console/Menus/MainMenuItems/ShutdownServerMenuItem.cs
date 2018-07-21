@@ -20,6 +20,8 @@
 
         public async Task<Result> ExecuteAsync()
         {
+            SharedFunctions.DisplayLocalServerInfo(_state);
+
             ReturnToParent = false;
             var shutdown = SharedFunctions.PromptUserYesOrNo("Shutdown server?");
             if (!shutdown) return Result.Ok();

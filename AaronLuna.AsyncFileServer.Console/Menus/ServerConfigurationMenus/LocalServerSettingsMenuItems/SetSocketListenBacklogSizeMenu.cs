@@ -1,9 +1,9 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus.SocketSettingsMenuItems
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus.LocalServerSettingsMenuItems
 {
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-
+    
     using Common.Console.Menu;
     using Common.Result;
 
@@ -19,7 +19,8 @@
             _state = state;
 
             ReturnToParent = true;
-            ItemText = $"Change listen socket backlog size * ({_state.Settings.SocketSettings.ListenBacklogSize} connections)";
+            ItemText = "*Listen Socket Backlog Limit.............: " +
+                       $"{_state.Settings.SocketSettings.ListenBacklogSize} connections";
             MenuText = "Select a value from the list below:";
 
             // IMPORTANT: The size of the backlog parameter is limited by the OS, and a smaller value is preferred to improve performance.
@@ -49,12 +50,17 @@
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
 
-        public async Task<Result> ExecuteAsync()
+        public Task<Result> ExecuteAsync()
+        {
+            return Task.Run((Func<Result>)Execute);
+        }
+
+        Result Execute()
         {
             _state.DoNotRefreshMainMenu = true;
             SharedFunctions.DisplayLocalServerInfo(_state);
 
-            var menuIndex = await SharedFunctions.GetUserSelectionIndexAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
+            var menuIndex = SharedFunctions.GetUserSelectionIndex(MenuText, MenuItems, _state);
             if (menuIndex > _backlogSizeValues.Count) return Result.Ok();
 
             _state.Settings.SocketSettings.ListenBacklogSize = _backlogSizeValues[menuIndex - 1];

@@ -1,9 +1,9 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus.FileTransferSettingsMenuItems
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus.LocalServerSettingsMenuItems
 {
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-
+    
     using Common.Console.Menu;
     using Common.Result;
 
@@ -19,7 +19,8 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Change file transfer update frequency ({_state.Settings.TransferUpdateInterval:P2})";
+            ItemText = " Report File Transfer Progress Every.....: " +
+                       $"{_state.Settings.TransferUpdateInterval:P2}";
             MenuText = "Select a value from the list below:";
 
             _updateFrequencyValues = new List<float>
@@ -49,12 +50,17 @@
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
 
-        public async Task<Result> ExecuteAsync()
+        public Task<Result> ExecuteAsync()
+        {
+            return Task.Run((Func<Result>)Execute);
+        }
+
+        Result Execute()
         {
             _state.DoNotRefreshMainMenu = true;
             SharedFunctions.DisplayLocalServerInfo(_state);
 
-            var menuIndex = await SharedFunctions.GetUserSelectionIndexAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
+            var menuIndex = SharedFunctions.GetUserSelectionIndex(MenuText, MenuItems, _state);
             if (menuIndex > _updateFrequencyValues.Count) return Result.Ok();
 
             _state.Settings.TransferUpdateInterval = _updateFrequencyValues[menuIndex - 1];

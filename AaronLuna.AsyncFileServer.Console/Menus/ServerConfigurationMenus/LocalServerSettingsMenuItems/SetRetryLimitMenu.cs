@@ -1,9 +1,9 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus.FileTransferSettingsMenuItems
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus.LocalServerSettingsMenuItems
 {
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-
+    
     using Common.Console.Menu;
     using Common.Result;
 
@@ -19,7 +19,8 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = $"Change max download attempts for remote servers ({_state.Settings.TransferRetryLimit} attempts)";
+            ItemText = " Unsuccessful File Transfer Retry Limit..: " +
+                       $"{_state.Settings.TransferRetryLimit} attempts";
             MenuText = "Select a value from the list below:";
 
             _retryLimitValues = new List<int>
@@ -45,12 +46,17 @@
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
 
-        public async Task<Result> ExecuteAsync()
+        public Task<Result> ExecuteAsync()
+        {
+            return Task.Run((Func<Result>)Execute);
+        }
+
+        Result Execute()
         {
             _state.DoNotRefreshMainMenu = true;
             SharedFunctions.DisplayLocalServerInfo(_state);
 
-            var menuIndex = await SharedFunctions.GetUserSelectionIndexAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
+            var menuIndex = SharedFunctions.GetUserSelectionIndex(MenuText, MenuItems, _state);
             if (menuIndex > _retryLimitValues.Count) return Result.Ok();
 
             _state.Settings.TransferRetryLimit = _retryLimitValues[menuIndex - 1];

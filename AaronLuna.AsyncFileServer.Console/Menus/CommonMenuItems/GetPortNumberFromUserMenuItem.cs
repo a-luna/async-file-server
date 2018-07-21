@@ -22,8 +22,8 @@
 
             ReturnToParent = localPort;
             ItemText = localPort
-                ? $"Change local server port number * ({_state.Settings.LocalServerPortNumber})"
-                : $"Change port number ({_state.SelectedServerInfo.PortNumber})";
+                ? $"*Local Server Port.......................: {_state.Settings.LocalServerPortNumber}"
+                : $"Port........: {_state.SelectedServerInfo.PortNumber}{Environment.NewLine}";
         }
 
         public string ItemText { get; set; }

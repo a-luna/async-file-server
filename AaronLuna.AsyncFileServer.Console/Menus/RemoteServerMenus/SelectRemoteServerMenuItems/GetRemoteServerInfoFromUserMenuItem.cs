@@ -3,7 +3,6 @@
     using System;
     using System.Threading.Tasks;
 
-    using Common;
     using Common.Console.Menu;
     using Common.Result;
 
@@ -16,7 +15,7 @@
         public GetRemoteServerInfoFromUserMenuItem(AppState state)
         {
             ReturnToParent = false;
-            ItemText = $"Add new client{Environment.NewLine}";
+            ItemText = $"Add remote server{Environment.NewLine}";
 
             _state = state;
         }
@@ -27,6 +26,7 @@
         public async Task<Result> ExecuteAsync()
         {
             _state.DoNotRequestServerInfo = true;
+            _state.DoNotRefreshMainMenu = true;
 
             var remoteServerIp =
                 SharedFunctions.GetIpAddressFromUser(Resources.Prompt_SetRemoteServerIp);
@@ -43,23 +43,17 @@
             {
                 return validateServerInfo;
             }
-            
-            var requestInfoFromServer = await RequestServerInfoAsync().ConfigureAwait(false);
 
-            if (requestInfoFromServer.Failure)
-            {
-                return requestInfoFromServer;
-            }
-
-            _state.SelectedServerInfo.Name
-                = SharedFunctions.SetSelectedServerName(_state.SelectedServerInfo);
-            
-            _state.Settings.RemoteServers.Add(_state.SelectedServerInfo);
-            var saveSettings = ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
+            var requestServerInfo = await
+                SharedFunctions.RequestServerInfoAsync(
+                    _state,
+                    _state.SelectedServerInfo,
+                    true);
 
             _state.DoNotRequestServerInfo = false;
+            _state.DoNotRefreshMainMenu = false;
 
-            return saveSettings;
+            return requestServerInfo;
         }
 
          Result ValidateServerInfo(ServerInfo serverInfo)
@@ -90,29 +84,6 @@
             _state.SelectedServerInfo = serverInfo;
 
             return Result.Ok();
-        }
-
-        async Task<Result> RequestServerInfoAsync()
-        {   
-            var ipAddress = _state.SelectedServerInfo.SessionIpAddress;
-            var port = _state.SelectedServerInfo.PortNumber;
-
-            var requestServerInfoTask =
-                Task.Run(() => 
-                    SharedFunctions.RequestServerInfoAsync(_state, ipAddress, port));
-
-            var requestServerInfoResult = Result.Fail("Request for server info timed out before receiving a response");
-
-            if (requestServerInfoTask
-                == await Task.WhenAny(
-                    requestServerInfoTask,
-                    Task.Delay(Constants.FiveSecondsInMilliseconds))
-                    .ConfigureAwait(false))
-            {
-                requestServerInfoResult = await requestServerInfoTask;
-            }
-            
-            return requestServerInfoResult;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus.LocalServerSettingsMenuItems
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus.LocalServerNetworkPropertiesMenuItems
 {
     using System;
     using System.Threading.Tasks;
@@ -7,12 +7,16 @@
     using Common.Network;
     using Common.Result;
 
-    class DisplayLocalIPv4AddressesMenuItem : IMenuItem
+    class DisplayIcmpV4StatsMenuItem : IMenuItem
     {
-        public DisplayLocalIPv4AddressesMenuItem()
+        readonly AppState _state;
+
+        public DisplayIcmpV4StatsMenuItem(AppState state)
         {
+            _state = state;
+
             ReturnToParent = false;
-            ItemText = $"Display Local IPv4 Address Info{Environment.NewLine}";
+            ItemText = $"Display ICMPv4 Statistics{Environment.NewLine}";
         }
 
         public string ItemText { get; set; }
@@ -26,7 +30,9 @@
         Result Execute()
         {
             Console.Clear();
-            NetworkUtilities.DisplayLocalIPv4AddressInfo();
+            SharedFunctions.DisplayLocalServerInfo(_state);
+            Console.WriteLine($"################## ICMPV4 STATS #################{Environment.NewLine}");
+            NetworkUtilities.DisplayIcmpV4Statistics();
 
             Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
             Console.ReadLine();

@@ -1,9 +1,9 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus.FileTransferSettingsMenuItems
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.ServerConfigurationMenus.LocalServerSettingsMenuItems
 {
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-
+    
     using Common.Console.Menu;
     using Common.Result;
 
@@ -21,8 +21,8 @@
             ReturnToParent = false;
 
             ItemText =
-                "Change length of time to reject transfers after retry limit exceeded " +
-                $"({_state.Settings.RetryLimitLockout.Minutes} minutes){Environment.NewLine}";
+                " Retry Limit Exceeded Lockout Timespan...: " +
+                $"{_state.Settings.RetryLimitLockout.Minutes} minutes{Environment.NewLine}";
 
             MenuText = "Select a value from the list below:";
 
@@ -53,12 +53,17 @@
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
 
-        public async Task<Result> ExecuteAsync()
+        public Task<Result> ExecuteAsync()
+        {
+            return Task.Run((Func<Result>)Execute);
+        }
+
+        Result Execute()
         {
             _state.DoNotRefreshMainMenu = true;
             SharedFunctions.DisplayLocalServerInfo(_state);
 
-            var menuIndex = await SharedFunctions.GetUserSelectionIndexAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
+            var menuIndex = SharedFunctions.GetUserSelectionIndex(MenuText, MenuItems, _state);
             if (menuIndex > _timeoutValues.Count) return Result.Ok();
 
             _state.Settings.RetryLimitLockout = TimeSpan.FromMinutes(_timeoutValues[menuIndex - 1]);

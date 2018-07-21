@@ -9,8 +9,10 @@
         internal static readonly string MenuTierLabel_LocalServerOptions = "Local Server Options:";
 
         internal static readonly string Menu_ChangeSettings =
-            "Items marked with an asterisk (*) will cause the server to restart after " +
-            "any change is made, current value shown in parantheses for each item.";
+            "Items marked with an asterisk (*) will cause the server to restart after any change is made";
+
+        internal static readonly string Menu_NetworkProperties =
+            "Please select the info/statistics you would like to view from the list below:";
 
         internal static readonly string Prompt_SetLocalPortNumber =
             "Enter the port number where this server will listen for incoming connections";

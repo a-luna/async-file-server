@@ -40,8 +40,7 @@
                 SharedFunctions.DisplayLocalServerInfo(_state);
                 PopulateMenu();
 
-                var menuItem =
-                    await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
+                var menuItem = SharedFunctions.GetUserSelection(MenuText, MenuItems, _state);
 
                 exit = menuItem.ReturnToParent;
                 result = await menuItem.ExecuteAsync().ConfigureAwait(false);
@@ -71,7 +70,13 @@
             MenuItems.Clear();
             MenuItems.Add(new GetPortNumberFromUserMenuItem(_state, _state.LocalServer.MyInfo, true));
             MenuItems.Add(new SetLocalServerCidrIpMenuItem(_state));
-            MenuItems.Add(new DisplayLocalIPv4AddressesMenuItem());
+            MenuItems.Add(new SetSocketBufferSizeMenu(_state));
+            MenuItems.Add(new SetSocketListenBacklogSizeMenu(_state));
+            MenuItems.Add(new SetSocketTimeoutMenu(_state));
+            MenuItems.Add(new SetUpdateIntervalMenu(_state));
+            MenuItems.Add(new SetTransferStalledTimeoutMenu(_state));
+            MenuItems.Add(new SetRetryLimitMenu(_state));
+            MenuItems.Add(new SetRetryLockoutTimeSpanMenu(_state));
             MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));
         }
 

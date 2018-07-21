@@ -16,7 +16,8 @@
         readonly List<ServerEvent> _eventLog;
         readonly FileTransferController _fileTransfer;
 
-        public FileTransferLogViewerMenuItem(AppState state,
+        public FileTransferLogViewerMenuItem(
+            AppState state,
             FileTransferController fileTransferController,
             List<ServerEvent> eventLog)
         {

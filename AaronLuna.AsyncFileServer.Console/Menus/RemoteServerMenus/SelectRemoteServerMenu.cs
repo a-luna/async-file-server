@@ -38,7 +38,7 @@
             SharedFunctions.DisplayLocalServerInfo(_state);
             PopulateMenu();
 
-            var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
+            var menuItem = SharedFunctions.GetUserSelection(MenuText, MenuItems, _state);
 
             var selectRemoteServerResult = await menuItem.ExecuteAsync().ConfigureAwait(false);
             if (selectRemoteServerResult.Success && !(menuItem is ReturnToParentMenuItem))

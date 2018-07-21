@@ -1,6 +1,5 @@
 ﻿namespace AaronLuna.AsyncFileServer.Console.Menus.EventLogsMenus
 {
-    using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
 
@@ -47,7 +46,7 @@
 
                 PopulateMenu();
                 SharedFunctions.DisplayLocalServerInfo(_state);
-                var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
+                var menuItem = SharedFunctions.GetUserSelection(MenuText, MenuItems, _state);
                 exit = menuItem.ReturnToParent;
                 result = await menuItem.ExecuteAsync().ConfigureAwait(false);
             }

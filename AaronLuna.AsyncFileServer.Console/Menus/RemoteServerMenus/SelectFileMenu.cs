@@ -53,7 +53,7 @@
                 return Result.Fail(populateMenuResult.Error);
             }
 
-            var menuItem = await SharedFunctions.GetUserSelectionAsync(MenuText, MenuItems, _state).ConfigureAwait(false);
+            var menuItem = SharedFunctions.GetUserSelection(MenuText, MenuItems, _state);
             return await menuItem.ExecuteAsync().ConfigureAwait(false);
         }
 
@@ -172,7 +172,7 @@
 
         async Task FileListResponseTimeoutTask()
         {
-            await Task.Delay(AaronLuna.Common.Constants.OneSecondInMilliseconds).ConfigureAwait(false);
+            await Task.Delay(Common.Constants.OneSecondInMilliseconds).ConfigureAwait(false);
             _fileListResponseTimeout = true;
         }
     }

@@ -32,30 +32,64 @@
             Console.ReadLine();
         }
 
-        public static async Task<Result> SendTextMessageAsync(AppState state)
+        public static Task<Result> SendTextMessageAsync(AppState state, ServerInfo remoteServerInfo)
         {
-            var ipAddress = state.SelectedServerInfo.SessionIpAddress;
-            var port = state.SelectedServerInfo.PortNumber;
+            var ipAddress = remoteServerInfo.SessionIpAddress;
+            var port = remoteServerInfo.PortNumber;
 
             Console.Clear();
+            DisplayLocalServerInfo(state);
             Console.WriteLine($"{Environment.NewLine}Please enter a text message to send to {ipAddress}:{port}");
             var message = Console.ReadLine();
 
-            var sendMessage =
-                await state.LocalServer.SendTextMessageAsync(
+            return state.LocalServer.SendTextMessageAsync(
                     message,
                     ipAddress,
-                    port).ConfigureAwait(false);
-
-            if (sendMessage.Failure)
-            {
-                NotifyUserErrorOccurred(sendMessage.Error);
-            }
-
-            return sendMessage;
+                    port);
         }
 
         public static async Task<Result> RequestServerInfoAsync(
+            AppState state,
+            ServerInfo serverInfo,
+            bool promptUserForServerName)
+        {
+            var ipAddress = serverInfo.SessionIpAddress;
+            var port = serverInfo.PortNumber;
+            var timeout = state.Settings.SocketSettings.SocketTimeoutInMilliseconds;
+
+            var requestServerInfoTask =
+                Task.Run(() => RequestServerInfoTaskAsync(state, ipAddress, port));
+
+            if (requestServerInfoTask == await Task.WhenAny(requestServerInfoTask, Task.Delay(timeout)))
+            {
+                var requestServerInfo = await requestServerInfoTask;
+                if (requestServerInfo.Failure)
+                {
+                    return requestServerInfo;
+                }
+
+                if (promptUserForServerName)
+                {
+                    serverInfo.Name = SetSelectedServerName(serverInfo);
+                }
+
+                state.Settings.RemoteServers.Add(serverInfo);
+
+                var saveSettings = state.SaveSettingsToFile();
+                if (saveSettings.Failure)
+                {
+                    return saveSettings;
+                }
+            }
+            else
+            {
+                return Result.Fail(Resources.Error_ServerInfoRequestTimedout);
+            }
+
+            return Result.Ok();
+        }
+
+        static async Task<Result> RequestServerInfoTaskAsync(
             AppState state,
             IPAddress ipAddress,
             int port)
@@ -82,10 +116,7 @@
             return Result.Ok();
         }
 
-        public static async Task<int> GetUserSelectionIndexAsync(
-            string menuText,
-            List<IMenuItem> menuItems,
-            AppState state)
+        public static int GetUserSelectionIndex(string menuText, List<IMenuItem> menuItems, AppState state)
         {
             var userSelection = 0;
             while (userSelection == 0)
@@ -93,28 +124,23 @@
                 ConsoleMenu.DisplayMenu(menuText, menuItems);
                 var input = Console.ReadLine();
 
-                var validationResult = ValidateNumberIsWithinRange(input, 1, menuItems.Count);
-                if (validationResult.Failure)
+                var inputValidation = ValidateNumberIsWithinRange(input, 1, menuItems.Count);
+                if (inputValidation.Failure)
                 {
-                    Console.WriteLine(Environment.NewLine + validationResult.Error);
-                    await Task.Delay(state.MessageDisplayTime).ConfigureAwait(false);
-
+                    NotifyUserErrorOccurred(inputValidation.Error);
                     DisplayLocalServerInfo(state);
                     continue;
                 }
 
-                userSelection = validationResult.Value;
+                userSelection = inputValidation.Value;
             }
 
             return userSelection;
         }
 
-        public static async Task<IMenuItem> GetUserSelectionAsync(
-            string menuText,
-            List<IMenuItem> menuItems,
-            AppState state)
+        public static IMenuItem GetUserSelection(string menuText, List<IMenuItem> menuItems, AppState state)
         {
-            var userSelection = await GetUserSelectionIndexAsync(menuText, menuItems, state).ConfigureAwait(false);
+            var userSelection = GetUserSelectionIndex(menuText, menuItems, state);
             return menuItems[userSelection - 1];
         }
 
@@ -174,16 +200,16 @@
                     $"(range {CidrPrefixBitsCountMin}-{CidrPrefixBitsCountMax}):";
 
                 Console.WriteLine(prompt);
-
                 var input = Console.ReadLine();
-                var bitCountValidationResult = ValidateNumberIsWithinRange(input, CidrPrefixBitsCountMin, CidrPrefixBitsCountMax);
-                if (bitCountValidationResult.Failure)
+
+                var inputValidation = ValidateNumberIsWithinRange(input, CidrPrefixBitsCountMin, CidrPrefixBitsCountMax);
+                if (inputValidation.Failure)
                 {
-                    Console.WriteLine(bitCountValidationResult.Error);
+                    NotifyUserErrorOccurred(inputValidation.Error);
                     continue;
                 }
 
-                bitCount = bitCountValidationResult.Value;
+                bitCount = inputValidation.Value;
             }
 
             return bitCount;
@@ -239,14 +265,14 @@
                     break;
                 }
 
-                var portValidationResult = ValidateNumberIsWithinRange(input, PortRangeMin, PortRangeMax);
-                if (portValidationResult.Failure)
+                var inputValidation = ValidateNumberIsWithinRange(input, PortRangeMin, PortRangeMax);
+                if (inputValidation.Failure)
                 {
-                    Console.WriteLine(portValidationResult.Error);
+                    NotifyUserErrorOccurred(inputValidation.Error);
                     continue;
                 }
 
-                portNumber = portValidationResult.Value;
+                portNumber = inputValidation.Value;
             }
 
             return portNumber;
@@ -346,13 +372,18 @@
             return remoteServerName;
         }
 
-        public static Result<string> LookupRemoteServerName(ServerInfo lookup, List<ServerInfo> serverInfoList)
+        public static Result LookupRemoteServerName(ServerInfo lookup, List<ServerInfo> serverInfoList)
         {
+            if (!string.IsNullOrEmpty(lookup.Name)) return Result.Ok();
+
             var findMatch = GetRemoteServer(lookup, serverInfoList);
 
-            return findMatch.Success
-                ? Result.Ok(findMatch.Value.Name)
-                : Result.Fail<string>(findMatch.Error);
+            if (findMatch.Success)
+            {
+                lookup.Name = findMatch.Value.Name;
+            }
+
+            return findMatch;
         }
 
         public static bool PromptUserYesOrNo(string prompt)
@@ -365,14 +396,15 @@
                 Console.WriteLine("2. No");
 
                 var input = Console.ReadLine();
-                var validationResult = ValidateNumberIsWithinRange(input, 1, 2);
-                if (validationResult.Failure)
+
+                var inputValidation = ValidateNumberIsWithinRange(input, 1, 2);
+                if (inputValidation.Failure)
                 {
-                    Console.WriteLine(validationResult.Error);
+                    NotifyUserErrorOccurred(inputValidation.Error);
                     continue;
                 }
 
-                userChoice = validationResult.Value;
+                userChoice = inputValidation.Value;
             }
 
             return userChoice == 1;
