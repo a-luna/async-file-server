@@ -678,8 +678,7 @@
             var transferAttempt = $"Attempt #{retryCounter}{retryLimit}";
 
             var remoteServerInfo =
-                $"{Environment.NewLine}Incoming file transfer from " +
-                $"{remoteServerIp}:{remotePortNumber} ({transferAttempt})" +
+                $"Incoming file transfer from {remoteServerIp}:{remotePortNumber} ({transferAttempt})" +
                 Environment.NewLine + Environment.NewLine;
 
             var fileInfo =

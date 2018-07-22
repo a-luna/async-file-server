@@ -28,8 +28,12 @@
             _state.DoNotRequestServerInfo = true;
             _state.DoNotRefreshMainMenu = true;
 
+            SharedFunctions.DisplayLocalServerInfo(_state);
+
             var remoteServerIp =
                 SharedFunctions.GetIpAddressFromUser(Resources.Prompt_SetRemoteServerIp);
+
+            SharedFunctions.DisplayLocalServerInfo(_state);
 
             var remoteServerPort =
                 SharedFunctions.GetPortNumberFromUser(

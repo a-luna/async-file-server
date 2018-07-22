@@ -4,7 +4,7 @@
     using System.IO;
     using System.Linq;
 
-    public class FileInfoList : List<(string filePath, long fileSizeBytes)>
+    public class FileInfoList : List<(string fileName, string folderPath, long fileSizeBytes)>
     {
         public FileInfoList() { }
 
@@ -19,8 +19,11 @@
 
             foreach (var file in fileList)
             {
-                var fileSize = new FileInfo(file).Length;
-                (string filePath, long fileSizeBytes) fileInfo = (filePath: file, fileSizeBytes: fileSize);
+                var fileInfo =
+                    (fileName: Path.GetFileName(file),
+                        folderPath: Path.GetDirectoryName(file),
+                        fileSizeBytes: new FileInfo(file).Length);
+
                 Add(fileInfo);
             }
         }

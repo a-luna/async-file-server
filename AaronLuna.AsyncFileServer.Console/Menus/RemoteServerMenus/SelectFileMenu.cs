@@ -116,11 +116,12 @@
             var fileInfoList = getFileListResult.Value;
             foreach (var i in Enumerable.Range(0, fileInfoList.Count))
             {
-                var filePath = fileInfoList[i].filePath;
+                var fileName = fileInfoList[i].fileName;
+                var folderPath = fileInfoList[i].folderPath;
                 var fileSize = fileInfoList[i].fileSizeBytes;
                 var isLastMenuItem = i.IsLastIteration(fileInfoList.Count);
 
-                MenuItems.Add(new GetFileMenuItem(_state, filePath, fileSize, isLastMenuItem));
+                MenuItems.Add(new GetFileMenuItem(_state, fileName, folderPath, fileSize, isLastMenuItem));
             }
 
             MenuItems.Add(new ReturnToParentMenuItem("Return to previous menu"));

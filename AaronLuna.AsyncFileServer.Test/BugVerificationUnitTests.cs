@@ -80,14 +80,14 @@
 
             var windowsFileList = new FileInfoList
             {
-                (filePath: windowsFilePaths[0], fileSizeBytes: fileSizes[0]),
-                (filePath: windowsFilePaths[1], fileSizeBytes: fileSizes[1]),
-                (filePath: windowsFilePaths[2], fileSizeBytes: fileSizes[2]),
-                (filePath: windowsFilePaths[3], fileSizeBytes: fileSizes[3]),
-                (filePath: windowsFilePaths[4], fileSizeBytes: fileSizes[4]),
-                (filePath: windowsFilePaths[5], fileSizeBytes: fileSizes[5]),
-                (filePath: windowsFilePaths[6], fileSizeBytes: fileSizes[6]),
-                (filePath: windowsFilePaths[7], fileSizeBytes: fileSizes[7])
+                (fileName: Path.GetFileName(windowsFilePaths[0]), folderPath: Path.GetDirectoryName(windowsFilePaths[0]), fileSizeBytes: fileSizes[0]),
+                (fileName: Path.GetFileName(windowsFilePaths[1]), folderPath: Path.GetDirectoryName(windowsFilePaths[1]), fileSizeBytes: fileSizes[1]),
+                (fileName: Path.GetFileName(windowsFilePaths[2]), folderPath: Path.GetDirectoryName(windowsFilePaths[2]), fileSizeBytes: fileSizes[2]),
+                (fileName: Path.GetFileName(windowsFilePaths[3]), folderPath: Path.GetDirectoryName(windowsFilePaths[3]), fileSizeBytes: fileSizes[3]),
+                (fileName: Path.GetFileName(windowsFilePaths[4]), folderPath: Path.GetDirectoryName(windowsFilePaths[4]), fileSizeBytes: fileSizes[4]),
+                (fileName: Path.GetFileName(windowsFilePaths[5]), folderPath: Path.GetDirectoryName(windowsFilePaths[5]), fileSizeBytes: fileSizes[5]),
+                (fileName: Path.GetFileName(windowsFilePaths[6]), folderPath: Path.GetDirectoryName(windowsFilePaths[6]), fileSizeBytes: fileSizes[6]),
+                (fileName: Path.GetFileName(windowsFilePaths[7]), folderPath: Path.GetDirectoryName(windowsFilePaths[7]), fileSizeBytes: fileSizes[7])
             };
 
             var fileListResponseBytes =
@@ -121,7 +121,7 @@
 
             foreach (var i in Enumerable.Range(0, fileInfoList.Count))
             {
-                Assert.AreEqual(fileNames[i], Path.GetFileName(fileInfoList[i].filePath));
+                Assert.AreEqual(fileNames[i], Path.GetFileName(fileInfoList[i].fileName));
             }
         }
     }

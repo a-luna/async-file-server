@@ -355,12 +355,13 @@
             foreach (var infoString in fileInfo.Split(fileSeparator))
             {
                 var infoSplit = infoString.Split(fileInfoSeparator);
-                if (infoSplit.Length != 2) continue;
+                if (infoSplit.Length != 3) continue;
 
-                var filePath = infoSplit[0];
-                if (!long.TryParse(infoSplit[1], out var fileSizeBytes)) continue;
+                var fileName = infoSplit[0];
+                var folderPath = infoSplit[1];
+                if (!long.TryParse(infoSplit[2], out var fileSizeBytes)) continue;
 
-                var fi = (filePath: filePath, fileSizeBytes: fileSizeBytes);
+                var fi = (fileName: fileName, folderPath: folderPath, fileSizeBytes: fileSizeBytes);
                 fileInfoList.Add(fi);
             }
 

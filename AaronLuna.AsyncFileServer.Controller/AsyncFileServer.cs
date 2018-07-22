@@ -1228,13 +1228,11 @@
             IPAddress remoteServerIpAddress,
             int remoteServerPort,
             string remoteServerName,
-            string remoteFilePath,
+            string fileName,
             long fileSizeBytes,
+            string remoteFolderPath,
             string localFolderPath)
         {
-            var fileName = Path.GetFileName(remoteFilePath);
-            var remoteFolderPath = Path.GetDirectoryName(remoteFilePath);
-
             RemoteServerInfo =
                 new ServerInfo(remoteServerIpAddress, remoteServerPort)
                 {

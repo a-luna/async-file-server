@@ -58,6 +58,9 @@
             var port = serverInfo.PortNumber;
             var timeout = state.Settings.SocketSettings.SocketTimeoutInMilliseconds;
 
+            DisplayLocalServerInfo(state);
+            Console.WriteLine("Requesting additional info from remote server...");
+
             var requestServerInfoTask =
                 Task.Run(() => RequestServerInfoTaskAsync(state, ipAddress, port));
 
@@ -68,6 +71,8 @@
                 {
                     return requestServerInfo;
                 }
+
+                DisplayLocalServerInfo(state);
 
                 if (promptUserForServerName)
                 {
@@ -222,7 +227,7 @@
 
             while (ipAddress.Equals(IPAddress.None))
             {
-                Console.WriteLine($"{Environment.NewLine}{prompt}");
+                Console.WriteLine(prompt);
                 var input = Console.ReadLine();
 
                 var parseIpResult = NetworkUtilities.ParseSingleIPv4Address(input);
@@ -244,7 +249,7 @@
             var portNumber = 0;
             while (portNumber is 0)
             {
-                Console.WriteLine($"{Environment.NewLine}{prompt} (range {PortRangeMin}-{PortRangeMax}):");
+                Console.WriteLine($"{prompt} (range {PortRangeMin}-{PortRangeMax}):");
 
                 if (allowRandom)
                 {
@@ -345,7 +350,8 @@
             var remoteServerName = string.Empty;
             while (string.IsNullOrEmpty(remoteServerName))
             {
-                Console.WriteLine(Environment.NewLine + prompt);
+                DisplayLocalServerInfo(state);
+                Console.WriteLine(prompt);
                 var input = Console.ReadLine();
 
                 var nameIsValid = input.IsValidFileName();

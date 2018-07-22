@@ -1,4 +1,7 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus.PendingRequestsMenuItems
+﻿using System.Linq;
+using AaronLuna.Common.Extensions;
+
+namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus.PendingRequestsMenuItems
 {
     using System;
     using System.Threading.Tasks;
@@ -31,13 +34,23 @@
             SharedFunctions.DisplayLocalServerInfo(_state);
             Console.WriteLine(Environment.NewLine);
 
-            foreach (var textMessage in _textSession.UnreadMessages)
+            var unreadMessages = _textSession.UnreadMessages;
+            var prompt = string.Empty;
+
+            foreach (var i in Enumerable.Range(0, unreadMessages.Count))
             {
-                Console.WriteLine(textMessage + Environment.NewLine);
+                var textMessage = unreadMessages[i];
                 textMessage.Unread = false;
+
+                prompt += textMessage + Environment.NewLine + Environment.NewLine;
+
+                if (i.IsLastIteration(unreadMessages.Count))
+                {
+                    prompt += "Reply?";
+                }
             }
 
-            var replyToMessage = SharedFunctions.PromptUserYesOrNo(_state, "Reply?");
+            var replyToMessage = SharedFunctions.PromptUserYesOrNo(_state, prompt);
             if (!replyToMessage) return Result.Ok();
 
             return await

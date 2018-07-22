@@ -223,10 +223,6 @@ namespace AaronLuna.AsyncFileServer.Console
                     _mainMenu.DisplayMenu();
                     break;
 
-                //case ServerEventType.ReceivedInboundFileTransferRequest:
-                //    ReceivedInboundFileTransferRequest(serverEvent);
-                //    break;
-
                 case ServerEventType.ReceiveFileBytesStarted:
                     ReceiveFileBytesStarted(serverEvent);
                     break;
@@ -259,6 +255,7 @@ namespace AaronLuna.AsyncFileServer.Console
         private async Task CheckIfRemoteServerAlreadySavedAsync()
         {
             if (_state.DoNotRequestServerInfo) return;
+            if (_state.LocalServer.MyInfo.IsEqualTo(_state.LocalServer.RemoteServerInfo)) return;
 
             var exists =
                 SharedFunctions.ServerInfoAlreadyExists(
@@ -371,7 +368,7 @@ namespace AaronLuna.AsyncFileServer.Console
             var fileInfo =
                 $"File Name..: {fileName}{Environment.NewLine}" +
                 $"File Size..: {serverEvent.FileSizeString}{Environment.NewLine}" +
-                $"Save To....: {localFolder}";
+                $"Save To....: {localFolder}{Environment.NewLine}";
 
             Console.WriteLine(remoteServerInfo);
             Console.WriteLine(fileInfo);

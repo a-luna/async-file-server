@@ -1,7 +1,6 @@
 ﻿namespace AaronLuna.AsyncFileServer.Console.Menus.RemoteServerMenus.SelectFileMenuItems
 {
     using System;
-    using System.IO;
     using System.Threading.Tasks;
 
     using Common.Console.Menu;
@@ -11,18 +10,24 @@
     class GetFileMenuItem : IMenuItem
     {
         readonly AppState _state;
-        readonly string _remoteFilePath;
+        readonly string _fileName;
+        readonly string _remoteFolderPath;
         readonly long _fileSize;
 
-        public GetFileMenuItem(AppState state, string remoteFilePath, long fileSize, bool isLastMenuItem)
+        public GetFileMenuItem(
+            AppState state,
+            string fileName,
+            string remoteFolderPath,
+            long fileSize,
+            bool isLastMenuItem)
         {
             _state = state;
-            _remoteFilePath = remoteFilePath;
+            _fileName = fileName;
+            _remoteFolderPath = remoteFolderPath;
             _fileSize = fileSize;
 
             ReturnToParent = false;
-
-            var fileName = Path.GetFileName(remoteFilePath);
+            
             var menuItem = $"{fileName} ({FileHelper.FileSizeToString(fileSize)})";
 
             ItemText = isLastMenuItem
@@ -44,8 +49,9 @@
                     remoteIp,
                     remotePort,
                     serverName,
-                    _remoteFilePath,
+                    _fileName,
                     _fileSize,
+                    _remoteFolderPath,
                     _state.LocalServer.MyInfo.TransferFolder);
         }
     }

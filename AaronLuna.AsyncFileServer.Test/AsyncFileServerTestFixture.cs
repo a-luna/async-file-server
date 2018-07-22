@@ -424,12 +424,13 @@ namespace AaronLuna.AsyncFileServer.Test
 
             var getFileResult =
                 await _client.GetFileAsync(
-                        _localIp,
-                        remoteServerPort,
-                        _server.MyInfo.Name,
-                        getFilePath,
-                        sentFileSize,
-                        _localFolder).ConfigureAwait(false);
+                    _localIp,
+                    remoteServerPort,
+                    _server.MyInfo.Name,
+                    Path.GetFileName(getFilePath),
+                    sentFileSize,
+                    Path.GetDirectoryName(getFilePath),
+                    _localFolder).ConfigureAwait(false);
 
             if (getFileResult.Failure)
             {
@@ -568,8 +569,9 @@ namespace AaronLuna.AsyncFileServer.Test
             Assert.AreEqual(4, fileInfoList.Count);
 
             var fiDictionaryActual = new Dictionary<string, long>();
-            foreach (var (filePath, fileSizeBytes) in fileInfoList)
+            foreach (var (fileName, folderPath, fileSizeBytes) in fileInfoList)
             {
+                var filePath = Path.Combine(folderPath, fileName);
                 fiDictionaryActual.Add(filePath, fileSizeBytes);
             }
 
@@ -687,12 +689,13 @@ namespace AaronLuna.AsyncFileServer.Test
 
             var getFileResult1 =
                 await _client.GetFileAsync(
-                            _localIp,
-                            remoteServerPort,
-                            _server.MyInfo.Name,
-                            getFilePath,
-                            sentFileSize,
-                            _localFolder).ConfigureAwait(false);
+                    _localIp,
+                    remoteServerPort,
+                    _server.MyInfo.Name,
+                    Path.GetFileName(getFilePath),
+                    sentFileSize,
+                    Path.GetDirectoryName(getFilePath),
+                    _localFolder).ConfigureAwait(false);
 
             if (getFileResult1.Failure)
             {
@@ -767,8 +770,9 @@ namespace AaronLuna.AsyncFileServer.Test
             Assert.AreEqual(4, fileInfoList.Count);
 
             var fiDictionaryActual = new Dictionary<string, long>();
-            foreach (var (filePath, fileSizeBytes) in fileInfoList)
+            foreach (var (fileName, folderPath, fileSizeBytes) in fileInfoList)
             {
+                var filePath = Path.Combine(folderPath, fileName);
                 fiDictionaryActual.Add(filePath, fileSizeBytes);
             }
 
@@ -862,8 +866,9 @@ namespace AaronLuna.AsyncFileServer.Test
             Assert.AreEqual(4, fileInfoList.Count);
 
             var fiDictionaryActual = new Dictionary<string, long>();
-            foreach (var (filePath, fileSizeBytes) in fileInfoList)
+            foreach (var (fileName, folderPath, fileSizeBytes) in fileInfoList)
             {
+                var filePath = Path.Combine(folderPath, fileName);
                 fiDictionaryActual.Add(filePath, fileSizeBytes);
             }
 

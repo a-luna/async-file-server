@@ -254,9 +254,10 @@
             var allFileInfo = string.Empty;
             foreach (var i in Enumerable.Range(0, fileInfoList.Count))
             {
-                var filePath = fileInfoList[i].filePath;
+                var fileName = fileInfoList[i].fileName;
+                var folderPath = fileInfoList[i].folderPath;
                 var fileSize = fileInfoList[i].fileSizeBytes;
-                var fileInfoString = $"{filePath}{fileInfoSeparator}{fileSize}";
+                var fileInfoString = $"{fileName}{fileInfoSeparator}{folderPath}{fileInfoSeparator}{fileSize}";
 
                 allFileInfo += fileInfoString;
 

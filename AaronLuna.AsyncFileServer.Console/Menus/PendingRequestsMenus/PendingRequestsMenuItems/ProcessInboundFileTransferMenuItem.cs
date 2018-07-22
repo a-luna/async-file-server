@@ -30,19 +30,21 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus.PendingRe
             SharedFunctions.DisplayLocalServerInfo(_state);
 
             var transferRequest = _fileTransfer.InboundRequestDetails();
-            Console.WriteLine(transferRequest);
+
+            var downloadPrompt = transferRequest + Environment.NewLine +
+                                 "Would you like to begin downloading this file?";
             
             var beginTransfer =
-                SharedFunctions.PromptUserYesOrNo(_state, "Would you like to begin downloading this file?");
+                SharedFunctions.PromptUserYesOrNo(_state, downloadPrompt);
 
             if (!beginTransfer)
             {
-                var prompt =
+                var rejectPrompt =
                     $"Would you like to reject the file transfer?{Environment.NewLine}{Environment.NewLine}" +
                     $"If you select No, the file transfer will remain in Pending state allowing you to download the file at a later time.{Environment.NewLine}{Environment.NewLine}" +
-                    "If you select Yes, the file transfer will be rejected and removed from this list.";
+                    $"If you select Yes, the file transfer will be rejected and removed from this list.{Environment.NewLine}";
 
-                var rejectTransfer = SharedFunctions.PromptUserYesOrNo(_state, prompt);
+                var rejectTransfer = SharedFunctions.PromptUserYesOrNo(_state, rejectPrompt);
                 if (!rejectTransfer) return Result.Ok();
 
                 var rejectResult = await _state.LocalServer.RejectInboundFileTransferAsync(_fileTransfer);
@@ -50,12 +52,8 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus.PendingRe
                 {
                     return rejectResult;
                 }
-
-                Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
-                Console.ReadLine();
-
+                
                 return Result.Fail("File transfer was rejected.");
-
             }
 
             SharedFunctions.DisplayLocalServerInfo(_state);

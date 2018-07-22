@@ -75,6 +75,7 @@
                 if (result.Success) continue;
                 _state.DoNotRefreshMainMenu = true;
 
+                Console.WriteLine(string.Empty);
                 SharedFunctions.NotifyUserErrorOccurred(result.Error);
             }
 
