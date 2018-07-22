@@ -121,7 +121,7 @@
 
             foreach (var i in Enumerable.Range(0, fileInfoList.Count))
             {
-                Assert.AreEqual(fileNames[i], Path.GetFileName(fileInfoList[i].fileName));
+                Assert.AreEqual(fileNames[i], fileInfoList[i].fileName);
             }
         }
     }

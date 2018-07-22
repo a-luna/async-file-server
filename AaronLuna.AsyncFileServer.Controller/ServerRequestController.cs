@@ -541,7 +541,8 @@
                 FileTransferInitiator.RemoteServer,
                 localServerInfo,
                 RemoteServerInfo,
-                _requestedFilePath,
+                _fileName,
+                _localFolderPath,
                 _remoteFolderPath);
 
             return RequestType == ServerRequestType.OutboundFileTransferRequest

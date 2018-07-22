@@ -115,7 +115,8 @@
             FileTransferInitiator initiator,
             ServerInfo localServerInfo,
             ServerInfo remoteServerInfo,
-            string localFilePath,
+            string fileName,
+            string localFolderPath,
             string remoteFolderPath)
         {
             LocalServerInfo = localServerInfo;
@@ -126,6 +127,8 @@
             TransferResponseCode = DateTime.Now.Ticks;
             RequestInitiatedTime = DateTime.Now;
 
+            var localFilePath = Path.Combine(localFolderPath, fileName);
+
             _fileTransfer = new FileTransfer
             {
                 MyLocalIpAddress = LocalServerInfo.LocalIpAddress,
@@ -135,9 +138,9 @@
                 RemoteServerPortNumber = RemoteServerInfo.PortNumber,
                 RemoteServerName = RemoteServerInfo.Name,
                 LocalFilePath = localFilePath,
-                LocalFolderPath = Path.GetDirectoryName(localFilePath),
+                LocalFolderPath = localFolderPath,
                 RemoteFolderPath = remoteFolderPath,
-                RemoteFilePath = Path.Combine(remoteFolderPath, Path.GetFileName(localFilePath)),
+                RemoteFilePath = Path.Combine(remoteFolderPath, fileName),
                 FileSizeInBytes = new FileInfo(localFilePath).Length
             };
         }

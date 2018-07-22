@@ -947,7 +947,8 @@
                 FileTransferInitiator.Self,
                 MyInfo,
                 RemoteServerInfo,
-                localFilePath,
+                Path.GetFileName(localFilePath),
+                Path.GetDirectoryName(localFilePath),
                 remoteFolderPath);
 
             lock (TransferQueueLock)
@@ -1270,7 +1271,8 @@
                     MyInfo.LocalIpAddress.ToString(),
                     MyInfo.PortNumber,
                     inboundFileTransfer.Id,
-                    inboundFileTransfer.RemoteFilePath,
+                    inboundFileTransfer.FileName,
+                    inboundFileTransfer.RemoteFolderPath,
                     inboundFileTransfer.LocalFolderPath);
 
             var sendRequestStartedEvent = new ServerEvent

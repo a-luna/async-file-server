@@ -121,11 +121,11 @@
             return wrappedRequest.ToArray();
         }
 
-        public static byte[] ConstructInboundFileTransferRequest(
-            string localIpAddress,
+        public static byte[] ConstructInboundFileTransferRequest(string localIpAddress,
             int localPort,
             int fileTransferId,
-            string remoteFilePath,
+            string fileName,
+            string remoteFolderPath,
             string localFolderPath)
         {
             var requestType = BitConverter.GetBytes((int)ServerRequestType.OutboundFileTransferRequest);
@@ -133,8 +133,11 @@
             var fileTransferIdData = BitConverter.GetBytes(fileTransferId);
             var fileTransferIdLen = BitConverter.GetBytes(Constants.SizeOfInt32InBytes);
 
-            var remoteFilePathData = Encoding.UTF8.GetBytes(remoteFilePath);
-            var remoteFilePathLen = BitConverter.GetBytes(remoteFilePathData.Length);
+            var fileNameData = Encoding.UTF8.GetBytes(fileName);
+            var fileNameLen = BitConverter.GetBytes(fileNameData.Length);
+
+            var remoteFolderPathData = Encoding.UTF8.GetBytes(remoteFolderPath);
+            var remoteFolderPathLen = BitConverter.GetBytes(remoteFolderPathData.Length);
 
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
@@ -149,8 +152,10 @@
             wrappedRequest.AddRange(requestType);
             wrappedRequest.AddRange(fileTransferIdLen);
             wrappedRequest.AddRange(fileTransferIdData);
-            wrappedRequest.AddRange(remoteFilePathLen);
-            wrappedRequest.AddRange(remoteFilePathData);
+            wrappedRequest.AddRange(fileNameLen);
+            wrappedRequest.AddRange(fileNameData);
+            wrappedRequest.AddRange(remoteFolderPathLen);
+            wrappedRequest.AddRange(remoteFolderPathData);
             wrappedRequest.AddRange(thisServerIpLen);
             wrappedRequest.AddRange(thisServerIpData);
             wrappedRequest.AddRange(thisServerPortLen);

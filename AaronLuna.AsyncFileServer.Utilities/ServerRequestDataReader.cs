@@ -137,7 +137,8 @@
                 case ServerRequestType.OutboundFileTransferRequest:
 
                     (fileTransferId,
-                        requestedFilePath,
+                        fileName,
+                        localFolderPath,
                         remoteServerIpString,
                         remoteServerPortNumber,
                         remoteFolderPath) = ReadOutboundFileTransferRequest(requestBytes);
@@ -300,7 +301,8 @@
 
         static (
             int remoteServerTransferId,
-            string localFilePath,
+            string fileName,
+            string localFolderPath,
             string remoteServerIpAddress,
             int remoteServerPortNumber,
             string remoteFolderPath) ReadOutboundFileTransferRequest(byte[] requestData)
@@ -308,21 +310,25 @@
             var remoteServerTransferIdLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes);
             var remoteServerTransferId = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 2);
 
-            var localFilePathLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 2 + remoteServerTransferIdLen);
-            var localFilePath = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 3 + remoteServerTransferIdLen, localFilePathLen);
+            var fileNameLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 2 + remoteServerTransferIdLen);
+            var fileName = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 3 + remoteServerTransferIdLen, fileNameLen);
 
-            var remoteServerIpLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 3 + remoteServerTransferIdLen + localFilePathLen);
-            var remoteServerIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 4 + remoteServerTransferIdLen + localFilePathLen, remoteServerIpLen);
+            var localFolderLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 3 + remoteServerTransferIdLen + fileNameLen);
+            var localFolder = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 4 + remoteServerTransferIdLen + fileNameLen, localFolderLen);
 
-            var remoteServerPortLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 4 + remoteServerTransferIdLen + localFilePathLen + remoteServerIpLen);
-            var remoteServerPort = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 5 + remoteServerTransferIdLen + localFilePathLen + remoteServerIpLen);
+            var remoteServerIpLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 4 + remoteServerTransferIdLen + fileNameLen + localFolderLen);
+            var remoteServerIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 5 + remoteServerTransferIdLen + fileNameLen + localFolderLen, remoteServerIpLen);
 
-            var remoteFolderData = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 5 + remoteServerTransferIdLen + localFilePathLen + remoteServerIpLen + remoteServerPortLen);
-            var remoteFolder = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 6 + remoteServerTransferIdLen + localFilePathLen + remoteServerIpLen + remoteServerPortLen, remoteFolderData);
+            var remoteServerPortLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 5 + remoteServerTransferIdLen + fileNameLen + localFolderLen + remoteServerIpLen);
+            var remoteServerPort = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 6 + remoteServerTransferIdLen + fileNameLen + localFolderLen + remoteServerIpLen);
+
+            var remoteFolderLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 6 + remoteServerTransferIdLen + fileNameLen + localFolderLen + remoteServerIpLen + remoteServerPortLen);
+            var remoteFolder = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 7 + remoteServerTransferIdLen + fileNameLen + localFolderLen + remoteServerIpLen + remoteServerPortLen, remoteFolderLen);
 
             return (
                 remoteServerTransferId,
-                localFilePath,
+                fileName,
+                localFolder,
                 remoteServerIp,
                 remoteServerPort,
                 remoteFolder);
