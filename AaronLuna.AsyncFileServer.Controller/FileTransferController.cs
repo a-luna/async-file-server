@@ -75,6 +75,7 @@
             get => _fileTransfer.FileSizeInBytes;
             set => _fileTransfer.FileSizeInBytes = value;
         }
+        public string FileSizeString => FileHelper.FileSizeToString(FileSizeInBytes);
 
         public string LocalFilePath => _fileTransfer.LocalFilePath;
         public string LocalFolderPath => _fileTransfer.LocalFolderPath;
@@ -319,10 +320,15 @@
             EventLog.Add(new ServerEvent
             {
                 EventType = ServerEventType.ReceiveFileBytesStarted,
+                FileTransferId = Id,
                 RemoteServerIpAddress = _fileTransfer.RemoteServerIpAddress,
                 RemoteServerPortNumber = _fileTransfer.RemoteServerPortNumber,
                 FileTransferStartTime = TransferStartTime,
+                FileName = FileName,
                 FileSizeInBytes = FileSizeInBytes,
+                LocalFolder = LocalFolderPath,
+                RetryCounter = RetryCounter,
+                RemoteServerRetryLimit = RemoteServerRetryLimit,
                 RequestId = RequestId
             });
 
@@ -524,25 +530,25 @@
 
             var transferStatus = $"[{Status}] {attempt}{Environment.NewLine}";
             var requestType = $"{TransferDirection} file transfer initiated by {initiator}{Environment.NewLine}{Environment.NewLine}";
-            var fileName = $"   File Name........: {_fileTransfer.FileName}{Environment.NewLine}";
-            var fileSize = $"   File Size........: {_fileTransfer.FileSizeString}{Environment.NewLine}";
-            var remoteServerInfo = $"   Remote Server....: {RemoteServerInfo}{Environment.NewLine}";
+            var fileName = $"   File Name..........: {_fileTransfer.FileName}{Environment.NewLine}";
+            var fileSize = $"   File Size..........: {_fileTransfer.FileSizeString}{Environment.NewLine}";
+            var remoteServerInfo = $"   Remote Server......: {RemoteServerInfo}{Environment.NewLine}";
 
             var requestTime = Initiator == FileTransferInitiator.Self
-                ? $"   Request Sent.....: {RequestInitiatedTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}"
-                : $"   Request Received : {RequestInitiatedTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}";
+                ? $"   Request Sent.......: {RequestInitiatedTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}"
+                : $"   Request Received...: {RequestInitiatedTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}";
 
-            var transferTime = Status.TasksRemaining()
-                ? $"   Transfer Started : {TransferStartTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}"
-                : $"   Transfer Complete: {TransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}";
+            var transferTime =
+                $"   Transfer Started...: {TransferStartTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                $"   Transfer Complete..: {TransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}";
 
             var lockoutExpireTime = Status == FileTransferStatus.RetryLimitExceeded
-                ? $"   Lockout Expires..: {RetryLockoutExpireTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}"
+                ? $"   Lockout Expires....: {RetryLockoutExpireTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}"
                 : transferTime;
 
-            var summaryNotStarted = requestType + fileName + fileSize + remoteServerInfo + requestTime;
+            var summaryNotStarted = $"{transferStatus}   {requestType}" + fileName + fileSize + remoteServerInfo + requestTime;
 
-            var summaryStarted = $"{transferStatus}   {summaryNotStarted}{lockoutExpireTime}";
+            var summaryStarted = summaryNotStarted + lockoutExpireTime;
 
             return Status == FileTransferStatus.AwaitingResponse
                 ? summaryNotStarted
@@ -653,6 +659,35 @@
                 : string.Empty;
 
             return details;
+        }
+
+        public string InboundRequestDetails()
+        {
+            var remoteServerIp = RemoteServerInfo.SessionIpAddress;
+            var remotePortNumber = RemoteServerInfo.PortNumber;
+            var retryCounter = RetryCounter;
+            var remoteServerRetryLimit = RemoteServerRetryLimit;
+            var fileName = FileName;
+            var fileSize = FileSizeString;
+            var localFolder = LocalFolderPath;
+
+            var retryLimit = remoteServerRetryLimit == 0
+                ? string.Empty
+                : $"/{remoteServerRetryLimit}{Environment.NewLine}";
+
+            var transferAttempt = $"Attempt #{retryCounter}{retryLimit}";
+
+            var remoteServerInfo =
+                $"{Environment.NewLine}Incoming file transfer from " +
+                $"{remoteServerIp}:{remotePortNumber} ({transferAttempt})" +
+                Environment.NewLine + Environment.NewLine;
+
+            var fileInfo =
+                $"File Name..: {fileName}{Environment.NewLine}" +
+                $"File Size..: {fileSize}{Environment.NewLine}" +
+                $"Save To....: {localFolder}{Environment.NewLine}";
+
+            return remoteServerInfo + fileInfo;
         }
 
         public static string GetTransferRate(TimeSpan elapsed, long bytesReceived)

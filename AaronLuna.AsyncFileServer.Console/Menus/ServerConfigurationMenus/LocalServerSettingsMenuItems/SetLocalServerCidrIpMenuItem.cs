@@ -29,7 +29,7 @@
 
         Result Execute()
         {
-            _state.Settings.LocalNetworkCidrIp = SharedFunctions.InitializeLanCidrIp();
+            _state.Settings.LocalNetworkCidrIp = SharedFunctions.InitializeLanCidrIp(_state);
             _state.RestartRequired = true;
 
             return Result.Ok();

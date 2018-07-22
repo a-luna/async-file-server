@@ -48,6 +48,11 @@
             foreach (var id in _state.LocalServer.StalledTransferIds)
             {
                 var fileTransfer = _state.LocalServer.GetFileTransferById(id).Value;
+
+                SharedFunctions.LookupRemoteServerName(
+                    fileTransfer.RemoteServerInfo,
+                    _state.Settings.RemoteServers);
+
                 MenuItems.Add(new RetryStalledFileTransferMenuItem(_state, fileTransfer.Id));
             }
 

@@ -69,7 +69,7 @@
                 "No server requests have been received since this list was cleared, would you like to view " +
                 "event logs for all requests?";
 
-            var restoreLogEntries = SharedFunctions.PromptUserYesOrNo(prompt);
+            var restoreLogEntries = SharedFunctions.PromptUserYesOrNo(_state, prompt);
             if (!restoreLogEntries)
             {
                 return true;
@@ -89,6 +89,10 @@
 
                 var request = _state.LocalServer.GetRequestById(id).Value;
                 var eventLog = _state.LocalServer.GetEventLogForRequest(id);
+
+                SharedFunctions.LookupRemoteServerName(
+                    request.RemoteServerInfo,
+                    _state.Settings.RemoteServers);
 
                 MenuItems.Add(
                     new ServerRequestLogViewerMenuItem(

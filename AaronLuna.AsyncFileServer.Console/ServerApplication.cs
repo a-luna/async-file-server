@@ -129,7 +129,7 @@ namespace AaronLuna.AsyncFileServer.Console
 
             if (string.IsNullOrEmpty(_state.Settings.LocalNetworkCidrIp))
             {
-                _state.Settings.LocalNetworkCidrIp = SharedFunctions.InitializeLanCidrIp();
+                _state.Settings.LocalNetworkCidrIp = SharedFunctions.InitializeLanCidrIp(_state);
                 cidrIpHasChanged = true;
             }
             else
@@ -223,9 +223,9 @@ namespace AaronLuna.AsyncFileServer.Console
                     _mainMenu.DisplayMenu();
                     break;
 
-                case ServerEventType.ReceivedInboundFileTransferRequest:
-                    ReceivedInboundFileTransferRequest(serverEvent);
-                    break;
+                //case ServerEventType.ReceivedInboundFileTransferRequest:
+                //    ReceivedInboundFileTransferRequest(serverEvent);
+                //    break;
 
                 case ServerEventType.ReceiveFileBytesStarted:
                     ReceiveFileBytesStarted(serverEvent);
@@ -317,11 +317,6 @@ namespace AaronLuna.AsyncFileServer.Console
 
         async Task RejectFileTransferAsync()
         {
-            var fileAlreadyExists =
-                $"{Environment.NewLine}A file with the same name already exists in the " +
-                "download folder, please rename or remove this file in order to proceed";
-
-            Console.WriteLine(fileAlreadyExists);
             _state.SignalReturnToMainMenu.Set();
 
             await Task.Delay(Constants.OneHalfSecondInMilliseconds).ConfigureAwait(false);
@@ -337,7 +332,7 @@ namespace AaronLuna.AsyncFileServer.Console
             _state.SelectedServerInfo.Platform = serverEvent.RemoteServerPlatform;
         }
 
-        void ReceivedInboundFileTransferRequest(ServerEvent serverEvent)
+        void ReceiveFileBytesStarted(ServerEvent serverEvent)
         {
             _inboundFileTransferId = serverEvent.FileTransferId;
             var remoteServerIp = serverEvent.RemoteServerIpAddress;
@@ -345,31 +340,8 @@ namespace AaronLuna.AsyncFileServer.Console
             var retryCounter = serverEvent.RetryCounter;
             var remoteServerRetryLimit = serverEvent.RemoteServerRetryLimit;
             var fileName = serverEvent.FileName;
-            var fileSize = FileHelper.FileSizeToString(serverEvent.FileSizeInBytes);
-            var localFolder = serverEvent.LocalFolder;
-
-            var retryLimit = remoteServerRetryLimit == 0
-                ? string.Empty
-                : $"/{remoteServerRetryLimit}{Environment.NewLine}";
-
-            var transferAttempt = $"Attempt #{retryCounter}{retryLimit}";
-
-            var remoteServerInfo =
-                $"{Environment.NewLine}Incoming file transfer from " +
-                $"{remoteServerIp}:{remotePortNumber} ({transferAttempt}){Environment.NewLine}";
-
-            var fileInfo =
-                $"File Name..: {fileName}{Environment.NewLine}" +
-                $"File Size..: {fileSize}{Environment.NewLine}" +
-                $"Save To....: {localFolder}{Environment.NewLine}";
-
-            Console.WriteLine(remoteServerInfo);
-            Console.WriteLine(fileInfo);
-        }
-
-        void ReceiveFileBytesStarted(ServerEvent serverEvent)
-        {
             var fileSize = serverEvent.FileSizeInBytes;
+            var localFolder = serverEvent.LocalFolder;
             var transferTimeout = _state.Settings.FileTransferStalledTimeout;
 
             _state.ProgressBar =
@@ -385,6 +357,24 @@ namespace AaronLuna.AsyncFileServer.Console
 
             _state.ProgressBar.FileTransferStalled += HandleStalledFileTransferAsync;
             _state.ProgressBarInstantiated = true;
+
+            var retryLimit = remoteServerRetryLimit == 0
+                ? string.Empty
+                : $"/{remoteServerRetryLimit}{Environment.NewLine}";
+
+            var transferAttempt = $"Attempt #{retryCounter}{retryLimit}";
+
+            var remoteServerInfo =
+                "Incoming file transfer from " +
+                $"{remoteServerIp}:{remotePortNumber} ({transferAttempt}){Environment.NewLine}";
+
+            var fileInfo =
+                $"File Name..: {fileName}{Environment.NewLine}" +
+                $"File Size..: {serverEvent.FileSizeString}{Environment.NewLine}" +
+                $"Save To....: {localFolder}";
+
+            Console.WriteLine(remoteServerInfo);
+            Console.WriteLine(fileInfo);
         }
 
         void HandleFileTransferProgress(object sender, ServerEvent serverEvent)

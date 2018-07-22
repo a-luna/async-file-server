@@ -29,7 +29,7 @@
         Result Execute()
         {
             _state.SelectedServerInfo.Name =
-                SharedFunctions.GetServerNameFromUser(Resources.Prompt_ChangeRemoteServerName);
+                SharedFunctions.GetServerNameFromUser(_state, Resources.Prompt_ChangeRemoteServerName);
 
             return Result.Ok();
         }

@@ -152,7 +152,8 @@
         public bool NoFileTransfersPending => NoFileTransfersInQueue();
         public bool FileTransferPending => PendingFileTransferInQueue();
         public int PendingFileTransferCount => PendingTransferCount();
-        public Result<ServerRequestController> NextPendingFileTransfer => GetNextFileTransferInQueue();
+        public Result<FileTransferController> NextPendingFileTransfer => GetNextFileTransferInQueue();
+        public List<int> PendingFileTransferIds => GetPendingFileTransferIds();
 
         public bool NoRequests => _requestId == 1;
         public List<int> RequestIds => _requests.Select(r => r.Id).ToList();
@@ -224,30 +225,35 @@
         int PendingTransferCount()
         {
             var pendingTransfers =
-                _requests.Select(r => r)
-                    .Where(r => r.IsInboundFileTransferRequest
-                                && r.Status == ServerRequestStatus.Pending)
+                _fileTransfers.Select(r => r)
+                    .Where(r => r.TransferDirection == FileTransferDirection.Inbound
+                                && r.Status == FileTransferStatus.AwaitingResponse)
                     .ToList();
 
             return pendingTransfers.Count;
         }
 
-        Result<ServerRequestController> GetNextFileTransferInQueue()
+        List<int> GetPendingFileTransferIds()
         {
-            List<ServerRequestController> pendingTransfers;
+            return
+                _fileTransfers.Select(ft => ft)
+                    .Where(ft => ft.TransferDirection == FileTransferDirection.Inbound
+                                 && ft.Status == FileTransferStatus.AwaitingResponse)
+                    .Select(ft => ft.Id)
+                    .ToList();
+        }
 
-            lock (RequestQueueLock)
-            {
-                pendingTransfers =
-                    _requests.Select(r => r)
-                        .Where(r => r.IsInboundFileTransferRequest
-                                    && r.Status == ServerRequestStatus.Pending)
-                        .ToList();
-            }
+        Result<FileTransferController> GetNextFileTransferInQueue()
+        {
+            var pendingTransfers =
+                _fileTransfers.Select(r => r)
+                    .Where(r => r.TransferDirection == FileTransferDirection.Inbound
+                                && r.Status == FileTransferStatus.AwaitingResponse)
+                    .ToList();
 
             return pendingTransfers.Count > 0
                 ? Result.Ok(pendingTransfers[0])
-                : Result.Fail<ServerRequestController>("Queue contains no pending file transfers");
+                : Result.Fail<FileTransferController>("Queue contains no pending file transfers");
         }
 
         public bool NoValidTextSessions()
@@ -599,7 +605,6 @@
                 }
 
                 if (_token.IsCancellationRequested || ShutdownInitiated) return Result.Ok();
-                if (inboundRequest.IsInboundFileTransferRequest) continue;
                 if (ServerIsBusy) continue;
 
                 var processRequest = await ProcessRequestAsync(inboundRequest).ConfigureAwait(false);
@@ -628,7 +633,9 @@
                 return getPendingTransfer;
             }
 
-            return await ProcessRequestAsync(getPendingTransfer.Value).ConfigureAwait(false);
+            var getServerRequest = GetRequestById(getPendingTransfer.Value.Id);
+
+            return await ProcessRequestAsync(getServerRequest.Value).ConfigureAwait(false);
         }
 
         async Task<Result> ProcessRequestAsync(ServerRequestController inboundRequest)
@@ -667,11 +674,16 @@
 
             if (result.Success) return await HandleRemainingRequestsInQueueAsync().ConfigureAwait(false);
 
-            EventOccurred?.Invoke(this, new ServerEvent
+            inboundRequest.Status = ServerRequestStatus.Error;
+
+            _eventLog.Add(new ServerEvent
             {
                 EventType = ServerEventType.ErrorOccurred,
-                ErrorMessage = result.Error
+                ErrorMessage = result.Error,
+                RequestId = inboundRequest.Id
             });
+
+            EventOccurred?.Invoke(this, _eventLog.Last());
 
             return result;
         }
@@ -687,7 +699,7 @@
                     break;
 
                 case ServerRequestType.InboundFileTransferRequest:
-                    result = await HandleInboundFileTransferRequestAsync(inboundRequest, _token).ConfigureAwait(false);
+                    result = await HandleInboundFileTransferRequestAsync(inboundRequest).ConfigureAwait(false);
                     break;
 
                 case ServerRequestType.OutboundFileTransferRequest:
@@ -779,8 +791,6 @@
 
             foreach (var request in _requests.Select(r => r).Where(r => r.Status == ServerRequestStatus.Pending))
             {
-                if (request.IsInboundFileTransferRequest) continue;
-
                 var result = await ProcessRequestAsync(request).ConfigureAwait(false);
                 if (result.Failure)
                 {
@@ -848,6 +858,17 @@
 
             if (sendRequest.Failure)
             {
+                outboundRequest.Status = ServerRequestStatus.Error;
+
+                _eventLog.Add(new ServerEvent
+                {
+                    EventType = ServerEventType.ErrorOccurred,
+                    ErrorMessage = sendRequest.Error,
+                    RequestId = outboundRequest.Id
+                });
+
+                EventOccurred?.Invoke(this, _eventLog.Last());
+
                 return sendRequest;
             }
 
@@ -1055,8 +1076,18 @@
 
             if (sendRequest.Success) return Result.Ok();
 
+            outboundRequest.Status = ServerRequestStatus.Error;
             outboundFileTransfer.Status = FileTransferStatus.Error;
             outboundFileTransfer.ErrorMessage = sendRequest.Error;
+
+            _eventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.ErrorOccurred,
+                ErrorMessage = sendRequest.Error,
+                FileTransferId = outboundFileTransfer.Id
+            });
+
+            EventOccurred?.Invoke(this, _eventLog.Last());
 
             return sendRequest;
         }
@@ -1290,8 +1321,18 @@
 
             if (sendRequest.Success) return Result.Ok();
 
+            outboundRequest.Status = ServerRequestStatus.Error;
             inboundFileTransfer.Status = FileTransferStatus.Error;
             inboundFileTransfer.ErrorMessage = sendRequest.Error;
+
+            _eventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.ErrorOccurred,
+                ErrorMessage = sendRequest.Error,
+                FileTransferId = inboundFileTransfer.Id
+            });
+
+            EventOccurred?.Invoke(this, _eventLog.Last());
 
             return sendRequest;
         }
@@ -1334,9 +1375,7 @@
             return Result.Ok();
         }
 
-        async Task<Result> HandleInboundFileTransferRequestAsync(
-            ServerRequestController inboundRequest,
-            CancellationToken token)
+        async Task<Result> HandleInboundFileTransferRequestAsync(ServerRequestController inboundRequest)
         {
             var getFileTransfer = GetInboundFileTransfer(inboundRequest);
             if (getFileTransfer.Failure)
@@ -1378,63 +1417,7 @@
                         ServerEventType.SendFileTransferRejectedComplete).ConfigureAwait(false);
             }
 
-            var acceptFileTransfer =
-                await AcceptFileTransferAsync(
-                    inboundRequest,
-                    inboundFileTransfer.Id,
-                    inboundFileTransfer.TransferResponseCode,
-                    ServerEventType.SendFileTransferAcceptedStarted,
-                    ServerEventType.SendFileTransferAcceptedComplete).ConfigureAwait(false);
-
-            if (acceptFileTransfer.Failure)
-            {
-                inboundFileTransfer.Status = FileTransferStatus.Error;
-                inboundFileTransfer.ErrorMessage = acceptFileTransfer.Error;
-
-                return acceptFileTransfer;
-            }
-
-            inboundFileTransfer.Status = FileTransferStatus.Accepted;
-            inboundFileTransfer.FileTransferProgress += HandleFileTransferProgress;
-
-            var getReceiveSocket = inboundRequest.GetTransferSocket();
-            if (getReceiveSocket.Failure)
-            {
-                return getReceiveSocket;
-            }
-
-            var socket = getReceiveSocket.Value;
-            var unreadBytes = inboundRequest.UnreadBytes.ToArray();
-
-            var receiveFile =
-                await inboundFileTransfer.ReceiveFileAsync(
-                        socket,
-                        unreadBytes,
-                        token)
-                    .ConfigureAwait(false);
-
-            if (receiveFile.Failure)
-            {
-                inboundFileTransfer.Status = FileTransferStatus.Error;
-                inboundFileTransfer.ErrorMessage = receiveFile.Error;
-
-                return receiveFile;
-            }
-
-            var confirmFileTransfer =
-                await SendFileTransferResponseAsync(
-                    ServerRequestType.FileTransferComplete,
-                    inboundFileTransfer.Id,
-                    inboundFileTransfer.TransferResponseCode,
-                    ServerEventType.SendFileTransferCompletedStarted,
-                    ServerEventType.SendFileTransferCompletedCompleted).ConfigureAwait(false);
-
-            if (confirmFileTransfer.Success) return Result.Ok();
-
-            inboundFileTransfer.Status = FileTransferStatus.Error;
-            inboundFileTransfer.ErrorMessage = confirmFileTransfer.Error;
-
-            return confirmFileTransfer;
+            return Result.Ok();
         }
 
         Result<FileTransferController> GetInboundFileTransfer(ServerRequestController inboundRequest)
@@ -1485,6 +1468,105 @@
             return Result.Ok(inboundFileTransfer);
         }
 
+        public async Task<Result> AcceptInboundFileTransferAsync(FileTransferController inboundFileTransfer)
+        {
+            var getServerRequest = GetRequestById(inboundFileTransfer.RequestId);
+            if (getServerRequest.Failure)
+            {
+                return getServerRequest;
+            }
+
+            var inboundRequest = getServerRequest.Value;
+
+            var acceptFileTransfer =
+                await AcceptFileTransferAsync(
+                    inboundRequest,
+                    inboundFileTransfer.Id,
+                    inboundFileTransfer.TransferResponseCode,
+                    ServerEventType.SendFileTransferAcceptedStarted,
+                    ServerEventType.SendFileTransferAcceptedComplete).ConfigureAwait(false);
+
+            if (acceptFileTransfer.Failure)
+            {
+                inboundRequest.Status = ServerRequestStatus.Error;
+                inboundFileTransfer.Status = FileTransferStatus.Error;
+                inboundFileTransfer.ErrorMessage = acceptFileTransfer.Error;
+
+                _eventLog.Add(new ServerEvent
+                {
+                    EventType = ServerEventType.ErrorOccurred,
+                    ErrorMessage = acceptFileTransfer.Error,
+                    FileTransferId = inboundFileTransfer.Id
+                });
+
+                EventOccurred?.Invoke(this, _eventLog.Last());
+
+                return acceptFileTransfer;
+            }
+
+            inboundFileTransfer.Status = FileTransferStatus.Accepted;
+            inboundFileTransfer.FileTransferProgress += HandleFileTransferProgress;
+
+            var getReceiveSocket = inboundRequest.GetTransferSocket();
+            if (getReceiveSocket.Failure)
+            {
+                return getReceiveSocket;
+            }
+
+            var socket = getReceiveSocket.Value;
+            var unreadBytes = inboundRequest.UnreadBytes.ToArray();
+
+            var receiveFile =
+                await inboundFileTransfer.ReceiveFileAsync(
+                        socket,
+                        unreadBytes,
+                        _token)
+                    .ConfigureAwait(false);
+
+            if (receiveFile.Failure)
+            {
+                inboundRequest.Status = ServerRequestStatus.Error;
+                inboundFileTransfer.Status = FileTransferStatus.Error;
+                inboundFileTransfer.ErrorMessage = receiveFile.Error;
+
+                _eventLog.Add(new ServerEvent
+                {
+                    EventType = ServerEventType.ErrorOccurred,
+                    ErrorMessage = receiveFile.Error,
+                    FileTransferId = inboundFileTransfer.Id
+                });
+
+                EventOccurred?.Invoke(this, _eventLog.Last());
+
+                return receiveFile;
+            }
+
+            var confirmFileTransfer =
+                await SendFileTransferResponseAsync(
+                    ServerRequestType.FileTransferComplete,
+                    inboundFileTransfer.Id,
+                    inboundFileTransfer.TransferResponseCode,
+                    ServerEventType.SendFileTransferCompletedStarted,
+                    ServerEventType.SendFileTransferCompletedCompleted).ConfigureAwait(false);
+
+            if (confirmFileTransfer.Success) return Result.Ok();
+
+            inboundRequest.Status = ServerRequestStatus.Error;
+            inboundFileTransfer.Status = FileTransferStatus.Error;
+            inboundFileTransfer.ErrorMessage = confirmFileTransfer.Error;
+
+            _eventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.ErrorOccurred,
+                ErrorMessage = confirmFileTransfer.Error,
+                FileTransferId = inboundFileTransfer.Id
+            });
+
+            EventOccurred?.Invoke(this, _eventLog.Last());
+
+            return confirmFileTransfer;
+        }
+
         Task<Result> AcceptFileTransferAsync(
             ServerRequestController inboundRequest,
             int fileTransferId,
@@ -1528,6 +1610,41 @@
                     sendRequestCompleteEvent);
         }
 
+        public async Task<Result> RejectInboundFileTransferAsync(FileTransferController inboundFileTransfer)
+        {
+            inboundFileTransfer.Status = FileTransferStatus.Rejected;
+            inboundFileTransfer.TransferStartTime = DateTime.Now;
+            inboundFileTransfer.TransferCompleteTime = inboundFileTransfer.TransferStartTime;
+
+            var rejectTransfer =
+                await SendFileTransferResponseAsync(
+                    ServerRequestType.FileTransferRejected,
+                    inboundFileTransfer.Id,
+                    inboundFileTransfer.TransferResponseCode,
+                    ServerEventType.SendFileTransferRejectedStarted,
+                    ServerEventType.SendFileTransferRejectedComplete);
+
+            if (rejectTransfer.Success) return Result.Ok();
+
+            var inboundRequest = _requests.Last();
+            inboundRequest.Status = ServerRequestStatus.Error;
+
+            inboundFileTransfer.Status = FileTransferStatus.Error;
+            inboundFileTransfer.ErrorMessage = rejectTransfer.Error;
+
+            _eventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.ErrorOccurred,
+                ErrorMessage = rejectTransfer.Error,
+                FileTransferId = inboundFileTransfer.Id,
+                RequestId = inboundRequest.Id
+            });
+
+            EventOccurred?.Invoke(this, _eventLog.Last());
+
+            return rejectTransfer;
+        }
+
         public async Task<Result> SendNotificationFileTransferStalledAsync(int fileTransferId)
         {
             const string fileTransferStalledErrorMessage =
@@ -1536,8 +1653,7 @@
             var getFileTransfer = GetFileTransferById(fileTransferId);
             if (getFileTransfer.Failure)
             {
-                var error = $"{getFileTransfer.Error} (AsyncFileServer.SendNotificationFileTransferStalledAsync)";
-                return Result.Fail(error);
+                return getFileTransfer;
             }
 
             var inboundFileTransfer = getFileTransfer.Value;
@@ -1546,13 +1662,33 @@
             inboundFileTransfer.ErrorMessage = fileTransferStalledErrorMessage;
             inboundFileTransfer.InboundFileTransferStalled = true;
 
-            return await
-                SendFileTransferResponseAsync(
+            var notifyTransferStalled =
+                await SendFileTransferResponseAsync(
                     ServerRequestType.FileTransferStalled,
                     inboundFileTransfer.Id,
                     inboundFileTransfer.TransferResponseCode,
                     ServerEventType.SendFileTransferStalledStarted,
                     ServerEventType.SendFileTransferStalledComplete).ConfigureAwait(false);
+
+            if (notifyTransferStalled.Success) return Result.Ok();
+
+            var inboundRequest = _requests.Last();
+            inboundRequest.Status = ServerRequestStatus.Error;
+
+            inboundFileTransfer.Status = FileTransferStatus.Error;
+            inboundFileTransfer.ErrorMessage = notifyTransferStalled.Error;
+
+            _eventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.ErrorOccurred,
+                ErrorMessage = notifyTransferStalled.Error,
+                FileTransferId = inboundFileTransfer.Id,
+                RequestId = inboundRequest.Id
+            });
+
+            EventOccurred?.Invoke(this, _eventLog.Last());
+
+            return notifyTransferStalled;
         }
 
         Result HandleStalledFileTransfer(ServerRequestController inboundRequest)
@@ -1612,13 +1748,33 @@
 
             var stalledFileTransfer = getFileTransferResult.Value;
 
-            return await
-                SendFileTransferResponseAsync(
+            var retryTransfer =
+                await SendFileTransferResponseAsync(
                     ServerRequestType.RetryOutboundFileTransfer,
                     stalledFileTransfer.Id,
                     stalledFileTransfer.TransferResponseCode,
                     ServerEventType.RetryOutboundFileTransferStarted,
                     ServerEventType.RetryOutboundFileTransferComplete).ConfigureAwait(false);
+
+            if (retryTransfer.Success) return Result.Ok();
+
+            var inboundRequest = _requests.Last();
+            inboundRequest.Status = ServerRequestStatus.Error;
+
+            stalledFileTransfer.Status = FileTransferStatus.Error;
+            stalledFileTransfer.ErrorMessage = retryTransfer.Error;
+
+            _eventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.ErrorOccurred,
+                ErrorMessage = retryTransfer.Error,
+                FileTransferId = stalledFileTransfer.Id,
+                RequestId = inboundRequest.Id
+            });
+
+            EventOccurred?.Invoke(this, _eventLog.Last());
+
+            return retryTransfer;
         }
 
         async Task<Result> HandleRetryFileTransferAsync(ServerRequestController inboundRequest)
@@ -1897,7 +2053,7 @@
                     sendRequestCompleteEvent);
         }
 
-        public Task<Result> RequestFileListAsync(
+        public async Task<Result> RequestFileListAsync(
             IPAddress remoteServerIpAddress,
             int remoteServerPort,
             string targetFolder)
@@ -1942,13 +2098,27 @@
                 _requestId++;
             }
 
-            return
-                outboundRequest.SendServerRequestAsync(
+            var sendrequest =
+                await outboundRequest.SendServerRequestAsync(
                     requestBytes,
                     remoteServerIpAddress,
                     remoteServerPort,
                     sendRequestStartedEvent,
                     sendRequestCompleteEvent);
+
+            if (sendrequest.Success) return Result.Ok();
+            outboundRequest.Status = ServerRequestStatus.Error;
+            
+            _eventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.ErrorOccurred,
+                ErrorMessage = sendrequest.Error,
+                RequestId = outboundRequest.Id
+            });
+
+            EventOccurred?.Invoke(this, _eventLog.Last());
+
+            return sendrequest;
         }
 
         async Task<Result> SendFileListAsync(ServerRequestController inboundRequest)
@@ -2084,17 +2254,33 @@
             EventOccurred?.Invoke(this, _eventLog.Last());
         }
 
-        public Task<Result> RequestServerInfoAsync(
+        public async Task<Result> RequestServerInfoAsync(
             IPAddress remoteServerIpAddress,
             int remoteServerPort)
         {
             RemoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
-            return
-                SendBasicServerRequestAsync(
+            var sendrequest =
+                await SendBasicServerRequestAsync(
                     ServerRequestType.ServerInfoRequest,
                     ServerEventType.RequestServerInfoStarted,
                     ServerEventType.RequestServerInfoComplete);
+
+            if (sendrequest.Success) return Result.Ok();
+
+            var inboundRequest = _requests.Last();
+            inboundRequest.Status = ServerRequestStatus.Error;
+
+            _eventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.ErrorOccurred,
+                ErrorMessage = sendrequest.Error,
+                RequestId = inboundRequest.Id
+            });
+
+            EventOccurred?.Invoke(this, _eventLog.Last());
+
+            return sendrequest;
         }
 
         Task<Result> SendServerInfoAsync(ServerRequestController inboundRequest)

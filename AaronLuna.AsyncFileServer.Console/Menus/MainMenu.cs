@@ -84,12 +84,11 @@
         void PopulateMenu()
         {
             TieredMenu.Clear();
-
+            
             PopulatePendingRequestsMenuTier();
-            PopulateSelectRemoteServerMenuTier();            
             PopulateRemoteServerMenuTier();
-            PopulateViewLogsMenuTier();
             PopulateServerConfigurationMenuTier();
+            PopulateViewLogsMenuTier();
         }
 
         IMenuItem GetUserSelection()
@@ -121,20 +120,20 @@
         {
             return $"Enter a menu item number (valid range 1-{TieredMenu.ItemCount}):";
         }
-        
+
         void PopulatePendingRequestsMenuTier()
         {
-            var handleRequestsMenuTier = new MenuTier(Resources.MenuTierLabel_PendingRequests);
+            var pendingRequestsMenuTier = new MenuTier(Resources.MenuTierLabel_PendingRequests);
 
-            if (_state.LocalServer.FileTransferPending)
+            if (_state.LocalServer.PendingFileTransferCount > 0)
             {
-                handleRequestsMenuTier.MenuItems.Add(
-                    new ProcessInboundFileTransferMenuItem(_state));
+                pendingRequestsMenuTier.MenuItems.Add(
+                    new PendingFileTransfersMenu(_state));
             }
 
             if (_state.LocalServer.StalledTransferIds.Count > 0)
             {
-                handleRequestsMenuTier.MenuItems.Add(
+                pendingRequestsMenuTier.MenuItems.Add(
                     new RetryStalledFileTransferMenu(_state));
             }
 
@@ -144,24 +143,12 @@
                 {
                     var textSession = _state.LocalServer.GetTextSessionById(id).Value;
 
-                    handleRequestsMenuTier.MenuItems.Add(
+                    pendingRequestsMenuTier.MenuItems.Add(
                         new ReadTextMessageMenuItem(_state, textSession));
                 }
             }
 
-            TieredMenu.AddTier(handleRequestsMenuTier);
-        }
-
-        void PopulateSelectRemoteServerMenuTier()
-        {
-            var selectRemoteServerTier = new MenuTier(string.Empty);
-
-            if (!_state.RemoteServerSelected)
-            {
-                selectRemoteServerTier.MenuItems.Add(new SelectRemoteServerMenu(_state));
-            }
-
-            TieredMenu.AddTier(selectRemoteServerTier);
+            TieredMenu.AddTier(pendingRequestsMenuTier);
         }
 
         void PopulateRemoteServerMenuTier()
@@ -175,10 +162,22 @@
                 selectedServerMenuTier.MenuItems.Add(new SelectFileMenu(_state, false));
                 selectedServerMenuTier.MenuItems.Add(new EditServerInfoMenu(_state));
                 selectedServerMenuTier.MenuItems.Add(new DeleteServerInfoMenuItem(_state));
-                selectedServerMenuTier.MenuItems.Add(new SelectRemoteServerMenu(_state));
             }
 
             TieredMenu.AddTier(selectedServerMenuTier);
+        }
+
+        void PopulateServerConfigurationMenuTier()
+        {
+            var serverConfigurationMenuTier =
+                new MenuTier(Resources.MenuTierLabel_ServerConfiguration);
+
+            serverConfigurationMenuTier.MenuItems.Add(new SelectRemoteServerMenu(_state));
+            serverConfigurationMenuTier.MenuItems.Add(new LocalServerSettingsMenu(_state));
+            serverConfigurationMenuTier.MenuItems.Add(new LocalServerNetworkPropertiesMenu(_state));
+            serverConfigurationMenuTier.MenuItems.Add(_shutdownServer);
+
+            TieredMenu.AddTier(serverConfigurationMenuTier);
         }
 
         void PopulateViewLogsMenuTier()
@@ -204,18 +203,6 @@
             viewLogsMenuTier.MenuItems.Add(new SetLogLevelMenu(_state));
 
             TieredMenu.AddTier(viewLogsMenuTier);
-        }
-
-        void PopulateServerConfigurationMenuTier()
-        {
-            var serverConfigurationMenuTier =
-                new MenuTier(Resources.MenuTierLabel_ServerConfiguration);
-
-            serverConfigurationMenuTier.MenuItems.Add(new LocalServerSettingsMenu(_state));
-            serverConfigurationMenuTier.MenuItems.Add(new LocalServerNetworkPropertiesMenu(_state));
-            serverConfigurationMenuTier.MenuItems.Add(_shutdownServer);
-
-            TieredMenu.AddTier(serverConfigurationMenuTier);
         }
     }
 }

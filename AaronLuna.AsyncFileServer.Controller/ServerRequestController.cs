@@ -500,6 +500,7 @@
             var inboundFileTransfer =
                 new FileTransferController(fileTransferId, settings)
             {
+                RequestId = Id,
                 TransferResponseCode = _fileTransferResponseCode,
                 RemoteServerRetryLimit = _fileTransferRetryLimit
             };
@@ -611,6 +612,7 @@
         {
             FileTransferId = fileTransfer.Id;
 
+            fileTransfer.RequestId = Id;
             fileTransfer.TransferResponseCode = _fileTransferResponseCode;
             fileTransfer.FileSizeInBytes = _fileSizeBytes;
             fileTransfer.RemoteServerRetryLimit = _fileTransferRetryLimit;

@@ -23,7 +23,7 @@
             SharedFunctions.DisplayLocalServerInfo(_state);
 
             ReturnToParent = false;
-            var shutdown = SharedFunctions.PromptUserYesOrNo("Shutdown server?");
+            var shutdown = SharedFunctions.PromptUserYesOrNo(_state, "Shutdown server?");
             if (!shutdown) return Result.Ok();
 
             await _state.LocalServer.ShutdownAsync().ConfigureAwait(false);

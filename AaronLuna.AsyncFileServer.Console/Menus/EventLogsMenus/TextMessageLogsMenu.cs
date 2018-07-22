@@ -52,6 +52,11 @@
             foreach (var id in _state.LocalServer.TextSessionIds)
             {
                 var textSession = _state.LocalServer.GetTextSessionById(id).Value;
+
+                SharedFunctions.LookupRemoteServerName(
+                    textSession.RemoteServerInfo,
+                    _state.Settings.RemoteServers);
+
                 MenuItems.Add(new ViewTextMessageLogMenuItem(_state, textSession));
             }
 

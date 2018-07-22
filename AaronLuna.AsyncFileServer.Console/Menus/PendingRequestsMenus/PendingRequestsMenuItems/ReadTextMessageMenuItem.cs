@@ -37,7 +37,7 @@
                 textMessage.Unread = false;
             }
 
-            var replyToMessage = SharedFunctions.PromptUserYesOrNo("Reply?");
+            var replyToMessage = SharedFunctions.PromptUserYesOrNo(_state, "Reply?");
             if (!replyToMessage) return Result.Ok();
 
             return await

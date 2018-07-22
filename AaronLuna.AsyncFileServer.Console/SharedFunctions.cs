@@ -27,8 +27,8 @@
 
         public static void NotifyUserErrorOccurred(string error)
         {
-            Console.WriteLine(Environment.NewLine + error + Environment.NewLine);
-            Console.WriteLine("Press enter to return to the main menu.");
+            Console.WriteLine(error + Environment.NewLine);
+            Console.WriteLine("Press enter to return to the previous menu.");
             Console.ReadLine();
         }
 
@@ -39,8 +39,9 @@
 
             Console.Clear();
             DisplayLocalServerInfo(state);
-            Console.WriteLine($"{Environment.NewLine}Please enter a text message to send to {ipAddress}:{port}");
+            Console.WriteLine($"Please enter a text message to send to {ipAddress}:{port}");
             var message = Console.ReadLine();
+            Console.WriteLine(string.Empty);
 
             return state.LocalServer.SendTextMessageAsync(
                     message,
@@ -70,7 +71,7 @@
 
                 if (promptUserForServerName)
                 {
-                    serverInfo.Name = SetSelectedServerName(serverInfo);
+                    serverInfo.Name = SetSelectedServerName(state, serverInfo);
                 }
 
                 state.Settings.RemoteServers.Add(serverInfo);
@@ -159,14 +160,14 @@
                 $"that {newCidrIp} is the correct value for the current LAN, " +
                 "would you like to use this value?";
 
-            var updateCidrIp = PromptUserYesOrNo(prompt);
+            var updateCidrIp = PromptUserYesOrNo(state, prompt);
             if (!updateCidrIp) return false;
 
             state.Settings.LocalNetworkCidrIp = newCidrIp;
             return true;
         }
 
-        public static string InitializeLanCidrIp()
+        public static string InitializeLanCidrIp(AppState state)
         {
             var getCidrIp = NetworkUtilities.GetCidrIp();
             if (getCidrIp.Failure)
@@ -178,7 +179,7 @@
             var prompt = "Found a single IPv4 address assiciated with the only ethernet adapter " +
                          $"on this machine, is it ok to use {cidrIp} as the CIDR IP?";
 
-            return PromptUserYesOrNo(prompt)
+            return PromptUserYesOrNo(state, prompt)
                 ? cidrIp
                 : GetCidrIpFromUser();
         }
@@ -325,21 +326,21 @@
             return exists;
         }
 
-        public static string SetSelectedServerName(ServerInfo serverInfo)
+        public static string SetSelectedServerName(AppState state, ServerInfo serverInfo)
         {
             var defaultServerName = $"{serverInfo.SessionIpAddress}:{serverInfo.PortNumber}-{serverInfo.Platform}";
 
             var initialPrompt =
                 $"Would you like to enter a name to help you identify this server? If you select no, a default name will be created ({defaultServerName})";
 
-            var enterCustomName = PromptUserYesOrNo(initialPrompt);
+            var enterCustomName = PromptUserYesOrNo(state, initialPrompt);
 
             return enterCustomName
-                ? GetServerNameFromUser(Resources.Prompt_SetRemoteServerName)
+                ? GetServerNameFromUser(state, Resources.Prompt_SetRemoteServerName)
                 : defaultServerName;
         }
 
-        public static string GetServerNameFromUser(string prompt)
+        public static string GetServerNameFromUser(AppState state, string prompt)
         {
             var remoteServerName = string.Empty;
             while (string.IsNullOrEmpty(remoteServerName))
@@ -362,7 +363,7 @@
                     $"Is \"{input}\" the name you wish to use for this server? " +
                     "Select no if you would like to change this value.";
 
-                var useThisName = PromptUserYesOrNo(confirm);
+                var useThisName = PromptUserYesOrNo(state, confirm);
                 if (useThisName)
                 {
                     remoteServerName = input;
@@ -386,12 +387,14 @@
             return findMatch;
         }
 
-        public static bool PromptUserYesOrNo(string prompt)
+        public static bool PromptUserYesOrNo(AppState state, string prompt)
         {
             var userChoice = 0;
             while (userChoice is 0)
             {
-                Console.WriteLine(Environment.NewLine + prompt);
+                DisplayLocalServerInfo(state);
+
+                Console.WriteLine(prompt);
                 Console.WriteLine("1. Yes");
                 Console.WriteLine("2. No");
 

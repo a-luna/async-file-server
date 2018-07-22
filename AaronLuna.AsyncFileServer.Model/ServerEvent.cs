@@ -327,7 +327,7 @@
 
                 case ServerEventType.ReceivedInboundFileTransferRequest:
                     report +=
-                        $"Started processing inbound file transfer request:{Environment.NewLine}{Environment.NewLine}" +
+                        $"Received inbound file transfer request:{Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}File Sender....: {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}" +
                         $"{indentLevel1}File Name......: {FileName}{Environment.NewLine}" +
                         $"{indentLevel1}File Size......: {FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
@@ -374,8 +374,7 @@
 
                 case ServerEventType.SendFileTransferRejectedStarted:
                     report +=
-                        $"Notifying {RemoteServerIpAddress}:{RemoteServerPortNumber} that file transfer has been rejected, " +
-                        "file with same name already exists in the local server's transfer folder";
+                        $"Notifying {RemoteServerIpAddress}:{RemoteServerPortNumber} that the file transfer has been rejected";
                     break;
 
                 case ServerEventType.RemoteServerRejectedFileTransfer:
@@ -480,7 +479,8 @@
                     break;
 
                 case ServerEventType.ErrorOccurred:
-                    report += $"Error Occurred!{Environment.NewLine}{Environment.NewLine}\t{ErrorMessage}{Environment.NewLine}";
+                    report += $"Error Occurred!{Environment.NewLine}{Environment.NewLine}" +
+                              ErrorMessage + Environment.NewLine;
                     break;
 
                 case ServerEventType.FileTransferStatusChange:
@@ -488,7 +488,7 @@
                     break;
 
                 case ServerEventType.SendFileTransferCompletedStarted:
-                    report += $"Notifying {RemoteServerIpAddress}:{RemoteServerPortNumber} that the file transfer was received successfully";
+                    report += $"Notifying {RemoteServerIpAddress}:{RemoteServerPortNumber} that the file was received successfully";
                     break;
 
                 case ServerEventType.RemoteServerConfirmedFileTransferCompleted:

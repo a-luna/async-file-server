@@ -70,7 +70,7 @@
                 "No file transfers have occurred since this list was cleared, would you like to view " +
                 "event logs for all transfers?";
 
-            var restoreLogEntries = SharedFunctions.PromptUserYesOrNo(prompt);
+            var restoreLogEntries = SharedFunctions.PromptUserYesOrNo(_state, prompt);
             if (!restoreLogEntries)
             {
                 return true;
