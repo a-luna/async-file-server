@@ -358,24 +358,21 @@ namespace AaronLuna.AsyncFileServer.Test
 
             while (_serverNoFileTransferPending) { }
 
-            try
-            {
-                await _server.ProcessNextFileTransferInQueueAsync().ConfigureAwait(false);
-                while (!_serverReceivedAllFileBytes)
-                {
-                    if (_serverErrorOccurred)
-                    {
-                        Assert.Fail("File transfer failed");
-                    }
-                }
-            }
-            catch (NullReferenceException ex)
-            {
-                var exceptionDetails =
-                    $"{ex.Message} ({ex.GetType()}) raised in method TplSocketServerTestFixture.VerifySendFile" +
-                    $"{Environment.NewLine}{ex.StackTrace}";
+            var pendingFileTransferId = _server.PendingFileTransferIds[0];
+            var pendingFileTransfer = _server.GetFileTransferById(pendingFileTransferId).Value;
 
-                Console.WriteLine(exceptionDetails);
+            var transferResult = await _server.AcceptInboundFileTransferAsync(pendingFileTransfer);
+            if (transferResult.Failure)
+            {
+                Assert.Fail("There was an error receiving the file from the remote server: " + transferResult.Error);
+            }
+
+            while (!_serverReceivedAllFileBytes)
+            {
+                if (_serverErrorOccurred)
+                {
+                    Assert.Fail("File transfer failed");
+                }
             }
 
             while (!_clientReceivedConfirmationMessage) { }
@@ -441,7 +438,15 @@ namespace AaronLuna.AsyncFileServer.Test
             }
 
             while (_clientNoFileTransferPending) { }
-            await _client.ProcessNextFileTransferInQueueAsync().ConfigureAwait(false);
+
+            var pendingFileTransferId = _client.PendingFileTransferIds[0];
+            var pendingFileTransfer = _client.GetFileTransferById(pendingFileTransferId).Value;
+
+            var transferResult = await _client.AcceptInboundFileTransferAsync(pendingFileTransfer);
+            if (transferResult.Failure)
+            {
+                Assert.Fail("There was an error receiving the file from the remote server: " + transferResult.Error);
+            }
 
             while (!_clientReceivedAllFileBytes)
             {
@@ -639,9 +644,7 @@ namespace AaronLuna.AsyncFileServer.Test
             {
                 Assert.Fail("Error occurred sending outbound file request to server");
             }
-
-            while (_serverNoFileTransferPending) { }
-            await _server.ProcessNextFileTransferInQueueAsync().ConfigureAwait(false);
+            
             while (!_serverRejectedFileTransfer) { }
         }
 
@@ -695,9 +698,7 @@ namespace AaronLuna.AsyncFileServer.Test
             {
                 Assert.Fail("There was an error requesting the file from the remote server: " + getFileResult1.Error);
             }
-
-            while (_clientNoFileTransferPending) { }
-            await _client.ProcessNextFileTransferInQueueAsync().ConfigureAwait(false);
+            
             while (!_clientRejectedFileTransfer) { }
         }
 

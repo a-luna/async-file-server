@@ -225,9 +225,9 @@
         int PendingTransferCount()
         {
             var pendingTransfers =
-                _fileTransfers.Select(r => r)
-                    .Where(r => r.TransferDirection == FileTransferDirection.Inbound
-                                && r.Status == FileTransferStatus.AwaitingResponse)
+                _fileTransfers.Select(ft => ft)
+                    .Where(ft => ft.TransferDirection == FileTransferDirection.Inbound
+                                && ft.Status == FileTransferStatus.AwaitingResponse)
                     .ToList();
 
             return pendingTransfers.Count;
