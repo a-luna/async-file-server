@@ -330,6 +330,26 @@
                     $"Found {matches.Count} requests with the same ID value of {id}");
         }
 
+        public Result<ServerRequestController> GetInboundRequestByTransferId(int transferId)
+        {
+            var matches =
+                _requests.Select(r => r)
+                    .Where(r => r.RequestType == ServerRequestType.InboundFileTransferRequest
+                                && r.FileTransferId == transferId)
+                    .ToList();
+
+            if (matches.Count == 0)
+            {
+                return Result.Fail<ServerRequestController>(
+                    $"No request was found with a file transfer ID value of {transferId}");
+            }
+
+            return matches.Count == 1
+                ? Result.Ok(matches[0])
+                : Result.Fail<ServerRequestController>(
+                    $"Found {matches.Count} requests with the same file transfer ID value of {transferId}");
+        }
+
         public Result<FileTransferController> GetFileTransferById(int id)
         {
             var matches = _fileTransfers.Select(t => t).Where(t => t.Id == id).ToList();
@@ -543,12 +563,13 @@
                 return Result.Fail($"{ex.Message} ({ex.GetType()} raised in method AsyncFileServer.Listen)");
             }
 
-            EventOccurred?.Invoke(this,
-                new ServerEvent
-                {
-                    EventType = ServerEventType.ServerStartedListening,
-                    LocalPortNumber = MyInfo.PortNumber
-                });
+            _eventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.ServerStartedListening,
+                LocalPortNumber = MyInfo.PortNumber
+            });
+
+            EventOccurred?.Invoke(this, _eventLog.Last());
 
             return Result.Ok();
         }
@@ -561,12 +582,13 @@
             {
                 if (FileTransferPending)
                 {
-                    EventOccurred?.Invoke(this,
-                        new ServerEvent
-                        {
-                            EventType = ServerEventType.QueueContainsUnhandledRequests,
-                            ItemsInQueueCount = PendingFileTransferCount
-                        });
+                    _eventLog.Add(new ServerEvent
+                    {
+                        EventType = ServerEventType.QueueContainsUnhandledRequests,
+                        ItemsInQueueCount = PendingFileTransferCount
+                    });
+
+                    EventOccurred?.Invoke(this, _eventLog.Last());
                 }
 
                 var acceptConnection = await _listenSocket.AcceptTaskAsync(_token).ConfigureAwait(false);
@@ -576,15 +598,16 @@
                 }
 
                 var socket = acceptConnection.Value;
-                var remoteServerIpString = socket.RemoteEndPoint.ToString().Split(':')[0];
+                var remoteServerIpString                                                                                   = socket.RemoteEndPoint.ToString().Split(':')[0];
                 var remoteServerIpAddress = NetworkUtilities.ParseSingleIPv4Address(remoteServerIpString).Value;
 
-                EventOccurred?.Invoke(this,
-                    new ServerEvent
-                    {
-                        EventType = ServerEventType.ConnectionAccepted,
-                        RemoteServerIpAddress = remoteServerIpAddress
-                    });
+                _eventLog.Add(new ServerEvent
+                {
+                    EventType = ServerEventType.ConnectionAccepted,
+                    RemoteServerIpAddress = remoteServerIpAddress
+                });
+
+                EventOccurred?.Invoke(this, _eventLog.Last());
 
                 var inboundRequest =
                     new ServerRequestController(_requestId, Settings);
@@ -1470,7 +1493,7 @@
 
         public async Task<Result> AcceptInboundFileTransferAsync(FileTransferController inboundFileTransfer)
         {
-            var getServerRequest = GetRequestById(inboundFileTransfer.RequestId);
+            var getServerRequest = GetInboundRequestByTransferId(inboundFileTransfer.Id);
             if (getServerRequest.Failure)
             {
                 return getServerRequest;
@@ -2417,8 +2440,8 @@
 
         void ShutdownListenSocket()
         {
-            EventOccurred?.Invoke(this,
-                new ServerEvent {EventType = ServerEventType.ShutdownListenSocketStarted});
+            _eventLog.Add(new ServerEvent { EventType = ServerEventType.ShutdownListenSocketStarted });
+            EventOccurred?.Invoke(this, _eventLog.Last());
 
             try
             {
@@ -2430,19 +2453,20 @@
                 _log.Error("Error raised in method ShutdownListenSocket", ex);
                 var errorMessage = $"{ex.Message} ({ex.GetType()} raised in method AsyncFileServer.ShutdownListenSocket)";
 
-                EventOccurred?.Invoke(this,
-                    new ServerEvent
-                    {
-                        EventType = ServerEventType.ShutdownListenSocketCompletedWithError,
-                        ErrorMessage = errorMessage
-                    });
+                _eventLog.Add(new ServerEvent
+                {
+                    EventType = ServerEventType.ShutdownListenSocketCompletedWithError,
+                    ErrorMessage = errorMessage
+                });
+
+                EventOccurred?.Invoke(this, _eventLog.Last());
             }
 
-            EventOccurred?.Invoke(this,
-                new ServerEvent {EventType = ServerEventType.ShutdownListenSocketCompletedWithoutError});
+            _eventLog.Add(new ServerEvent { EventType = ServerEventType.ShutdownListenSocketCompletedWithoutError });
+            EventOccurred?.Invoke(this, _eventLog.Last());
 
-            EventOccurred?.Invoke(this,
-                new ServerEvent { EventType = ServerEventType.ServerStoppedListening });
+            _eventLog.Add(new ServerEvent { EventType = ServerEventType.ServerStoppedListening });
+            EventOccurred?.Invoke(this, _eventLog.Last());
         }
     }
 }

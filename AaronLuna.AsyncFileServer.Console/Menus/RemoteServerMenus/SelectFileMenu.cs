@@ -93,13 +93,17 @@
             List<string> listOfFiles;
             try
             {
-                listOfFiles = Directory.GetFiles(_state.LocalServer.MyInfo.TransferFolder).ToList();
+                listOfFiles =
+                    Directory.GetFiles(_state.LocalServer.MyInfo.TransferFolder).ToList()
+                        .Select(f => f)
+                        .Where(f => !f.StartsWith('.'))
+                        .ToList();
             }
             catch (IOException ex)
             {
                 return Result.Fail<List<string>>($"{ex.Message} ({ex.GetType()})");
             }
-
+            
             return listOfFiles.Count > 0
                 ? Result.Ok(listOfFiles)
                 : Result.Fail<List<string>>(emptyFolderError);
