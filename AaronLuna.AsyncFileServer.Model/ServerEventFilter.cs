@@ -11,8 +11,14 @@
         {
             log.RemoveAll(DoNotDisplayInLog);
 
+            if (logLevel == LogLevel.Debug)
+            {
+                log.RemoveAll(LogLevelIsTraceOnly);
+            }
+
             if (logLevel == LogLevel.Info)
             {
+                log.RemoveAll(LogLevelIsTraceOnly);
                 log.RemoveAll(LogLevelIsDebugOnly);
             }
 
@@ -25,6 +31,11 @@
         static bool DoNotDisplayInLog(ServerEvent serverEvent)
         {
             return serverEvent.DoNotDisplayInLog;
+        }
+
+        static bool LogLevelIsTraceOnly(ServerEvent serverEvent)
+        {
+            return serverEvent.LogLevelIsTraceOnly;
         }
 
         static bool LogLevelIsDebugOnly(ServerEvent serverEvent)

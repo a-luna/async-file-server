@@ -150,6 +150,19 @@
             }
         }
 
+        public static bool LogLevelIsTraceOnly(this ServerEventType eventType)
+        {
+            switch (eventType)
+            {
+                case ServerEventType.SentFileChunkToClient:
+                case ServerEventType.UpdateFileTransferProgress:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
         public static bool LogLevelIsDebugOnly(this ServerEventType eventType)
         {
             switch (eventType)

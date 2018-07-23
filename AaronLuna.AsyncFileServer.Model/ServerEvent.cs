@@ -72,6 +72,7 @@
         public string ErrorMessage { get; set; }
 
         public bool DoNotDisplayInLog => EventType.DoNotDisplayInLog();
+        public bool LogLevelIsTraceOnly => EventType.LogLevelIsTraceOnly();
         public bool LogLevelIsDebugOnly => EventType.LogLevelIsDebugOnly();
 
         public void UpdateTimeStamp()

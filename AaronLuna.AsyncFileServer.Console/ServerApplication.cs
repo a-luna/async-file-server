@@ -190,6 +190,7 @@ namespace AaronLuna.AsyncFileServer.Console
                 case ServerEventType.ReceiveRequestFromRemoteServerComplete:
                 case ServerEventType.ReceivedTextMessage:
                 case ServerEventType.QueueContainsUnhandledRequests:
+                case ServerEventType.SendFileTransferRejectedStarted:
                     RefreshMainMenu(serverEvent);
                     break;
 
@@ -231,9 +232,9 @@ namespace AaronLuna.AsyncFileServer.Console
                     await ReceiveFileBytesCompleteAsync(serverEvent).ConfigureAwait(false);
                     break;
 
-                case ServerEventType.SendFileTransferRejectedStarted:
-                    await RejectFileTransferAsync().ConfigureAwait(false);
-                    break;
+                //case ServerEventType.SendFileTransferRejectedStarted:
+                //    await RejectFileTransferAsync().ConfigureAwait(false);
+                //    break;
 
                 case ServerEventType.SendFileTransferStalledComplete:
                     await NotifiedRemoteServerThatFileTransferIsStalledAsync().ConfigureAwait(false);
@@ -280,13 +281,13 @@ namespace AaronLuna.AsyncFileServer.Console
             }
         }
 
-        async Task RejectFileTransferAsync()
-        {
-            _state.SignalReturnToMainMenu.Set();
+        //async Task RejectFileTransferAsync()
+        //{
+        //    _state.SignalReturnToMainMenu.Set();
 
-            await Task.Delay(Constants.OneHalfSecondInMilliseconds).ConfigureAwait(false);
-            _state.SignalReturnToMainMenu.WaitOne();
-        }
+        //    await Task.Delay(Constants.OneHalfSecondInMilliseconds).ConfigureAwait(false);
+        //    _state.SignalReturnToMainMenu.WaitOne();
+        //}
 
         void ReceivedServerInfo(ServerEvent serverEvent)
         {
