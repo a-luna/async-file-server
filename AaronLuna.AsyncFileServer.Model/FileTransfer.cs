@@ -8,46 +8,32 @@
     public class FileTransfer
     {
         public FileTransfer()
-        {            
-            MyLocalIpAddress = IPAddress.None;
-            MyPublicIpAddress = IPAddress.None;
-            RemoteServerIpAddress = IPAddress.None;
-
-            LocalFilePath = string.Empty;
+        {   
+            FileName = string.Empty;
             LocalFolderPath = string.Empty;
-            RemoteFilePath = string.Empty;
             RemoteFolderPath = string.Empty;
-            RemoteServerName = string.Empty;
+            RemoteServerIpAddress = IPAddress.None;
         }
         
-        public IPAddress MyLocalIpAddress { get; set; }
-        public IPAddress MyPublicIpAddress { get; set; }
-        public int MyServerPortNumber { get; set; }
+        public string FileName { get; set; }
+        public long FileSizeInBytes { get; set; }
+        public string LocalFolderPath { get; set; }
+        public string RemoteFolderPath { get; set; }
         public IPAddress RemoteServerIpAddress { get; set; }
         public int RemoteServerPortNumber { get; set; }
-        public string RemoteServerName { get; set; }
 
-        public string LocalFilePath { get; set; }
-        public string LocalFolderPath { get; set; }
-        public string RemoteFilePath { get; set; }
-        public string RemoteFolderPath { get; set; }
-        public string FileName => Path.GetFileName(LocalFilePath);
-
-        public long FileSizeInBytes { get; set; }
+        public string LocalFilePath => Path.Combine(LocalFolderPath, FileName);
+        public string RemoteFilePath => Path.Combine(RemoteFolderPath, FileName);
         public string FileSizeString => FileHelper.FileSizeToString(FileSizeInBytes);
 
         public FileTransfer Duplicate()
         {
             var shallowCopy = (FileTransfer)MemberwiseClone();
-
-            shallowCopy.MyLocalIpAddress = new IPAddress(MyLocalIpAddress.GetAddressBytes());
-            shallowCopy.MyPublicIpAddress = new IPAddress(MyPublicIpAddress.GetAddressBytes());
-            shallowCopy.RemoteServerIpAddress = new IPAddress(RemoteServerIpAddress.GetAddressBytes());
-
-            shallowCopy.LocalFilePath = string.Copy(LocalFilePath);
+            
+            shallowCopy.FileName = string.Copy(FileName);
             shallowCopy.LocalFolderPath = string.Copy(LocalFolderPath);
-            shallowCopy.RemoteFilePath = string.Copy(RemoteFilePath);
             shallowCopy.RemoteFolderPath = string.Copy(RemoteFolderPath);
+            shallowCopy.RemoteServerIpAddress = new IPAddress(RemoteServerIpAddress.GetAddressBytes());
 
             return shallowCopy;
         }

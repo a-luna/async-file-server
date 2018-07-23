@@ -2,18 +2,27 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Net;
     using System.Net.Sockets;
     using System.Threading.Tasks;
 
-    using Model;
-    using Utilities;
     using Common;
     using Common.Result;
 
+    using Model;
+    using Utilities;
+
     public class ServerRequestController
     {
+        internal static readonly string ErrorNoDataReceived =
+            "Request from remote server has not been received.";
+
+        internal static readonly string ErrorRequestInitiatedByRemoteServer =
+            "File Transfer was initiated by remote server, please call GetInboundFileTransfer() " +
+            "to retrieve all transfer details.";
+
         Socket _socket;
         readonly byte[] _buffer;
         readonly int _bufferSize;
@@ -24,14 +33,13 @@
         IPAddress _remoteServerIpAddress;
         int _remoteServerPortNumber;
 
-        int _fileTransferId;
+        int _remoteServerFileTransferId;
         int _fileTransferRetryCounter;
         int _fileTransferRetryLimit;
         long _fileSizeBytes;
         long _fileTransferResponseCode;
         long _lockoutExpireTimeTicks;
         string _fileName;
-        string _requestedFilePath;
         string _localFolderPath;
         string _remoteFolderPath;
         string _textMessage;
@@ -147,7 +155,9 @@
             {
                 EventType = ServerEventType.ConnectToRemoteServerStarted,
                 RemoteServerIpAddress = remoteServerIp,
-                RemoteServerPortNumber = remoteServerPort
+                RemoteServerPortNumber = remoteServerPort,
+                RequestId = Id,
+                FileTransferId = FileTransferId
             });
 
             EventOccurred?.Invoke(this, EventLog.Last());
@@ -167,7 +177,9 @@
             {
                 EventType = ServerEventType.ConnectToRemoteServerComplete,
                 RemoteServerIpAddress = remoteServerIp,
-                RemoteServerPortNumber = remoteServerPort
+                RemoteServerPortNumber = remoteServerPort,
+                RequestId = Id,
+                FileTransferId = FileTransferId
             });
 
             EventOccurred?.Invoke(this, EventLog.Last());
@@ -211,7 +223,13 @@
             _request = new ServerRequest {Direction = ServerRequestDirection.Received};
             Status = ServerRequestStatus.NoData;
 
-            EventLog.Add(new ServerEvent { EventType = ServerEventType.ReceiveRequestFromRemoteServerStarted });
+            EventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.ReceiveRequestFromRemoteServerStarted,
+                RequestId = Id,
+                FileTransferId = FileTransferId
+            });
+
             EventOccurred?.Invoke(this, EventLog.Last());
 
             var receiveRequestLength = await ReceiveLengthOfIncomingRequest().ConfigureAwait(false);
@@ -230,7 +248,13 @@
 
             _request.RequestBytes = receiveRequestBytes.Value;
             
-            EventLog.Add(new ServerEvent { EventType = ServerEventType.DetermineRequestTypeStarted });
+            EventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.DetermineRequestTypeStarted,
+                RequestId = Id,
+                FileTransferId = FileTransferId
+            });
+
             EventOccurred?.Invoke(this, EventLog.Last());
 
             ReadRequestBytes(_request.RequestBytes);
@@ -238,7 +262,9 @@
             EventLog.Add(new ServerEvent
             {
                 EventType = ServerEventType.DetermineRequestTypeComplete,
-                RequestType = RequestType
+                RequestType = RequestType,
+                RequestId = Id,
+                FileTransferId = FileTransferId
             });
 
             EventOccurred?.Invoke(this, EventLog.Last());
@@ -248,7 +274,9 @@
                 EventType = ServerEventType.ReceiveRequestFromRemoteServerComplete,
                 RemoteServerIpAddress = _remoteServerIpAddress,
                 RemoteServerPortNumber = _remoteServerPortNumber,
-                RequestType = RequestType
+                RequestType = RequestType,
+                RequestId = Id,
+                FileTransferId = FileTransferId
             });
 
             EventOccurred?.Invoke(this, EventLog.Last());
@@ -260,7 +288,13 @@
 
         async Task<Result<int>> ReceiveLengthOfIncomingRequest()
         {
-            EventLog.Add(new ServerEvent { EventType = ServerEventType.ReceiveRequestLengthStarted });
+            EventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.ReceiveRequestLengthStarted,
+                RequestId = Id,
+                FileTransferId = FileTransferId
+            });
+
             EventOccurred?.Invoke(this, EventLog.Last());
 
             var readFromSocket =
@@ -289,7 +323,9 @@
                 EventType = ServerEventType.ReceivedRequestLengthBytesFromSocket,
                 BytesReceivedCount = _lastBytesReceivedCount,
                 RequestLengthInBytes = Constants.SizeOfInt32InBytes,
-                UnreadBytesCount = unreadBytesCount
+                UnreadBytesCount = unreadBytesCount,
+                RequestId = Id,
+                FileTransferId = FileTransferId
             });
 
             SocketEventOccurred?.Invoke(this, EventLog.Last());
@@ -304,6 +340,8 @@
                 {
                     EventType = ServerEventType.SaveUnreadBytesAfterRequestLengthReceived,
                     UnreadBytesCount = unreadBytesCount,
+                    RequestId = Id,
+                    FileTransferId = FileTransferId
                 });
 
                 EventOccurred?.Invoke(this, EventLog.Last());
@@ -313,7 +351,9 @@
             {
                 EventType = ServerEventType.ReceiveRequestLengthComplete,
                 RequestLengthInBytes = requestLength,
-                RequestLengthBytes = requestLengthBytes
+                RequestLengthBytes = requestLengthBytes,
+                RequestId = Id,
+                FileTransferId = FileTransferId
             });
 
             EventOccurred?.Invoke(this, EventLog.Last());
@@ -323,7 +363,12 @@
 
         async Task<Result<byte[]>> ReceiveRequestBytesAsync(int requestLengthInBytes)
         {
-            EventLog.Add(new ServerEvent { EventType = ServerEventType.ReceiveRequestBytesStarted });
+            EventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.ReceiveRequestBytesStarted,
+                RequestId = Id,
+                FileTransferId = FileTransferId
+            });
             EventOccurred?.Invoke(this, EventLog.Last());
 
             int currentRequestBytesReceived;
@@ -349,7 +394,9 @@
                     EventType = ServerEventType.CopySavedBytesToRequestData,
                     UnreadBytesCount = UnreadBytes.Count,
                     RequestLengthInBytes = requestLengthInBytes,
-                    RequestBytesRemaining = bytesRemaining
+                    RequestBytesRemaining = bytesRemaining,
+                    RequestId = Id,
+                    FileTransferId = FileTransferId
                 });
 
                 EventOccurred?.Invoke(this, EventLog.Last());
@@ -405,7 +452,9 @@
                     TotalRequestBytesReceived = bytesReceived,
                     RequestLengthInBytes = requestLengthInBytes,
                     RequestBytesRemaining = bytesRemaining,
-                    UnreadBytesCount = unreadByteCount
+                    UnreadBytesCount = unreadByteCount,
+                    RequestId = Id,
+                    FileTransferId = FileTransferId
                 });
 
                 SocketEventOccurred?.Invoke(this, EventLog.Last());
@@ -414,7 +463,9 @@
             EventLog.Add(new ServerEvent
             {
                 EventType = ServerEventType.ReceiveRequestBytesComplete,
-                RequestBytes = requestBytes.ToArray()
+                RequestBytes = requestBytes.ToArray(),
+                RequestId = Id,
+                FileTransferId = FileTransferId
             });
 
             EventOccurred?.Invoke(this, EventLog.Last());
@@ -429,7 +480,9 @@
             {
                 EventType = ServerEventType.SaveUnreadBytesAfterAllRequestBytesReceived,
                 ExpectedByteCount = currentRequestBytesReceived,
-                UnreadBytesCount = unreadByteCount
+                UnreadBytesCount = unreadByteCount,
+                RequestId = Id,
+                FileTransferId = FileTransferId
             });
 
             EventOccurred?.Invoke(this, EventLog.Last());
@@ -447,29 +500,28 @@
             RequestType = ServerRequestDataReader.ReadRequestType(requestBytes);
 
             (_remoteServerIpAddress,
+                _,
+                _,
                 _remoteServerPortNumber,
+                _,
                 _textMessage,
-                _fileTransferId,
-                _,
-                _,
-                _,
+                _fileInfoList,
                 _fileName,
-                _requestedFilePath,
+                _fileSizeBytes,
                 _localFolderPath,
                 _remoteFolderPath,
-                _fileInfoList,
-                _fileSizeBytes,
                 _fileTransferResponseCode,
-                _lockoutExpireTimeTicks,
+                _remoteServerFileTransferId,
                 _fileTransferRetryCounter,
-                _fileTransferRetryLimit) = ServerRequestDataReader.ReadRequestBytes(requestBytes);
+                _fileTransferRetryLimit,
+                _lockoutExpireTimeTicks) = ServerRequestDataReader.ReadRequestBytes(requestBytes);
         }
 
         public Result<TextMessage> GetTextMessage()
         {
             if (Status == ServerRequestStatus.NoData)
             {
-                return Result.Fail<TextMessage>("Request from remote server has not been received.");
+                return Result.Fail<TextMessage>(ErrorNoDataReceived);
             }
 
             var textMessage = new TextMessage
@@ -492,7 +544,7 @@
         {
             if (Status == ServerRequestStatus.NoData)
             {
-                return Result.Fail<FileTransferController>("Request from remote server has not been received.");
+                return Result.Fail<FileTransferController>(ErrorNoDataReceived);
             }
 
             FileTransferId = fileTransferId;
@@ -505,7 +557,8 @@
                 RemoteServerRetryLimit = _fileTransferRetryLimit
             };
 
-            inboundFileTransfer.InitializeInboundFileTransfer(
+            inboundFileTransfer.Initialize(
+                FileTransferDirection.Inbound,
                 FileTransferInitiator.RemoteServer,
                 localServerInfo,
                 RemoteServerInfo,
@@ -526,7 +579,7 @@
         {
             if (Status == ServerRequestStatus.NoData)
             {
-                return Result.Fail<FileTransferController>("Request from remote server has not been received.");
+                return Result.Fail<FileTransferController>(ErrorNoDataReceived);
             }
 
             FileTransferId = fileTransferId;
@@ -534,14 +587,19 @@
             var fileTransferController =
                 new FileTransferController(fileTransferId, settings)
                 {
-                    RemoteServerTransferId = _fileTransferId
+                    RemoteServerTransferId = _remoteServerFileTransferId
                 };
 
-            fileTransferController.InitializeOutboundFileTransfer(
+            var localFilePath = Path.Combine(_localFolderPath, _fileName);
+            var fileSizeInBytes = new FileInfo(localFilePath).Length;
+
+            fileTransferController.Initialize(
+                FileTransferDirection.Outbound,
                 FileTransferInitiator.RemoteServer,
                 localServerInfo,
                 RemoteServerInfo,
                 _fileName,
+                fileSizeInBytes,
                 _localFolderPath,
                 _remoteFolderPath);
 
@@ -555,7 +613,7 @@
         {
             if (Status == ServerRequestStatus.NoData)
             {
-                return Result.Fail<long>("Request from remote server has not been received.");
+                return Result.Fail<long>(ErrorNoDataReceived);
             }
 
             return RequestTypeIsFileTransferResponse
@@ -567,11 +625,11 @@
         {
             if (Status == ServerRequestStatus.NoData)
             {
-                return Result.Fail<int>("Request from remote server has not been received.");
+                return Result.Fail<int>(ErrorNoDataReceived);
             }
 
             return RequestTypeIsFileTransferError
-                ? Result.Ok(_fileTransferId)
+                ? Result.Ok(_remoteServerFileTransferId)
                 : Result.Fail<int>($"Request received is not valid for this operation ({RequestType}).");
         }
 
@@ -579,28 +637,24 @@
         {
             if (Status == ServerRequestStatus.NoData)
             {
-                return Result.Fail<int>("Request from remote server has not been received.");
+                return Result.Fail<int>(ErrorNoDataReceived);
             }
 
             if (RequestType != ServerRequestType.InboundFileTransferRequest)
             {
                 return Result.Fail<int>($"Request received is not valid for this operation ({RequestType}).");
             }
-
-            const string error =
-                "File Transfer was initiated by remote server, please call GetInboundFileTransfer() " +
-                "to retrieve all transfer details.";
-
-            return _fileTransferId != 0
-                ? Result.Ok(_fileTransferId)
-                : Result.Fail<int>(error);
+            
+            return _remoteServerFileTransferId != 0
+                ? Result.Ok(_remoteServerFileTransferId)
+                : Result.Fail<int>(ErrorRequestInitiatedByRemoteServer);
         }
 
         public Result<FileTransferController> UpdateInboundFileTransfer(FileTransferController fileTransfer)
         {
             if (Status == ServerRequestStatus.NoData)
             {
-                return Result.Fail<FileTransferController>("Request from remote server has not been received.");
+                return Result.Fail<FileTransferController>(ErrorNoDataReceived);
             }
 
             return RequestType == ServerRequestType.InboundFileTransferRequest
@@ -640,7 +694,7 @@
         {
             if (Status == ServerRequestStatus.NoData)
             {
-                return Result.Fail<Socket>("Request from remote server has not been received.");
+                return Result.Fail<Socket>(ErrorNoDataReceived);
             }
 
             return RequestType == ServerRequestType.FileTransferAccepted
@@ -652,7 +706,7 @@
         {
             if (Status == ServerRequestStatus.NoData)
             {
-                return Result.Fail<FileTransferController>("Request from remote server has not been received.");
+                return Result.Fail<FileTransferController>(ErrorNoDataReceived);
             }
 
             return RequestType == ServerRequestType.RetryLimitExceeded
@@ -672,7 +726,7 @@
         {
             if (Status == ServerRequestStatus.NoData)
             {
-                return Result.Fail<string>("Request from remote server has not been received.");
+                return Result.Fail<string>(ErrorNoDataReceived);
             }
 
             return RequestType == ServerRequestType.FileListRequest
@@ -680,11 +734,11 @@
                 : Result.Fail<string>($"Request received is not valid for this operation ({RequestType}).");
         }
 
-        public Result<FileInfoList> GetRemoteServerFileInfoList()
+        public Result<FileInfoList> GetFileInfoList()
         {
             if (Status == ServerRequestStatus.NoData)
             {
-                return Result.Fail<FileInfoList>("Request from remote server has not been received.");
+                return Result.Fail<FileInfoList>(ErrorNoDataReceived);
             }
 
             return RequestType == ServerRequestType.FileListResponse

@@ -19,17 +19,16 @@
         public static ServerInfo ReadRemoteServerInfo(byte[] requestBytes)
         {
             var (remoteServerIpAddress,
-                remoteServerPortNumber,
-                _,
-                _,
                 remoteServerLocalIpAddress,
                 remoteServerPublicIpAddress,
+                remoteServerPortNumber,
                 platform,
                 _,
                 _,
                 _,
-                remoteFolderPath,
                 _,
+                _,
+                remoteFolderPath,
                 _,
                 _,
                 _,
@@ -60,41 +59,40 @@
         }
 
         public static (
-            IPAddress remoteServerIpAddress,
-            int remoteServerPortNumber,
-            string textMessage,
-            int fileTransferId,
-            IPAddress remoteServerLocalIpAddress,
-            IPAddress remoteServerPublicIpAddress,
-            ServerPlatform platform,
-            string fileName,
-            string requestedFilePath,
-            string localFolderPath,
-            string remoteFolderPath,
-            FileInfoList fileInfoList,
-            long fileSizeBytes,
-            long fileTransferResponseCode,
-            long lockoutExpireTimeTicks,
-            int fileTransferRetryCounter,
-            int fileTransferRetryLimit) ReadRequestBytes(byte[] requestBytes)
+            IPAddress remoteServerSessionIpAddress,     // 1
+            IPAddress remoteServerLocalIpAddress,       // 2
+            IPAddress remoteServerPublicIpAddress,      // 3
+            int remoteServerPortNumber,                 // 4
+            ServerPlatform platform,                    // 5
+            string textMessage,                         // 6
+            FileInfoList fileInfoList,                  // 7
+            string fileName,                            // 8
+            long fileSizeBytes,                         // 9
+            string localFolderPath,                     // 10
+            string remoteFolderPath,                    // 11
+            long fileTransferResponseCode,              // 12
+            int remoteServerTransferId,                 // 13
+            int fileTransferRetryCounter,               // 14
+            int fileTransferRetryLimit,                 // 15
+            long lockoutExpireTimeTicks)                // 16
+            ReadRequestBytes(byte[] requestBytes)
         {
             var remoteServerIpString = string.Empty;
-            var remoteServerPortNumber = 0;
-            var textMessage = string.Empty;
-            var fileTransferId = 0;
             var remoteServerLocalIpString = string.Empty;
             var remoteServerPublicIpString = string.Empty;
+            var remoteServerPortNumber = 0;
             var platform = ServerPlatform.None;
+            var textMessage = string.Empty;
+            var fileInfoList = new FileInfoList();
             var fileName = string.Empty;
-            var requestedFilePath = string.Empty;
+            long fileSizeBytes = 0;
             var localFolderPath = string.Empty;
             var remoteFolderPath = string.Empty;
-            var fileInfoList = new FileInfoList();
-            long fileSizeBytes = 0;
             long fileTransferResponseCode = 0;
-            long lockoutExpireTimeTicks = 0;
+            var remoteServerTransferId = 0;
             var fileTransferRetryCounter = 0;
             var fileTransferRetryLimit = 0;
+            long lockoutExpireTimeTicks = 0;
 
             switch (ReadRequestType(requestBytes))
             {
@@ -122,7 +120,7 @@
                 case ServerRequestType.InboundFileTransferRequest:
 
                     (fileTransferResponseCode,
-                        fileTransferId,
+                        remoteServerTransferId,
                         fileTransferRetryCounter,
                         fileTransferRetryLimit,
                         fileName,
@@ -136,7 +134,7 @@
 
                 case ServerRequestType.OutboundFileTransferRequest:
 
-                    (fileTransferId,
+                    (remoteServerTransferId,
                         fileName,
                         localFolderPath,
                         remoteServerIpString,
@@ -192,7 +190,7 @@
                         remoteServerPortNumber,
                         fileTransferIdInt64) = ReadRequestWithInt64Value(requestBytes);
 
-                    fileTransferId = Convert.ToInt32(fileTransferIdInt64);
+                    remoteServerTransferId = Convert.ToInt32(fileTransferIdInt64);
 
                     break;
 
@@ -200,7 +198,7 @@
 
                     (remoteServerIpString,
                         remoteServerPortNumber,
-                        fileTransferId,
+                        remoteServerTransferId,
                         fileTransferRetryLimit,
                         lockoutExpireTimeTicks) = ReadRetryLimitExceededRequest(requestBytes);
 
@@ -226,22 +224,21 @@
                 : NetworkUtilities.ParseSingleIPv4Address(remoteServerPublicIpString).Value;
 
             return (remoteServerIpAddress,
-                remoteServerPortNumber,
-                textMessage,
-                fileTransferId,
                 remoteServerLocalIpAddress,
                 remoteServerPublicIpAddress,
+                remoteServerPortNumber,
                 platform,
+                textMessage,
+                fileInfoList,
                 fileName,
-                requestedFilePath,
+                fileSizeBytes,
                 localFolderPath,
                 remoteFolderPath,
-                fileInfoList,
-                fileSizeBytes,
                 fileTransferResponseCode,
-                lockoutExpireTimeTicks,
+                remoteServerTransferId,
                 fileTransferRetryCounter,
-                fileTransferRetryLimit);
+                fileTransferRetryLimit,
+                lockoutExpireTimeTicks);
         }
 
         static (

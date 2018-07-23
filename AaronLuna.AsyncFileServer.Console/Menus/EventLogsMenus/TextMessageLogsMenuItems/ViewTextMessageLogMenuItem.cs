@@ -12,13 +12,15 @@
         readonly AppState _state;
         readonly TextSession _textSession;
 
-        public ViewTextMessageLogMenuItem(AppState state, TextSession textSession)
+        public ViewTextMessageLogMenuItem(AppState state, TextSession textSession, bool isLastMenuItem)
         {
             _state = state;
             _textSession = textSession;
 
             ReturnToParent = false;
-            ItemText = textSession.ToString();
+            ItemText = isLastMenuItem
+                ? $"{textSession}{Environment.NewLine}"
+                : textSession.ToString();
         }
 
         public string ItemText { get; set; }

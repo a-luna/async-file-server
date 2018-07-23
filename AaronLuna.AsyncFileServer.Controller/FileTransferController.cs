@@ -81,7 +81,7 @@
         public string LocalFolderPath => _fileTransfer.LocalFolderPath;
         public string RemoteFilePath => _fileTransfer.RemoteFilePath;
         public string RemoteFolderPath => _fileTransfer.RemoteFolderPath;
-        public string FileName => GetFileName();
+        public string FileName => _fileTransfer.FileName;
 
         public DateTime RequestInitiatedTime { get; set; }
         public DateTime TransferStartTime { get; set; }
@@ -111,68 +111,36 @@
         public event EventHandler<ServerEvent> SocketEventOccurred;
         public event EventHandler<ServerEvent> FileTransferProgress;
 
-        public void InitializeOutboundFileTransfer(
+        public void Initialize(
+            FileTransferDirection direction, 
             FileTransferInitiator initiator,
             ServerInfo localServerInfo,
             ServerInfo remoteServerInfo,
             string fileName,
+            long fileSizeInBytes,
             string localFolderPath,
             string remoteFolderPath)
         {
+            TransferDirection = direction;
+            Initiator = initiator;
             LocalServerInfo = localServerInfo;
             RemoteServerInfo = remoteServerInfo;
-            TransferDirection = FileTransferDirection.Outbound;
-            Initiator = initiator;
-            Status = FileTransferStatus.AwaitingResponse;
-            TransferResponseCode = DateTime.Now.Ticks;
-            RequestInitiatedTime = DateTime.Now;
-
-            var localFilePath = Path.Combine(localFolderPath, fileName);
-
-            _fileTransfer = new FileTransfer
-            {
-                MyLocalIpAddress = LocalServerInfo.LocalIpAddress,
-                MyPublicIpAddress = LocalServerInfo.PublicIpAddress,
-                MyServerPortNumber = LocalServerInfo.PortNumber,
-                RemoteServerIpAddress = RemoteServerInfo.SessionIpAddress,
-                RemoteServerPortNumber = RemoteServerInfo.PortNumber,
-                RemoteServerName = RemoteServerInfo.Name,
-                LocalFilePath = localFilePath,
-                LocalFolderPath = localFolderPath,
-                RemoteFolderPath = remoteFolderPath,
-                RemoteFilePath = Path.Combine(remoteFolderPath, fileName),
-                FileSizeInBytes = new FileInfo(localFilePath).Length
-            };
-        }
-
-        public void InitializeInboundFileTransfer(
-            FileTransferInitiator initiator,
-            ServerInfo localServerInfo,
-            ServerInfo remoteServerInfo,
-            string fileName,
-            long fileSizeBytes,
-            string localFolderPath,
-            string remoteFolderPath)
-        {
-            LocalServerInfo = localServerInfo;
-            RemoteServerInfo = remoteServerInfo;
-            TransferDirection = FileTransferDirection.Inbound;
-            Initiator = initiator;
             Status = FileTransferStatus.AwaitingResponse;
             RequestInitiatedTime = DateTime.Now;
 
+            if (TransferDirection == FileTransferDirection.Outbound)
+            {
+                TransferResponseCode = DateTime.Now.Ticks;
+            }
+
             _fileTransfer = new FileTransfer
             {
-                MyLocalIpAddress = LocalServerInfo.LocalIpAddress,
-                MyPublicIpAddress = LocalServerInfo.PublicIpAddress,
-                MyServerPortNumber = LocalServerInfo.PortNumber,
                 RemoteServerIpAddress = RemoteServerInfo.SessionIpAddress,
                 RemoteServerPortNumber = RemoteServerInfo.PortNumber,
-                RemoteFilePath = Path.Combine(remoteFolderPath, fileName),
-                RemoteFolderPath = remoteFolderPath,
-                LocalFilePath = Path.Combine(localFolderPath, fileName),
+                FileName = fileName,
                 LocalFolderPath = localFolderPath,
-                FileSizeInBytes = fileSizeBytes
+                RemoteFolderPath = remoteFolderPath,
+                FileSizeInBytes = fileSizeInBytes
             };
         }
 
@@ -185,16 +153,13 @@
             RequestInitiatedTime = DateTime.MinValue;
             TransferStartTime = DateTime.MinValue;
             TransferCompleteTime = DateTime.MinValue;
-
-            CurrentBytesReceived = 0;
-            TotalBytesReceived = 0;
+            
             CurrentBytesSent = 0;
-            BytesRemaining = 0;
             FileChunkSentCount = 0;
             PercentComplete = 0;
         }
 
-        public async Task<Result> SendFileBytesAsync(Socket socket, CancellationToken token)
+        public async Task<Result> SendFileAsync(Socket socket, CancellationToken token)
         {
             _socket = socket;
             Status = FileTransferStatus.InProgress;
@@ -205,6 +170,7 @@
                 EventType = ServerEventType.SendFileBytesStarted,
                 RemoteServerIpAddress = _fileTransfer.RemoteServerIpAddress,
                 RemoteServerPortNumber = _fileTransfer.RemoteServerPortNumber,
+                FileTransferId = Id,
                 RequestId = RequestId
             });
 
@@ -285,6 +251,7 @@
                         FileBytesRemaining = BytesRemaining,
                         FileChunkSentCount = FileChunkSentCount,
                         SocketSendCount = socketSendCount,
+                        FileTransferId = Id,
                         RequestId = RequestId
                     });
 
@@ -302,7 +269,8 @@
                     EventType = ServerEventType.SendFileBytesComplete,
                     RemoteServerIpAddress = _fileTransfer.RemoteServerIpAddress,
                     RemoteServerPortNumber = _fileTransfer.RemoteServerPortNumber,
-                    RequestId = RequestId
+                    RequestId = RequestId,
+                    FileTransferId = Id,
                 });
 
                 EventOccurred?.Invoke(this, EventLog.Last());
@@ -370,7 +338,8 @@
                     TotalFileBytesReceived = TotalBytesReceived,
                     FileSizeInBytes = FileSizeInBytes,
                     FileBytesRemaining = BytesRemaining,
-                    RequestId = RequestId
+                    RequestId = RequestId,
+                    FileTransferId = Id,
                 });
 
                 EventOccurred?.Invoke(this, EventLog.Last());
@@ -443,7 +412,8 @@
                         EventType = ServerEventType.MultipleFileWriteAttemptsNeeded,
                         FileWriteAttempts = fileWriteAttempts,
                         PercentComplete = PercentComplete,
-                        RequestId = RequestId
+                        RequestId = RequestId,
+                        FileTransferId = Id,
                     });
 
                     EventOccurred?.Invoke(this, EventLog.Last());
@@ -465,7 +435,8 @@
                         FileSizeInBytes = FileSizeInBytes,
                         FileBytesRemaining = BytesRemaining,
                         PercentComplete = PercentComplete,
-                        RequestId = RequestId
+                        RequestId = RequestId,
+                        FileTransferId = Id
                     });
 
                     SocketEventOccurred?.Invoke(this, EventLog.Last());
@@ -480,7 +451,9 @@
                 {
                     EventType = ServerEventType.UpdateFileTransferProgress,
                     TotalFileBytesReceived = TotalBytesReceived,
-                    PercentComplete = PercentComplete
+                    PercentComplete = PercentComplete,
+                    RequestId = RequestId,
+                    FileTransferId = Id
                 });
             }
 
@@ -511,7 +484,8 @@
                 FileTransferRate = TransferRate,
                 RemoteServerIpAddress = _fileTransfer.RemoteServerIpAddress,
                 RemoteServerPortNumber = _fileTransfer.RemoteServerPortNumber,
-                RequestId = RequestId
+                RequestId = RequestId,
+                FileTransferId = Id
             });
 
             EventOccurred?.Invoke(this, EventLog.Last());
@@ -712,22 +686,6 @@
             return kilobytesPerSecond > 1
                 ? $"{kilobytesPerSecond:F1} KB/s"
                 : $"{bytesPerSecond:F1} bytes/s";
-        }
-
-        // TODO: I have a feeling that this is no longer necessary (it may even be incorrect and I should always be using either remote or local)
-        string GetFileName()
-        {
-            switch (TransferDirection)
-            {
-                case FileTransferDirection.Inbound:
-                    return Path.GetFileName(_fileTransfer.RemoteFilePath);
-
-                case FileTransferDirection.Outbound:
-                    return Path.GetFileName(_fileTransfer.LocalFilePath);
-
-                default:
-                    return string.Empty;
-            }
         }
     }
 }

@@ -22,7 +22,12 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus.PendingRe
             _textSession = textSession;
 
             ReturnToParent = false;
-            ItemText = $"Read new message from {textSession.RemoteServerInfo}";
+
+            var message = textSession.UnreadMessages.Count > 1
+                ? "messages"
+                : "message";
+
+            ItemText = $"Read {textSession.UnreadMessages.Count} {message} from {textSession.RemoteServerInfo}";
         }
 
         public string ItemText { get; set; }

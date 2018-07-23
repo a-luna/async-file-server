@@ -54,7 +54,7 @@
 
         internal static readonly string Error_ServerInfoRequestTimedout =
             "Request for server info timed out before receiving a response";
-
+        
         internal static readonly string Error_NoClientSelectedError =
             "Please select a remote server before choosing an action to perform.";
 

@@ -52,14 +52,17 @@
         public static async Task<Result> RequestServerInfoAsync(
             AppState state,
             ServerInfo serverInfo,
-            bool promptUserForServerName)
+            bool runPassively)
         {
             var ipAddress = serverInfo.SessionIpAddress;
             var port = serverInfo.PortNumber;
             var timeout = state.Settings.SocketSettings.SocketTimeoutInMilliseconds;
 
-            DisplayLocalServerInfo(state);
-            Console.WriteLine("Requesting additional info from remote server...");
+            if (!runPassively)
+            {
+                DisplayLocalServerInfo(state);
+                Console.WriteLine("Requesting additional info from remote server...");
+            }
 
             var requestServerInfoTask =
                 Task.Run(() => RequestServerInfoTaskAsync(state, ipAddress, port));
@@ -72,10 +75,9 @@
                     return requestServerInfo;
                 }
 
-                DisplayLocalServerInfo(state);
-
-                if (promptUserForServerName)
+                if (!runPassively)
                 {
+                    DisplayLocalServerInfo(state);
                     serverInfo.Name = SetSelectedServerName(state, serverInfo);
                 }
 
@@ -329,6 +331,38 @@
                 break;
             }
             return exists;
+        }
+
+        public static async Task CheckIfRemoteServerAlreadySavedAsync(AppState state)
+        {
+            if (state.DoNotRequestServerInfo) return;
+            if (state.LocalServer.MyInfo.IsEqualTo(state.LocalServer.RemoteServerInfo)) return;
+
+            var exists =
+                ServerInfoAlreadyExists(
+                    state.LocalServer.RemoteServerInfo,
+                    state.Settings.RemoteServers);
+
+            if (exists)
+            {
+                LookupRemoteServerName(
+                    state.LocalServer.RemoteServerInfo,
+                    state.Settings.RemoteServers);
+
+                return;
+            }
+
+            state.DoNotRequestServerInfo = true;
+            state.DoNotRefreshMainMenu = true;
+
+            await
+                RequestServerInfoAsync(
+                    state,
+                    state.LocalServer.RemoteServerInfo,
+                    true);
+
+            state.DoNotRequestServerInfo = false;
+            state.DoNotRefreshMainMenu = false;
         }
 
         public static string SetSelectedServerName(AppState state, ServerInfo serverInfo)

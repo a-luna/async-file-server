@@ -1,4 +1,7 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.EventLogsMenus
+﻿using System.Linq;
+using AaronLuna.Common.Extensions;
+
+namespace AaronLuna.AsyncFileServer.Console.Menus.EventLogsMenus
 {
     using System.Collections.Generic;
     using System.Threading.Tasks;
@@ -47,17 +50,21 @@
 
         void PopulateMenu()
         {
-            MenuItems.Clear(); 
+            MenuItems.Clear();
 
-            foreach (var id in _state.LocalServer.TextSessionIds)
+            var menuItemsCount = _state.LocalServer.TextSessionIds.Count;
+            foreach (var i in Enumerable.Range(0, menuItemsCount))
             {
+                var id = _state.LocalServer.TextSessionIds[i];
                 var textSession = _state.LocalServer.GetTextSessionById(id).Value;
 
                 SharedFunctions.LookupRemoteServerName(
                     textSession.RemoteServerInfo,
                     _state.Settings.RemoteServers);
 
-                MenuItems.Add(new ViewTextMessageLogMenuItem(_state, textSession));
+                var isLastMenuItem = i.IsLastIteration(menuItemsCount);
+
+                MenuItems.Add(new ViewTextMessageLogMenuItem(_state, textSession, isLastMenuItem));
             }
 
             MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));

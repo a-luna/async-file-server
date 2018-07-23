@@ -199,7 +199,7 @@
                     break;
 
                 case ServerEventType.QueueContainsUnhandledRequests:
-                    report += $"Number of unhandled requests currently in queue: {ItemsInQueueCount}";
+                    report += $"Number of unhandled requests currently in queue: {ItemsInQueueCount}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ShutdownListenSocketStarted:

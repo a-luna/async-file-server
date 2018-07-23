@@ -20,7 +20,7 @@ namespace AaronLuna.AsyncFileServer.Test
     [TestClass]
     public class AsyncFileServerTestFixture
     {
-        const bool GenerateLogFiles = true;
+        const bool GenerateLogFiles = false;
         const string FileName = "smallFile.jpg";
 
         CancellationTokenSource _cts;

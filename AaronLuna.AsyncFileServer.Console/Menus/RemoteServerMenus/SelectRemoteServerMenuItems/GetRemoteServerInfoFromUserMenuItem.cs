@@ -52,7 +52,7 @@
                 SharedFunctions.RequestServerInfoAsync(
                     _state,
                     _state.SelectedServerInfo,
-                    true);
+                    false);
 
             _state.DoNotRequestServerInfo = false;
             _state.DoNotRefreshMainMenu = false;

@@ -183,7 +183,7 @@ namespace AaronLuna.AsyncFileServer.Console
             switch (serverEvent.EventType)
             {
                 case ServerEventType.ProcessRequestComplete:
-                    await CheckIfRemoteServerAlreadySavedAsync();
+                    await SharedFunctions.CheckIfRemoteServerAlreadySavedAsync(_state);
                     RefreshMainMenu(serverEvent);
                     break;
 
@@ -250,38 +250,6 @@ namespace AaronLuna.AsyncFileServer.Console
                 default:
                     return;
             }
-        }
-
-        private async Task CheckIfRemoteServerAlreadySavedAsync()
-        {
-            if (_state.DoNotRequestServerInfo) return;
-            if (_state.LocalServer.MyInfo.IsEqualTo(_state.LocalServer.RemoteServerInfo)) return;
-
-            var exists =
-                SharedFunctions.ServerInfoAlreadyExists(
-                    _state.LocalServer.RemoteServerInfo,
-                    _state.Settings.RemoteServers);
-
-            if (exists)
-            {
-                SharedFunctions.LookupRemoteServerName(
-                    _state.LocalServer.RemoteServerInfo,
-                    _state.Settings.RemoteServers);
-
-                return;
-            }
-
-            _state.DoNotRequestServerInfo = true;
-            _state.DoNotRefreshMainMenu = true;
-
-            await
-                SharedFunctions.RequestServerInfoAsync(
-                    _state,
-                    _state.LocalServer.RemoteServerInfo,
-                    false);
-
-            _state.DoNotRequestServerInfo = false;
-            _state.DoNotRefreshMainMenu = false;
         }
 
         void RefreshMainMenu(ServerEvent serverEvent)
@@ -506,10 +474,17 @@ namespace AaronLuna.AsyncFileServer.Console
 
         void HandleErrorOccurred(ServerEvent serverEvent)
         {
+            TearDownProgressBar();
+
             _state.ErrorOccurred = true;
             _state.ErrorMessage = serverEvent.ErrorMessage;
             _state.FileTransferInProgress = false;
 
+           SharedFunctions.NotifyUserErrorOccurred(serverEvent.ErrorMessage);
+        }
+
+        void TearDownProgressBar()
+        {
             if (!_state.ProgressBarInstantiated) return;
 
             _state.ProgressBar.Dispose();

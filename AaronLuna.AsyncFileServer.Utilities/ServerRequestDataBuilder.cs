@@ -166,16 +166,16 @@
             return wrappedRequest.ToArray();
         }
 
-        public static byte[] ConstructOutboundFileTransferRequest(
-            string localIpAddress,
+        public static byte[] ConstructOutboundFileTransferRequest(string localIpAddress,
             int localPort,
+            string fileName,
+            long fileSizeBytes,
+            string localFolderPath,
+            string remoteFolderPath,
             long responseCode,
             int remoteServerFileTransferId,
             int retryCounter,
-            int retryLimit,
-            string localFilePath,
-            long fileSizeBytes,
-            string remoteFolderPath)
+            int retryLimit)
         {
             var requestType = BitConverter.GetBytes((int)ServerRequestType.InboundFileTransferRequest);
 
@@ -190,12 +190,10 @@
 
             var retryLimitData = BitConverter.GetBytes(retryLimit);
             var retryLimitLen = BitConverter.GetBytes(Constants.SizeOfInt32InBytes);
-
-            var fileName = Path.GetFileName(localFilePath);
+            
             var fileNameData = Encoding.UTF8.GetBytes(fileName);
             var fileNameLen = BitConverter.GetBytes(fileNameData.Length);
-
-            var localFolderPath = Path.GetDirectoryName(localFilePath);
+            
             var localFolderData = Encoding.UTF8.GetBytes(localFolderPath);
             var localFolderLen = BitConverter.GetBytes(localFolderData.Length);
 
