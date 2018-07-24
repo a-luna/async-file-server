@@ -286,11 +286,22 @@
             return portNumber;
         }
 
+        public static Result<bool> UserEnteredAnything(string input)
+        {
+            if (string.IsNullOrEmpty(input) || string.IsNullOrWhiteSpace(input))
+            {
+                return Result.Fail<bool>("Error! Input was null or empty string.");
+            }
+
+            return Result.Ok(true);
+        }
+
         public static Result<int> ValidateNumberIsWithinRange(string input, int rangeMin, int rangeMax)
         {
-            if (string.IsNullOrEmpty(input))
+            var userEnteredAnything = UserEnteredAnything(input);
+            if (userEnteredAnything.Failure)
             {
-                return Result.Fail<int>("Error! Input was null or empty string.");
+                return Result.Fail<int>(userEnteredAnything.Error);
             }
 
             if (!int.TryParse(input, out var parsedNum))
@@ -387,6 +398,13 @@
                 DisplayLocalServerInfo(state);
                 Console.WriteLine(prompt);
                 var input = Console.ReadLine();
+                
+                var userEnteredAnything = UserEnteredAnything(input);
+                if (userEnteredAnything.Failure)
+                {
+                   NotifyUserErrorOccurred(userEnteredAnything.Error);
+                    continue;
+                }
 
                 var nameIsValid = input.IsValidFileName();
                 if (!nameIsValid)

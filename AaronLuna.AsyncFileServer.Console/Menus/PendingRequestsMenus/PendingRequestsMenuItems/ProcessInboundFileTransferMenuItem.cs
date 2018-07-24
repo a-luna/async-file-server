@@ -57,6 +57,7 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus.PendingRe
             }
 
             SharedFunctions.DisplayLocalServerInfo(_state);
+            Console.WriteLine(transferRequest);
             var transferResult = await _state.LocalServer.AcceptInboundFileTransferAsync(_fileTransfer);
 
             Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");

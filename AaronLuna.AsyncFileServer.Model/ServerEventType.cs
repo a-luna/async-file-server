@@ -56,7 +56,7 @@
         ReceivedOutboundFileTransferRequest,
 
         SendFileBytesStarted,
-        SentFileChunkToClient,
+        SentFileChunkToRemoteServer,
         SendFileBytesComplete,
 
         MultipleFileWriteAttemptsNeeded,
@@ -154,7 +154,7 @@
         {
             switch (eventType)
             {
-                case ServerEventType.SentFileChunkToClient:
+                case ServerEventType.SentFileChunkToRemoteServer:
                 case ServerEventType.UpdateFileTransferProgress:
                     return true;
 
@@ -184,7 +184,7 @@
                 case ServerEventType.SaveUnreadBytesAfterAllRequestBytesReceived:
                 case ServerEventType.ProcessRequestStarted:
                 case ServerEventType.ProcessRequestComplete:
-                case ServerEventType.SentFileChunkToClient:
+                case ServerEventType.SentFileChunkToRemoteServer:
                 case ServerEventType.CopySavedBytesToIncomingFile:
                 case ServerEventType.ReceivedFileBytesFromSocket:
                 case ServerEventType.UpdateFileTransferProgress:

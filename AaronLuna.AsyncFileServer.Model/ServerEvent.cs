@@ -386,7 +386,7 @@
                     report += $"Sending file to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 
-                case ServerEventType.SentFileChunkToClient:
+                case ServerEventType.SentFileChunkToRemoteServer:
                     report +=
                         $"Sent file chunk #{FileChunkSentCount:N0} ({SocketSendCount:N0} total Socket.Send calls):{Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}Current Bytes Sent..: {CurrentFileBytesSent:N0}{Environment.NewLine}" +

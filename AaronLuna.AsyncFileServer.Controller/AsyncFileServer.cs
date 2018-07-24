@@ -227,7 +227,7 @@
             var pendingTransfers =
                 _fileTransfers.Select(ft => ft)
                     .Where(ft => ft.TransferDirection == FileTransferDirection.Inbound
-                                && ft.Status == FileTransferStatus.AwaitingResponse)
+                                && ft.Status == FileTransferStatus.Pending)
                     .ToList();
 
             return pendingTransfers.Count;
@@ -238,7 +238,7 @@
             return
                 _fileTransfers.Select(ft => ft)
                     .Where(ft => ft.TransferDirection == FileTransferDirection.Inbound
-                                 && ft.Status == FileTransferStatus.AwaitingResponse)
+                                 && ft.Status == FileTransferStatus.Pending)
                     .Select(ft => ft.Id)
                     .ToList();
         }
@@ -248,7 +248,7 @@
             var pendingTransfers =
                 _fileTransfers.Select(r => r)
                     .Where(r => r.TransferDirection == FileTransferDirection.Inbound
-                                && r.Status == FileTransferStatus.AwaitingResponse)
+                                && r.Status == FileTransferStatus.Pending)
                     .ToList();
 
             return pendingTransfers.Count > 0
@@ -1395,6 +1395,10 @@
                 inboundFileTransfer.TransferStartTime = DateTime.Now;
                 inboundFileTransfer.TransferCompleteTime = inboundFileTransfer.TransferStartTime;
 
+                inboundFileTransfer.ErrorMessage =
+                    "A file with the same name alreay exists in the transfer foler: " +
+                    inboundFileTransfer.LocalFilePath;
+
                 return await SendFileTransferResponseAsync(
                         ServerRequestType.FileTransferRejected,
                         inboundFileTransfer,
@@ -1485,9 +1489,6 @@
                 return acceptFileTransfer;
             }
 
-            inboundFileTransfer.Status = FileTransferStatus.Accepted;
-            inboundFileTransfer.FileTransferProgress += HandleFileTransferProgress;
-
             var getReceiveSocket = inboundRequest.GetTransferSocket();
             if (getReceiveSocket.Failure)
             {
@@ -1496,6 +1497,9 @@
 
             var socket = getReceiveSocket.Value;
             var unreadBytes = inboundRequest.UnreadBytes.ToArray();
+
+            inboundFileTransfer.Status = FileTransferStatus.Accepted;
+            inboundFileTransfer.FileTransferProgress += HandleFileTransferProgress;
 
             var receiveFile =
                 await inboundFileTransfer.ReceiveFileAsync(
@@ -1596,6 +1600,7 @@
             inboundFileTransfer.Status = FileTransferStatus.Rejected;
             inboundFileTransfer.TransferStartTime = DateTime.Now;
             inboundFileTransfer.TransferCompleteTime = inboundFileTransfer.TransferStartTime;
+            inboundFileTransfer.ErrorMessage = "File transfer was rejected by user";
 
             var rejectTransfer =
                 await SendFileTransferResponseAsync(

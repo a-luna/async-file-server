@@ -675,7 +675,7 @@
             if (_fileTransferRetryCounter == 1) return fileTransfer;
 
             fileTransfer.RetryCounter = _fileTransferRetryCounter;
-            fileTransfer.Status = FileTransferStatus.AwaitingResponse;
+            fileTransfer.Status = FileTransferStatus.Pending;
             fileTransfer.ErrorMessage = string.Empty;
 
             fileTransfer.RequestInitiatedTime = DateTime.Now;

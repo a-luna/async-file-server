@@ -19,9 +19,11 @@
             _state = state;
 
             ReturnToParent = true;
+
+            var timeout = TimeSpan.FromMilliseconds(_state.Settings.SocketSettings.SocketTimeoutInMilliseconds).TotalSeconds;
+
             ItemText =
-                "*Send/Receive Socket Timeout Length......: " +
-                $"{_state.Settings.SocketSettings.SocketTimeoutInMilliseconds} ms" +
+                $"*Send/Receive Socket Timeout Length......: {timeout} seconds" +
                 Environment.NewLine;
 
             MenuText = $"Select a value from the list below:{Environment.NewLine}";

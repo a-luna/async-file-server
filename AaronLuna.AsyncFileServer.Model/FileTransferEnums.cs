@@ -17,7 +17,7 @@
     public enum FileTransferStatus
     {
         None,
-        AwaitingResponse,
+        Pending,
         Accepted,
         Rejected,
         InProgress,
@@ -49,12 +49,12 @@
 
     public static class FileTransferStatusExtensions
     {
-        public static string ToString(this FileTransferStatus status)
+        public static string Name(this FileTransferStatus status)
         {
             switch (status)
             {
-                case FileTransferStatus.AwaitingResponse:
-                    return "Awaiting Response";
+                case FileTransferStatus.Pending:
+                    return "PENDING";
 
                 case FileTransferStatus.InProgress:
                     return "In Progress";
@@ -78,14 +78,42 @@
             }
         }
 
-        public static bool TasksRemaining(this FileTransferStatus status)
+        public static bool TransferNeverStarted(this FileTransferStatus status)
         {
             switch (status)
             {
-                case FileTransferStatus.AwaitingResponse:
+                case FileTransferStatus.Pending:
                 case FileTransferStatus.Accepted:
+                case FileTransferStatus.Rejected:
+                case FileTransferStatus.RetryLimitExceeded:
+                case FileTransferStatus.Error:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        public static bool TransferStartedButDidNotComplete(this FileTransferStatus status)
+        {
+            switch (status)
+            {
                 case FileTransferStatus.InProgress:
+                case FileTransferStatus.Stalled:
+                case FileTransferStatus.Cancelled:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        public static bool TransfercompletedSucessfully(this FileTransferStatus status)
+        {
+            switch (status)
+            {
                 case FileTransferStatus.AwaitingConfirmation:
+                case FileTransferStatus.Complete:
                     return true;
 
                 default:

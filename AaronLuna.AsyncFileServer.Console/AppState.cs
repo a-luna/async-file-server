@@ -48,7 +48,8 @@
         public int InboundFileTransferId { get; set; }
         public int LogViewerFileTransferId { get; set; }
         public int LogViewerRequestId { get; set; }
-        public bool FileTransferInProgress { get; set; }
+        public bool OutboundFileTransferInProgress { get; set; }
+        public bool InboundFileTransferInProgress { get; set; }
 
         public string UserEntryLocalNetworkCidrIp { get; set; }
         public IPAddress UserEntryIpAddress { get; set; }
@@ -108,7 +109,7 @@
                 ? $"Selected Server: {SelectedServerInfo}"
                 : "Please select a remote server";
 
-            return FileTransferInProgress
+            return OutboundFileTransferInProgress
                 ? $"SENDING FILE TO {LocalServer.RemoteServerInfo}..."
                 : selectedServerStatus;
         }

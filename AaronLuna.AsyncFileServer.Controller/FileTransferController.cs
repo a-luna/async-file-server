@@ -103,9 +103,11 @@
         public float PercentComplete { get; set; }
         public string TransferRate => GetTransferRate(TransferTimeSpan, _fileTransfer.FileSizeInBytes);
 
-        public bool AwaitingResponse => Status == FileTransferStatus.AwaitingResponse;
+        public bool AwaitingResponse => Status == FileTransferStatus.Pending;
         public bool TransferStalled => Status == FileTransferStatus.Stalled;
-        public bool TasksRemaining => Status.TasksRemaining();
+        public bool TransferNeverStarted => Status.TransferNeverStarted();
+        public bool TransferStartedButDidNotComplete => Status.TransferStartedButDidNotComplete();
+        public bool TransfercompletedSucessfully => Status.TransfercompletedSucessfully();
 
         public event EventHandler<ServerEvent> EventOccurred;
         public event EventHandler<ServerEvent> SocketEventOccurred;
@@ -125,7 +127,7 @@
             Initiator = initiator;
             LocalServerInfo = localServerInfo;
             RemoteServerInfo = remoteServerInfo;
-            Status = FileTransferStatus.AwaitingResponse;
+            Status = FileTransferStatus.Pending;
             RequestInitiatedTime = DateTime.Now;
 
             if (TransferDirection == FileTransferDirection.Outbound)
@@ -147,7 +149,7 @@
         public void ResetTransferValues()
         {
             RetryCounter++;
-            Status = FileTransferStatus.AwaitingResponse;
+            Status = FileTransferStatus.Pending;
             ErrorMessage = string.Empty;
 
             RequestInitiatedTime = DateTime.MinValue;
@@ -234,28 +236,46 @@
                         socketSendCount++;
                     }
 
+                    CurrentBytesSent = fileChunkSize;
                     FileChunkSentCount++;
 
-                    var percentRemaining = BytesRemaining / (float)_fileTransfer.FileSizeInBytes;
-
-                    PercentComplete = 1 - percentRemaining;
-                    CurrentBytesSent = fileChunkSize;
-
-                    if (_fileTransfer.FileSizeInBytes > 10 * _bufferSize) continue;
-
-                    EventLog.Add(new ServerEvent
+                    var checkPercentRemaining = BytesRemaining / (float)_fileTransfer.FileSizeInBytes;
+                    var checkPercentComplete = 1 - checkPercentRemaining;
+                    var changeSinceLastUpdate = checkPercentComplete - PercentComplete;
+                    
+                    // this event fires on every file chunk sent event, which could be hurdreds of thousands
+                    // of times depending on the file size and buffer size. Since this  event is only used
+                    // by myself when debugging small test files, I limited this event to only fire when 
+                    // the size of the file will result in 10 file chunk sent events at most.
+                    if (_fileTransfer.FileSizeInBytes <= 10 * _bufferSize)
                     {
-                        EventType = ServerEventType.SentFileChunkToClient,
-                        FileSizeInBytes = _fileTransfer.FileSizeInBytes,
-                        CurrentFileBytesSent = fileChunkSize,
-                        FileBytesRemaining = BytesRemaining,
-                        FileChunkSentCount = FileChunkSentCount,
-                        SocketSendCount = socketSendCount,
-                        FileTransferId = Id,
-                        RequestId = RequestId
-                    });
+                        EventLog.Add(new ServerEvent
+                        {
+                            EventType = ServerEventType.SentFileChunkToRemoteServer,
+                            FileSizeInBytes = _fileTransfer.FileSizeInBytes,
+                            CurrentFileBytesSent = fileChunkSize,
+                            FileBytesRemaining = BytesRemaining,
+                            FileChunkSentCount = FileChunkSentCount,
+                            SocketSendCount = socketSendCount,
+                            FileTransferId = Id,
+                            RequestId = RequestId
+                        });
 
-                    SocketEventOccurred?.Invoke(this, EventLog.Last());
+                        SocketEventOccurred?.Invoke(this, EventLog.Last());
+                    }
+                    
+                    // Report progress in intervals which are set by the user in the settings file
+                    if (changeSinceLastUpdate < _updateInterval) continue;
+                    PercentComplete = checkPercentComplete;
+
+                    FileTransferProgress?.Invoke(this, new ServerEvent
+                    {
+                        EventType = ServerEventType.UpdateFileTransferProgress,
+                        TotalFileBytesReceived = TotalBytesReceived,
+                        PercentComplete = PercentComplete,
+                        RequestId = RequestId,
+                        FileTransferId = Id
+                    });
                 }
 
                 Status = FileTransferStatus.AwaitingConfirmation;
@@ -419,11 +439,11 @@
                     EventOccurred?.Invoke(this, EventLog.Last());
                 }
 
-                // this method fires on every socket read event, which could be hurdreds of thousands
+                // this event fires on every socket read event, which could be hurdreds of thousands
                 // of times depending on the file size and buffer size. Since this  event is only used
                 // by myself when debugging small test files, I limited this event to only fire when 
-                // the size of the file will result in less than 10 read events
-                if (FileSizeInBytes < 10 * _bufferSize)
+                // the size of the file will result in 10 socket read events at most.
+                if (FileSizeInBytes <= 10 * _bufferSize)
                 {
                     EventLog.Add(new ServerEvent
                     {
@@ -505,31 +525,50 @@
                 ? "Remote Server"
                 : "Me";
 
-            var transferStatus = $"[{Status}] {attempt}{Environment.NewLine}";
-            var requestType = $"{TransferDirection} file transfer initiated by {initiator}{Environment.NewLine}{Environment.NewLine}";
-            var fileName = $"   File Name..........: {_fileTransfer.FileName}{Environment.NewLine}";
-            var fileSize = $"   File Size..........: {_fileTransfer.FileSizeString}{Environment.NewLine}";
-            var remoteServerInfo = $"   Remote Server......: {RemoteServerInfo}{Environment.NewLine}";
+            var transferStatus = $"[{Status.Name()}] {attempt}";
+            var requestType = $"   {TransferDirection} file transfer initiated by {initiator}";
+            var fileName = $"   File Name..........: {_fileTransfer.FileName}";
+            var fileSize = $"   File Size..........: {_fileTransfer.FileSizeString}";
+            var remoteServerInfo = $"   Remote Server......: {RemoteServerInfo}";
 
-            var requestTime = Initiator == FileTransferInitiator.Self
+            var requestInitiatedTime = Initiator == FileTransferInitiator.Self
                 ? $"   Request Sent.......: {RequestInitiatedTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}"
                 : $"   Request Received...: {RequestInitiatedTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}";
 
-            var transferTime =
-                $"   Transfer Started...: {TransferStartTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+            var transferStartTime =
+                $"   Transfer Started...: {TransferStartTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}";
+
+            var transferCompleteTime =                
                 $"   Transfer Complete..: {TransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}";
 
-            var lockoutExpireTime = Status == FileTransferStatus.RetryLimitExceeded
-                ? $"   Lockout Expires....: {RetryLockoutExpireTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}"
-                : transferTime;
+            var lockoutExpireTime =
+                $"   Lockout Expires....: {RetryLockoutExpireTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}";
 
-            var summaryNotStarted = $"{transferStatus}   {requestType}" + fileName + fileSize + remoteServerInfo + requestTime;
+            var timeStamps = string.Empty;
+            if (Status == FileTransferStatus.RetryLimitExceeded)
+            {
+                timeStamps = requestInitiatedTime + lockoutExpireTime;
+            }
+            else if (TransferNeverStarted)
+            {
+                timeStamps = requestInitiatedTime;
+            }
+            else if (TransferStartedButDidNotComplete)
+            {
+                timeStamps = requestInitiatedTime + transferStartTime;
+            }
+            else if (TransfercompletedSucessfully)
+            {
+                timeStamps = requestInitiatedTime + transferStartTime + transferCompleteTime;
+            }
 
-            var summaryStarted = summaryNotStarted + lockoutExpireTime;
-
-            return Status == FileTransferStatus.AwaitingResponse
-                ? summaryNotStarted
-                : summaryStarted;
+            return
+                transferStatus + Environment.NewLine +
+                requestType + Environment.NewLine + Environment.NewLine +
+                fileName + Environment.NewLine +
+                fileSize + Environment.NewLine +
+                remoteServerInfo + Environment.NewLine +
+                timeStamps;
         }
 
         public string TransferDetails()
@@ -597,12 +636,19 @@
 
             details += $" Request {direction}: {requestInitiated}{Environment.NewLine}";
 
-            if (Status == FileTransferStatus.AwaitingResponse) return details;
+            if (Status == FileTransferStatus.Pending) return details;
 
             details += $" Transfer Started.......: {transferStarted}{Environment.NewLine}";
             details += $" Transfer Completed.....: {transferComplete}{Environment.NewLine}";
 
-            if (Status == FileTransferStatus.Rejected) return details;
+            if (Status == FileTransferStatus.Rejected)
+            {
+                details += string.IsNullOrEmpty(ErrorMessage)
+                    ? string.Empty
+                    : $" Error Message..........: {ErrorMessage}{Environment.NewLine}";
+
+                return details;
+            }
 
             details += $" Transfer Time Elapsed..: {timeElapsed}{Environment.NewLine}";
             details += $" Transfer Rate..........: {TransferRate}{Environment.NewLine}{Environment.NewLine}";
