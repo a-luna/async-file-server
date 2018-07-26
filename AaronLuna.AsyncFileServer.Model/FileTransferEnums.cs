@@ -23,8 +23,8 @@
         InProgress,
         Stalled,
         Cancelled,
-        AwaitingConfirmation,
-        Complete,
+        TransferComplete,
+        ConfirmedComplete,
         RetryLimitExceeded,
         Error
     }
@@ -59,17 +59,19 @@
                 case FileTransferStatus.InProgress:
                     return "In Progress";
 
-                case FileTransferStatus.AwaitingConfirmation:
-                    return "Awaiting Confirmation";
+                case FileTransferStatus.TransferComplete:
+                    return "Transfer Complete";
 
                 case FileTransferStatus.RetryLimitExceeded:
                     return "Retry Limit Exceeded";
 
+                case FileTransferStatus.ConfirmedComplete:
+                    return "Complete";
+
                 case FileTransferStatus.Accepted:
                 case FileTransferStatus.Rejected:
                 case FileTransferStatus.Stalled:
-                case FileTransferStatus.Cancelled:
-                case FileTransferStatus.Complete:
+                case FileTransferStatus.Cancelled:                
                 case FileTransferStatus.Error:
                     return status.ToString();
 
@@ -112,8 +114,8 @@
         {
             switch (status)
             {
-                case FileTransferStatus.AwaitingConfirmation:
-                case FileTransferStatus.Complete:
+                case FileTransferStatus.TransferComplete:
+                case FileTransferStatus.ConfirmedComplete:
                     return true;
 
                 default:

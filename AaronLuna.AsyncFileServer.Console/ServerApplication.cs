@@ -1,8 +1,8 @@
-﻿//TODO: Figure out best eay to prompt user to provide a name for a server that was added passively following any process request complete event
-//TODO: Update AsyncFileServer.ToString() to be more useful when debugging. New format should possibly incorporate: Name, Local IP, Port #, request/transfer counts?
+﻿//TODO: Update AsyncFileServer.ToString() to be more useful when debugging. New format should possibly incorporate: Name, Local IP, Port #, request/transfer counts?
 //TODO: Determine if it will be simple or difficult to show deconstructed request bytes and how each region maps to fileNameLen, fileName, portNumLen, portNum, etc
 //TODO: To avoid crashes, when there is an error reading settings from xml, handle exception, create default settings object and proceed. Rename the offending xml file and write new settings.xml to file.
 //TODO: In the AaronLuna.AsyncFileServer.Test namespace, create a filetransfercontroller subclass that overrides the defaut SendFileAsync() behavior to send only 10% of a file in order to be used within a set of unit tests that verify the stalled timeout/retry counter/limit/lockout timespan settings are working correctly.
+//TODO: Need to create a test case to verify the behavior when server is busy and more requests are received but are not processed. The pending requests should be automatically processed once the server is no longer busy. Need to verify that all request types are processed correctly including text messages an inbound file transfer requests
 
 namespace AaronLuna.AsyncFileServer.Console
 {
@@ -31,7 +31,6 @@ namespace AaronLuna.AsyncFileServer.Console
         readonly CancellationTokenSource _cts;
         readonly AppState _state;
         MainMenu _mainMenu;
-        int _inboundFileTransferId;
 
         public ServerApplication()
         {
@@ -184,20 +183,19 @@ namespace AaronLuna.AsyncFileServer.Console
             switch (serverEvent.EventType)
             {
                 case ServerEventType.ProcessRequestComplete:
-                    await SharedFunctions.CheckIfRemoteServerAlreadySavedAsync(_state);
+                    await CheckIfRemoteServerAlreadySavedAsync(serverEvent);
                     RefreshMainMenu(serverEvent);
                     break;
 
-                case ServerEventType.ReceiveRequestFromRemoteServerComplete:
                 case ServerEventType.ReceivedTextMessage:
-                case ServerEventType.QueueContainsUnhandledRequests:
+                case ServerEventType.PendingFileTransfer:
                 case ServerEventType.SendFileTransferRejectedStarted:
-                    RefreshMainMenu(serverEvent);
+                    _mainMenu.DisplayMenu();
                     break;
 
                 case ServerEventType.ReceivedServerInfo:
                     ReceivedServerInfo(serverEvent);
-                    _state.WaitingForServerInfoResponse = false;
+                    _mainMenu.DisplayMenu();
                     break;
 
                 case ServerEventType.ReceivedFileList:
@@ -238,18 +236,42 @@ namespace AaronLuna.AsyncFileServer.Console
                 case ServerEventType.SendFileTransferStalledComplete:
                     await NotifiedRemoteServerThatFileTransferIsStalledAsync().ConfigureAwait(false);
                     break;
-
-                case ServerEventType.ReceivedRetryLimitExceeded:
-                    await HandleRetryLimitExceededAsync(serverEvent).ConfigureAwait(false);
-                    break;
-
+                    
                 case ServerEventType.ErrorOccurred:
-                    HandleErrorOccurred(serverEvent);
+                    HandleErrorOccurred();
+                    _mainMenu.DisplayMenu();
                     break;
 
                 default:
                     return;
             }
+        }
+
+        private async Task CheckIfRemoteServerAlreadySavedAsync(ServerEvent serverEvent)
+        {
+            if (_state.DoNotRequestServerInfo) return;
+
+            var exists = SharedFunctions.CheckIfRemoteServerAlreadySaved(
+                _state.LocalServer.MyInfo,
+                serverEvent.RemoteServerIpAddress,
+                serverEvent.RemoteServerPortNumber,
+                _state.Settings.RemoteServers);
+
+            if (exists) return;
+
+            _state.DoNotRequestServerInfo = true;
+            _state.DoNotRefreshMainMenu = true;
+            _state.DoNotPromptUserForServerName = true;
+
+            await
+                SharedFunctions.RequestServerInfoAsync(
+                    _state,
+                    serverEvent.RemoteServerIpAddress,
+                    serverEvent.RemoteServerPortNumber,
+                    _state.DoNotPromptUserForServerName);
+
+            _state.DoNotRequestServerInfo = false;
+            _state.DoNotRefreshMainMenu = false;
         }
 
         void RefreshMainMenu(ServerEvent serverEvent)
@@ -282,16 +304,35 @@ namespace AaronLuna.AsyncFileServer.Console
         
         void ReceivedServerInfo(ServerEvent serverEvent)
         {
-            _state.SelectedServerInfo.TransferFolder = serverEvent.RemoteFolder;
-            _state.SelectedServerInfo.PublicIpAddress = serverEvent.PublicIpAddress;
-            _state.SelectedServerInfo.LocalIpAddress = serverEvent.LocalIpAddress;
-            _state.SelectedServerInfo.SessionIpAddress = serverEvent.RemoteServerIpAddress;
-            _state.SelectedServerInfo.Platform = serverEvent.RemoteServerPlatform;
+            var serverInfo = new ServerInfo
+            {
+                TransferFolder = serverEvent.RemoteFolder,
+                PublicIpAddress = serverEvent.PublicIpAddress,
+                LocalIpAddress = serverEvent.LocalIpAddress,
+                SessionIpAddress = serverEvent.RemoteServerIpAddress,
+                PortNumber = serverEvent.RemoteServerPortNumber,
+                Platform = serverEvent.RemoteServerPlatform
+            };
+
+            if (!_state.DoNotPromptUserForServerName)
+            {
+                _state.SelectedServerInfo = serverInfo;
+                SharedFunctions.DisplayLocalServerInfo(_state);
+
+                _state.SelectedServerInfo.Name =
+                    SharedFunctions.SetSelectedServerName(_state, _state.SelectedServerInfo);
+
+                _state.WaitingForUserToConfirmNewRemoteServerDetails = false;
+            }
+
+            _state.Settings.RemoteServers.Add(serverInfo);
+            _state.SaveSettingsToFile();
+            _state.WaitingForServerInfoResponse = false;
         }
 
         void ReceiveFileBytesStarted(ServerEvent serverEvent)
         {
-            _inboundFileTransferId = serverEvent.FileTransferId;
+            _state.InboundFileTransferId = serverEvent.FileTransferId;
             var fileSize = serverEvent.FileSizeInBytes;
             var transferTimeout = _state.Settings.FileTransferStalledTimeout;
 
@@ -309,7 +350,7 @@ namespace AaronLuna.AsyncFileServer.Console
             _state.ProgressBar.FileTransferStalled += HandleStalledFileTransferAsync;
             _state.ProgressBarInstantiated = true;
             
-            var getFileTransfer = _state.LocalServer.GetFileTransferById(_inboundFileTransferId);
+            var getFileTransfer = _state.LocalServer.GetFileTransferById(_state.InboundFileTransferId);
             if (getFileTransfer.Failure)
             {
                 SharedFunctions.NotifyUserErrorOccurred(getFileTransfer.Error);
@@ -319,13 +360,14 @@ namespace AaronLuna.AsyncFileServer.Console
             var inboundFileTransfer = getFileTransfer.Value;
 
             SharedFunctions.DisplayLocalServerInfo(_state);
-            Console.WriteLine(inboundFileTransfer.InboundRequestDetails());
+            Console.WriteLine(inboundFileTransfer.InboundRequestDetails(true));
         }
 
         void HandleFileTransferProgress(object sender, ServerEvent serverEvent)
         {
             if (_state.OutboundFileTransferInProgress) return;
 
+            _state.InboundFileTransferId = serverEvent.FileTransferId;
             _state.ProgressBar.BytesReceived = serverEvent.TotalFileBytesReceived;
             _state.ProgressBar.Report(serverEvent.PercentComplete);
         }
@@ -352,10 +394,9 @@ namespace AaronLuna.AsyncFileServer.Console
             Console.WriteLine(report);
             _state.SignalReturnToMainMenu.Set();
 
-            _state.ProgressBar.Dispose();
-            _state.ProgressBarInstantiated = false;
-
+            TearDownProgressBar();
             await Task.Delay(Constants.OneHalfSecondInMilliseconds).ConfigureAwait(false);
+
             _state.SignalReturnToMainMenu.WaitOne();
         }
 
@@ -376,8 +417,7 @@ namespace AaronLuna.AsyncFileServer.Console
             var inboundFileTransfer = getFileTransfer.Value;
 
             _state.FileStalledInfo = eventArgs;
-            _state.ProgressBar.Dispose();
-            _state.ProgressBarInstantiated = false;
+            TearDownProgressBar();
 
             var notifyStalledResult =
                 await SendFileTransferStalledNotification(inboundFileTransfer.Id).ConfigureAwait(false);
@@ -411,7 +451,7 @@ namespace AaronLuna.AsyncFileServer.Console
         async Task NotifiedRemoteServerThatFileTransferIsStalledAsync()
         {
             var getFileTransferResult =
-                _state.LocalServer.GetFileTransferById(_inboundFileTransferId);
+                _state.LocalServer.GetFileTransferById(_state.InboundFileTransferId);
 
             if (getFileTransferResult.Success)
             {
@@ -435,34 +475,12 @@ namespace AaronLuna.AsyncFileServer.Console
             _state.SignalReturnToMainMenu.WaitOne();
         }
 
-        async Task HandleRetryLimitExceededAsync(ServerEvent serverEvent)
+        void HandleErrorOccurred()
         {
-            var fileName = serverEvent.FileName;
-            var retryLimit = serverEvent.RemoteServerRetryLimit;
-            var lockoutExpireTime = serverEvent.RetryLockoutExpireTime;
+            if (!_state.OutboundFileTransferInProgress) return;
 
-            var retryLImitExceeded =
-                $"{Environment.NewLine}Maximum # of attempts to complete stalled file transfer " +
-                $"reached or exceeded: {retryLimit} failed attempts for \"{fileName}\"" +
-                $"{Environment.NewLine}You will be locked out from attempting this " +
-                $"file transfer until {lockoutExpireTime:g}";
-
-            Console.WriteLine(retryLImitExceeded);
-            _state.SignalReturnToMainMenu.Set();
-
-            await Task.Delay(Constants.OneHalfSecondInMilliseconds).ConfigureAwait(false);
-            _mainMenu.DisplayMenu();
-        }
-
-        void HandleErrorOccurred(ServerEvent serverEvent)
-        {
             TearDownProgressBar();
-
-            _state.ErrorOccurred = true;
-            _state.ErrorMessage = serverEvent.ErrorMessage;
             _state.OutboundFileTransferInProgress = false;
-
-           SharedFunctions.NotifyUserErrorOccurred(serverEvent.ErrorMessage);
         }
 
         void TearDownProgressBar()

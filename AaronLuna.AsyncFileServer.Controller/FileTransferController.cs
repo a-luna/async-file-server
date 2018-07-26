@@ -278,7 +278,7 @@
                     });
                 }
 
-                Status = FileTransferStatus.AwaitingConfirmation;
+                Status = FileTransferStatus.TransferComplete;
                 TransferCompleteTime = DateTime.Now;
                 PercentComplete = 1;
                 CurrentBytesSent = 0;
@@ -483,13 +483,12 @@
                     "Data is no longer bring received from remote client, file transfer has been canceled (ReceiveFileAsync)";
 
                 Status = FileTransferStatus.Stalled;
-                TransferCompleteTime = DateTime.Now;
                 ErrorMessage = fileTransferStalledErrorMessage;
 
                 return Result.Ok();
             }
 
-            Status = FileTransferStatus.Complete;
+            Status = FileTransferStatus.ConfirmedComplete;
             TransferCompleteTime = DateTime.Now;
             PercentComplete = 1;
             CurrentBytesReceived = 0;
@@ -684,7 +683,7 @@
             return details;
         }
 
-        public string InboundRequestDetails()
+        public string InboundRequestDetails(bool addHeader)
         {
             var remoteServerIp = RemoteServerInfo.SessionIpAddress;
             var remotePortNumber = RemoteServerInfo.PortNumber;
@@ -700,16 +699,32 @@
 
             var transferAttempt = $"Attempt #{retryCounter}{retryLimit}";
 
-            var remoteServerInfo =
-                $"Incoming file transfer from {remoteServerIp}:{remotePortNumber} ({transferAttempt})" +
+            var header =
+                $"Inbound file transfer request ({transferAttempt})" +
                 Environment.NewLine + Environment.NewLine;
 
             var fileInfo =
-                $"File Name..: {fileName}{Environment.NewLine}" +
-                $"File Size..: {fileSize}{Environment.NewLine}" +
-                $"Save To....: {localFolder}{Environment.NewLine}";
+                $"File Sender..: {remoteServerIp}:{remotePortNumber}" +
+                $"File Name....: {fileName}{Environment.NewLine}" +
+                $"File Size....: {fileSize}{Environment.NewLine}" +
+                $"Save To......: {localFolder}{Environment.NewLine}";
 
-            return remoteServerInfo + fileInfo;
+            return addHeader
+                ? header + fileInfo
+                : fileInfo;
+        }
+
+        public string OutboundRequestDetails()
+        {
+            var remoteServerIp = RemoteServerInfo.SessionIpAddress;
+            var remotePortNumber = RemoteServerInfo.PortNumber;
+
+            return
+                $"Send File To...: {remoteServerIp}:{remotePortNumber}{Environment.NewLine}" +
+                $"File Name......: {FileName}{Environment.NewLine}" +
+                $"File Size......: {FileSizeInBytes:N0} bytes ({FileSizeString}){Environment.NewLine}" +
+                $"File Location..: {LocalFolderPath}{Environment.NewLine}" +
+                $"Target Folder..: {RemoteFolderPath}{Environment.NewLine}";
         }
 
         public static string GetTransferRate(TimeSpan elapsed, long bytesReceived)

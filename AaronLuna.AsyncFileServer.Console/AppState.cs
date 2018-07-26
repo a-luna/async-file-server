@@ -36,6 +36,7 @@
 
         public bool WaitingForServerInfoResponse { get; set; }
         public bool WaitingForFileListResponse { get; set; }
+        public bool WaitingForUserToConfirmNewRemoteServerDetails { get; set; }
         public bool RemoteServerSelected { get; set; }
         public bool ErrorOccurred { get; set; }
         public bool ProgressBarInstantiated { get; set; }
@@ -43,6 +44,7 @@
         public bool NoFilesAvailableForDownload { get; set; }
         public bool DoNotRefreshMainMenu { get; set; }
         public bool DoNotRequestServerInfo { get; set; }
+        public bool DoNotPromptUserForServerName { get; set; }
         public bool RestartRequired { get; set; }
 
         public int InboundFileTransferId { get; set; }
@@ -69,7 +71,7 @@
         {
             var serverIsListening = LocalServer.IsListening
                 ? $"Server is listening on port {LocalServer.MyInfo.PortNumber}"
-                : "Server is currently not listening for incoming connections";
+                : "SERVER IS NOT RUNNING";
 
             var localServerIp =
                 $"LAN CIDR IP..: {Settings.LocalNetworkCidrIp}{Environment.NewLine}" +
@@ -84,7 +86,7 @@
                 ? $"{LocalServer.PendingFileTransferCount} pending file transfer {filePlural}"
                 : "No pending file transfers";
 
-            var transferInProgress = LocalServer.FileTransferInProgress
+            var transferInProgress = InboundFileTransferInProgress || OutboundFileTransferInProgress
                 ? "FILE TRANSFER IN PROGRESS"
                 : fileTransferQueue;
 
@@ -105,13 +107,9 @@
 
         public string RemoteServerInfo()
         {
-            var selectedServerStatus = RemoteServerSelected
+            return RemoteServerSelected
                 ? $"Selected Server: {SelectedServerInfo}"
                 : "Please select a remote server";
-
-            return OutboundFileTransferInProgress
-                ? $"SENDING FILE TO {LocalServer.RemoteServerInfo}..."
-                : selectedServerStatus;
         }
 
         public Result SaveSettingsToFile()

@@ -1,4 +1,6 @@
-﻿namespace AaronLuna.AsyncFileServer.Console
+﻿using System;
+
+namespace AaronLuna.AsyncFileServer.Console
 {
     static class Resources
     {
@@ -45,6 +47,11 @@
         internal static readonly string Prompt_ChangeRemoteServerPortNumber =
             "Enter a new value for the port number of the selected server:";
 
+        internal static readonly string Prompt_DeleteSelectedServerInfo =
+            $"Would you like to delete this remote server?{Environment.NewLine}{Environment.NewLine}" +
+            "This cannot be undone and will remove all information related to this remote server " +
+            $"from the settings.xml file.{Environment.NewLine}";
+
         internal static readonly string Warning_UseLoopbackIp =
             "Unable to determine the local IP address for this machine, please " +
             "ensure that the CIDR IP address is correct for your LAN.\nWould you " +
@@ -52,7 +59,7 @@
             "(you will only be able to communicate with other servers running on " +
             "the same local machine, this is only useful for testing)";
 
-        internal static readonly string Error_ServerInfoRequestTimedout =
+        internal static readonly string Error_ServerInfoRequestTimeout =
             "Request for server info timed out before receiving a response";
         
         internal static readonly string Error_NoClientSelectedError =

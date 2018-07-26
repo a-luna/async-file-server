@@ -32,10 +32,22 @@
 
         Result Execute()
         {
+            if (string.IsNullOrEmpty(_server.Name))
+            {
+                _server.Name = SharedFunctions.SetSelectedServerName(_state, _server);
+
+                var saveSettings =_state.SaveSettingsToFile();
+                if (saveSettings.Failure)
+                {
+                    return saveSettings;
+                }
+            }
+
             _state.SelectedServerInfo = _server;
             _state.RemoteServerSelected = true;
 
             return Result.Ok();
+
         }
     }
 }

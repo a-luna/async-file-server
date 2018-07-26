@@ -3,7 +3,6 @@
     using System;
     using System.Threading.Tasks;
 
-    using Model;
     using Common.Console.Menu;
     using Common.Result;
 
@@ -29,10 +28,13 @@
 
         Result Execute()
         {
+            var deleteServerInfo = SharedFunctions.PromptUserYesOrNo(_state, Resources.Prompt_DeleteSelectedServerInfo);
+            if (!deleteServerInfo) return Result.Ok();
+
             _state.RemoteServerSelected = false;
             _state.Settings.RemoteServers.Remove(_state.SelectedServerInfo);
 
-            return ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
+            return _state.SaveSettingsToFile();
         }
     }
 }

@@ -126,16 +126,22 @@
         {
             var pendingRequestsMenuTier = new MenuTier(Resources.MenuTierLabel_PendingRequests);
 
+            if (_state.LocalServer.UnreadErrors.Count > 0)
+            {
+                pendingRequestsMenuTier.MenuItems.Add(
+                    new ReadNewErrorMessagesMenuItem(_state, _state.LocalServer.UnreadErrors));
+            }
+
             if (_state.LocalServer.PendingFileTransferCount > 0)
             {
                 pendingRequestsMenuTier.MenuItems.Add(
-                    new PendingFileTransfersMenu(_state));
+                    new ViewPendingFileTransfersMenu(_state));
             }
 
             if (_state.LocalServer.StalledTransferIds.Count > 0)
             {
                 pendingRequestsMenuTier.MenuItems.Add(
-                    new RetryStalledFileTransferMenu(_state));
+                    new ViewStalledFileTransfersMenu(_state));
             }
 
             if (_state.LocalServer.UnreadTextMessageCount > 0)
@@ -145,7 +151,7 @@
                     var textSession = _state.LocalServer.GetTextSessionById(id).Value;
 
                     pendingRequestsMenuTier.MenuItems.Add(
-                        new ReadTextMessageMenuItem(_state, textSession));
+                        new ReadNewTextMessagesMenuItem(_state, textSession));
                 }
             }
 

@@ -1,37 +1,37 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus.PendingRequestsMenuItems;
-using AaronLuna.Common.Console.Menu;
-using AaronLuna.Common.Result;
-
-namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus
 {
-    class PendingFileTransfersMenu : IMenu
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
+
+    using Common.Console.Menu;
+    using Common.Result;
+
+    using ViewStalledFileTransfersMenuItems;
+
+    class ViewStalledFileTransfersMenu : IMenu
     {
         readonly AppState _state;
 
-        public PendingFileTransfersMenu(AppState state)
+        public ViewStalledFileTransfersMenu(AppState state)
         {
             _state = state;
 
             ReturnToParent = false;
-            ItemText = "View pending file transfers";
-            MenuText = "Select a pending file transfer to view details of the incoming request:";
+            ItemText = "Retry stalled file transfers";
+            MenuText = "Choose a stalled file transfer below to attempt downloading:";
             MenuItems = new List<IMenuItem>();
         }
 
-        public string ItemText { get; set; }
         public bool ReturnToParent { get; set; }
+        public string ItemText { get; set; }
         public string MenuText { get; set; }
         public List<IMenuItem> MenuItems { get; set; }
-        
+
         public async Task<Result> ExecuteAsync()
         {
-            if (_state.LocalServer.NoFileTransfersPending)
+            if (_state.LocalServer.StalledTransferIds.Count == 0)
             {
-                return Result.Fail("There are no pending file transfers");
+                return Result.Fail("There are no stalled file transfers");
             }
 
             _state.DoNotRefreshMainMenu = true;
@@ -45,7 +45,7 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus
         void PopulateMenu()
         {
             MenuItems.Clear();
-            foreach (var id in _state.LocalServer.PendingFileTransferIds)
+            foreach (var id in _state.LocalServer.StalledTransferIds)
             {
                 var fileTransfer = _state.LocalServer.GetFileTransferById(id).Value;
 
@@ -53,7 +53,7 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus
                     fileTransfer.RemoteServerInfo,
                     _state.Settings.RemoteServers);
 
-                MenuItems.Add(new ProcessInboundFileTransferMenuItem(_state, fileTransfer));
+                MenuItems.Add(new RetryStalledFileTransferMenuItem(_state, fileTransfer.Id));
             }
 
             MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));

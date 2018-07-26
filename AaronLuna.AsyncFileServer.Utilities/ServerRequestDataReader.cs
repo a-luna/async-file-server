@@ -63,36 +63,36 @@
             IPAddress remoteServerLocalIpAddress,       // 2
             IPAddress remoteServerPublicIpAddress,      // 3
             int remoteServerPortNumber,                 // 4
-            ServerPlatform platform,                    // 5
+            ServerPlatform remoteServerPlatform,                    // 5
             string textMessage,                         // 6
             FileInfoList fileInfoList,                  // 7
             string fileName,                            // 8
-            long fileSizeBytes,                         // 9
+            long fileSizeInBytes,                         // 9
             string localFolderPath,                     // 10
             string remoteFolderPath,                    // 11
             long fileTransferResponseCode,              // 12
             int remoteServerTransferId,                 // 13
             int fileTransferRetryCounter,               // 14
             int fileTransferRetryLimit,                 // 15
-            long lockoutExpireTimeTicks)                // 16
+            long lockoutExpireTimeInTicks)                // 16
             ReadRequestBytes(byte[] requestBytes)
         {
             var remoteServerIpString = string.Empty;
             var remoteServerLocalIpString = string.Empty;
             var remoteServerPublicIpString = string.Empty;
             var remoteServerPortNumber = 0;
-            var platform = ServerPlatform.None;
+            var remoteServerPlatform = ServerPlatform.None;
             var textMessage = string.Empty;
             var fileInfoList = new FileInfoList();
             var fileName = string.Empty;
-            long fileSizeBytes = 0;
+            long fileSizeInBytes = 0;
             var localFolderPath = string.Empty;
             var remoteFolderPath = string.Empty;
             long fileTransferResponseCode = 0;
             var remoteServerTransferId = 0;
             var fileTransferRetryCounter = 0;
             var fileTransferRetryLimit = 0;
-            long lockoutExpireTimeTicks = 0;
+            long lockoutExpireTimeInTicks = 0;
 
             switch (ReadRequestType(requestBytes))
             {
@@ -103,7 +103,7 @@
 
                     (remoteServerLocalIpString,
                         remoteServerPortNumber,
-                        platform,
+                        remoteServerPlatform,
                         remoteServerPublicIpString,
                         remoteFolderPath) = ReadServerInfoResponse(requestBytes);
 
@@ -124,7 +124,7 @@
                         fileTransferRetryCounter,
                         fileTransferRetryLimit,
                         fileName,
-                        fileSizeBytes,
+                        fileSizeInBytes,
                         remoteFolderPath,
                         localFolderPath,                        
                         remoteServerIpString,
@@ -200,7 +200,7 @@
                         remoteServerPortNumber,
                         remoteServerTransferId,
                         fileTransferRetryLimit,
-                        lockoutExpireTimeTicks) = ReadRetryLimitExceededRequest(requestBytes);
+                        lockoutExpireTimeInTicks) = ReadRetryLimitExceededRequest(requestBytes);
 
                     break;
 
@@ -227,18 +227,18 @@
                 remoteServerLocalIpAddress,
                 remoteServerPublicIpAddress,
                 remoteServerPortNumber,
-                platform,
+                remoteServerPlatform,
                 textMessage,
                 fileInfoList,
                 fileName,
-                fileSizeBytes,
+                fileSizeInBytes,
                 localFolderPath,
                 remoteFolderPath,
                 fileTransferResponseCode,
                 remoteServerTransferId,
                 fileTransferRetryCounter,
                 fileTransferRetryLimit,
-                lockoutExpireTimeTicks);
+                lockoutExpireTimeInTicks);
         }
 
         static (

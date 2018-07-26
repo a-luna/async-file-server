@@ -59,6 +59,22 @@
             _buffer = new byte[_bufferSize];
         }
 
+        public ServerRequestController(
+            int id,
+            ServerSettings settings,
+            ServerInfo remoteServerInfo) :this(id, settings)
+        {
+            RemoteServerInfo = remoteServerInfo;
+        }
+
+        public ServerRequestController(
+            int id,
+            ServerSettings settings,
+            Socket socket) : this(id, settings)
+        {
+            _socket = socket;
+        }
+
         public int Id { get; }
         public ServerRequestStatus Status { get; set; }
         public List<ServerEvent> EventLog { get; set; }
@@ -67,6 +83,7 @@
         public ServerInfo RemoteServerInfo { get; set; }
         public int FileTransferId { get; set; }
 
+        public bool RequestHasNotBeenReceived => Status == ServerRequestStatus.NoData;
         public bool IsInboundFileTransferRequest => RequestType == ServerRequestType.InboundFileTransferRequest;
         public bool RequestTypeIsFileTransferResponse => RequestType.IsFileTransferResponse();
         public bool RequestTypeIsFileTransferError => RequestType.IsFileTransferError();
@@ -217,9 +234,8 @@
                 : sendRequestBytes;
         }
 
-        public async Task<Result> ReceiveServerRequestAsync(Socket socket)
+        public async Task<Result> ReceiveServerRequestAsync()
         {
-            _socket = socket;
             _request = new ServerRequest {Direction = ServerRequestDirection.Received};
             Status = ServerRequestStatus.NoData;
 
@@ -519,7 +535,7 @@
 
         public Result<TextMessage> GetTextMessage()
         {
-            if (Status == ServerRequestStatus.NoData)
+            if (RequestHasNotBeenReceived)
             {
                 return Result.Fail<TextMessage>(ErrorNoDataReceived);
             }
@@ -542,7 +558,7 @@
             ServerInfo localServerInfo,
             ServerSettings settings)
         {
-            if (Status == ServerRequestStatus.NoData)
+            if (RequestHasNotBeenReceived)
             {
                 return Result.Fail<FileTransferController>(ErrorNoDataReceived);
             }
@@ -574,10 +590,10 @@
 
         public Result<FileTransferController> GetOutboundFileTransfer(
             int fileTransferId,
-            ServerInfo localServerInfo,
-            ServerSettings settings)
+            ServerSettings settings,
+            ServerInfo localServerInfo)
         {
-            if (Status == ServerRequestStatus.NoData)
+            if (RequestHasNotBeenReceived)
             {
                 return Result.Fail<FileTransferController>(ErrorNoDataReceived);
             }
@@ -611,7 +627,7 @@
 
         public Result<long> GetFileTransferResponseCode()
         {
-            if (Status == ServerRequestStatus.NoData)
+            if (RequestHasNotBeenReceived)
             {
                 return Result.Fail<long>(ErrorNoDataReceived);
             }
@@ -623,7 +639,7 @@
 
         public Result<int> GetRemoteServerFileTransferId()
         {
-            if (Status == ServerRequestStatus.NoData)
+            if (RequestHasNotBeenReceived)
             {
                 return Result.Fail<int>(ErrorNoDataReceived);
             }
@@ -635,7 +651,7 @@
 
         public Result<int> GetInboundFileTransferId()
         {
-            if (Status == ServerRequestStatus.NoData)
+            if (RequestHasNotBeenReceived)
             {
                 return Result.Fail<int>(ErrorNoDataReceived);
             }
@@ -652,7 +668,7 @@
 
         public Result<FileTransferController> UpdateInboundFileTransfer(FileTransferController fileTransfer)
         {
-            if (Status == ServerRequestStatus.NoData)
+            if (RequestHasNotBeenReceived)
             {
                 return Result.Fail<FileTransferController>(ErrorNoDataReceived);
             }
@@ -692,7 +708,7 @@
 
         public Result<Socket> GetTransferSocket()
         {
-            if (Status == ServerRequestStatus.NoData)
+            if (RequestHasNotBeenReceived)
             {
                 return Result.Fail<Socket>(ErrorNoDataReceived);
             }
@@ -704,7 +720,7 @@
 
         public Result<FileTransferController> GetRetryLockoutDetails(FileTransferController fileTransfer)
         {
-            if (Status == ServerRequestStatus.NoData)
+            if (RequestHasNotBeenReceived)
             {
                 return Result.Fail<FileTransferController>(ErrorNoDataReceived);
             }
@@ -724,7 +740,7 @@
 
         public Result<string> GetLocalFolderPath()
         {
-            if (Status == ServerRequestStatus.NoData)
+            if (RequestHasNotBeenReceived)
             {
                 return Result.Fail<string>(ErrorNoDataReceived);
             }
@@ -736,7 +752,7 @@
 
         public Result<FileInfoList> GetFileInfoList()
         {
-            if (Status == ServerRequestStatus.NoData)
+            if (RequestHasNotBeenReceived)
             {
                 return Result.Fail<FileInfoList>(ErrorNoDataReceived);
             }

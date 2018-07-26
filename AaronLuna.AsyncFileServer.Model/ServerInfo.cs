@@ -115,6 +115,17 @@
         $"   IP........: {SessionIpAddress}{Environment.NewLine}" +
         $"   Port......: {PortNumber}{Environment.NewLine}" +
         $"   Platform..: {Platform}{Environment.NewLine}";
+
+        public void DetermineSessionIpAddress(string lanCidrIp)
+        {
+            SessionIpAddress = PublicIpAddress;
+
+            var checkLocalIp = LocalIpAddress.IsInRange(lanCidrIp);
+            if (checkLocalIp.Success && checkLocalIp.Value)
+            {
+                SessionIpAddress = LocalIpAddress;
+            }
+        }
     }
 
     public static class ServerInfoExtensions

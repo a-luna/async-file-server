@@ -94,9 +94,10 @@
             try
             {
                 listOfFiles =
-                    Directory.GetFiles(_state.LocalServer.MyInfo.TransferFolder).ToList()
-                        .Select(f => f)
-                        .Where(f => !f.StartsWith('.'))
+                    Directory.GetFiles(_state.LocalServer.MyInfo.TransferFolder)
+                        .Select(f => new FileInfo(f))
+                        .Where(fi => !fi.Name.StartsWith('.'))
+                        .Select(fi => fi.ToString())
                         .ToList();
             }
             catch (IOException ex)

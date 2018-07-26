@@ -1,11 +1,9 @@
-﻿namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus.RetryStalledFileTransferMenuItems
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus.ViewStalledFileTransfersMenuItems
 {
     using System.Threading.Tasks;
 
     using Common.Console.Menu;
     using Common.Result;
-
-    using Model;
 
     class RetryStalledFileTransferMenuItem : IMenuItem
     {
@@ -27,9 +25,7 @@
         public async Task<Result> ExecuteAsync()
         {
             var retryFileTransferesult = await _state.LocalServer.RetryFileTransferAsync(
-                _fileTransferId,
-                _state.SelectedServerInfo.SessionIpAddress,
-                _state.SelectedServerInfo.PortNumber).ConfigureAwait(false);
+                _fileTransferId).ConfigureAwait(false);
 
             return retryFileTransferesult.Success
                 ? Result.Ok()

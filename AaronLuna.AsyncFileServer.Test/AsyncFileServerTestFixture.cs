@@ -348,7 +348,9 @@ namespace AaronLuna.AsyncFileServer.Test
                     _localIp,
                     remoteServerPort,
                     _server.MyInfo.Name,
-                    sendFilePath,
+                    FileName,
+                    sizeOfFileToSend,
+                    _localFolder,
                     receiveFolderPath).ConfigureAwait(false);
 
             if (sendFileResult.Failure)
@@ -632,6 +634,7 @@ namespace AaronLuna.AsyncFileServer.Test
             while (!_server.IsListening) { }
             while (!_client.IsListening) { }
 
+            var sizeOfFileToSend = new FileInfo(sendFilePath).Length;
             Assert.IsTrue(File.Exists(receiveFilePath));
 
             var sendFileResult1 =
@@ -639,7 +642,9 @@ namespace AaronLuna.AsyncFileServer.Test
                     _localIp,
                     remoteServerPort,
                     _server.MyInfo.Name,
-                    sendFilePath,
+                    FileName,
+                    sizeOfFileToSend,
+                    _localFolder,
                     receiveFolderPath).ConfigureAwait(false);
 
             if (sendFileResult1.Failure)
@@ -908,7 +913,7 @@ namespace AaronLuna.AsyncFileServer.Test
 
             switch (serverEvent.EventType)
             {
-                case ServerEventType.QueueContainsUnhandledRequests:
+                case ServerEventType.PendingFileTransfer:
                     _clientNoFileTransferPending = false;
                     break;
 
@@ -968,7 +973,7 @@ namespace AaronLuna.AsyncFileServer.Test
 
             switch (serverEvent.EventType)
             {
-                case ServerEventType.QueueContainsUnhandledRequests:
+                case ServerEventType.PendingFileTransfer:
                     _serverNoFileTransferPending = false;
                     break;
 

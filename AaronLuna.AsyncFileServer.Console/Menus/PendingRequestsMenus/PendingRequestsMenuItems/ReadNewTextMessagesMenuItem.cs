@@ -1,33 +1,32 @@
-﻿using System.Linq;
-using AaronLuna.Common.Extensions;
-
-namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus.PendingRequestsMenuItems
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus.PendingRequestsMenuItems
 {
     using System;
+    using System.Linq;
     using System.Threading.Tasks;
 
     using Common.Console.Menu;
+    using Common.Extensions;
     using Common.Result;
 
     using Model;
 
-    class ReadTextMessageMenuItem : IMenuItem
+    class ReadNewTextMessagesMenuItem : IMenuItem
     {
         readonly AppState _state;
         readonly TextSession _textSession;
 
-        public ReadTextMessageMenuItem(AppState state, TextSession textSession)
+        public ReadNewTextMessagesMenuItem(AppState state, TextSession textSession)
         {
             _state = state;
             _textSession = textSession;
 
             ReturnToParent = false;
 
-            var message = textSession.UnreadMessages.Count > 1
+            var messagePlural = textSession.UnreadMessages.Count > 1
                 ? "messages"
                 : "message";
 
-            ItemText = $"Read {textSession.UnreadMessages.Count} {message} from {textSession.RemoteServerInfo}";
+            ItemText = $"Read {textSession.UnreadMessages.Count} {messagePlural} from {textSession.RemoteServerInfo}";
         }
 
         public string ItemText { get; set; }

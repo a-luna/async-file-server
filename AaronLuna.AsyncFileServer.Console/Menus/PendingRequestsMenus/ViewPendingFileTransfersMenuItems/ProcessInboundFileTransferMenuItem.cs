@@ -1,10 +1,8 @@
-﻿using AaronLuna.AsyncFileServer.Controller;
-
-namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus.PendingRequestsMenuItems
+﻿namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus.ViewPendingFileTransfersMenuItems
 {
     using System;
     using System.Threading.Tasks;
-
+    using Controller;
     using Common.Console.Menu;
     using Common.Result;
 
@@ -29,7 +27,7 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus.PendingRe
         {
             SharedFunctions.DisplayLocalServerInfo(_state);
 
-            var transferRequest = _fileTransfer.InboundRequestDetails();
+            var transferRequest = _fileTransfer.InboundRequestDetails(true);
 
             var downloadPrompt = transferRequest + Environment.NewLine +
                                  "Would you like to begin downloading this file?";
@@ -57,11 +55,11 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.PendingRequestsMenus.PendingRe
             }
 
             SharedFunctions.DisplayLocalServerInfo(_state);
-            Console.WriteLine(transferRequest);
+            System.Console.WriteLine(transferRequest);
             var transferResult = await _state.LocalServer.AcceptInboundFileTransferAsync(_fileTransfer);
 
-            Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
-            Console.ReadLine();
+            System.Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
+            System.Console.ReadLine();
 
             _state.SignalReturnToMainMenu.Set();
             return transferResult;

@@ -12,18 +12,21 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.RemoteServerMenus.SelectFileMe
     class SendFileMenuItem : IMenuItem
     {
         readonly AppState _state;
-        readonly string _outgoingFilePath;
+        readonly string _fileName;
+        readonly long _fileSizeInBytes;
+        readonly string _localFolderPath;
 
         public SendFileMenuItem(AppState state, string outgoingFilePath, bool isLastMenuItem)
         {
             _state = state;
-            _outgoingFilePath = outgoingFilePath;
 
             ReturnToParent = false;
 
-            var fileName = Path.GetFileName(outgoingFilePath);
-            var fileSize = new FileInfo(outgoingFilePath).Length;
-            var menuItem = $"{fileName} ({FileHelper.FileSizeToString(fileSize)})";
+            _fileName = Path.GetFileName(outgoingFilePath);
+            _localFolderPath = Path.GetDirectoryName(outgoingFilePath);
+            _fileSizeInBytes = new FileInfo(outgoingFilePath).Length;
+
+            var menuItem = $"{_fileName} ({FileHelper.FileSizeToString(_fileSizeInBytes)})";
 
             ItemText = isLastMenuItem
                 ? menuItem + Environment.NewLine
@@ -45,7 +48,9 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.RemoteServerMenus.SelectFileMe
                     ipAddress,
                     port,
                     serverName,
-                    _outgoingFilePath,
+                    _fileName,
+                    _fileSizeInBytes,
+                    _localFolderPath,
                     transferFolderPath).ConfigureAwait(false);
 
             return sendFileResult.Success

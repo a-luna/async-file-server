@@ -40,7 +40,9 @@
         DetermineRequestTypeStarted,
         DetermineRequestTypeComplete,
 
-        QueueContainsUnhandledRequests,
+        ProcessRequestBacklogStarted,
+        ProcessRequestBacklogComplete,
+        PendingFileTransfer,
         ProcessRequestStarted,
         ProcessRequestComplete,
 
@@ -187,6 +189,7 @@
                 case ServerEventType.SentFileChunkToRemoteServer:
                 case ServerEventType.CopySavedBytesToIncomingFile:
                 case ServerEventType.ReceivedFileBytesFromSocket:
+                case ServerEventType.MultipleFileWriteAttemptsNeeded:
                 case ServerEventType.UpdateFileTransferProgress:
                     return true;
 

@@ -11,6 +11,7 @@
     {
         NoData,
         Pending,
+        InProgress,
         Processed,
         Sent,
         Error

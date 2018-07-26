@@ -108,7 +108,7 @@
                     break;
 
                 case ServerEventType.ConnectionAccepted:
-                    report += $"Connection accepted from {RemoteServerIpAddress}";
+                    report += $"Connection accepted from {RemoteServerIpAddress}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ConnectToRemoteServerStarted:
@@ -199,8 +199,14 @@
                     report += $"PROCESS COMPLETE: {RequestType.Name()}{Environment.NewLine}";
                     break;
 
-                case ServerEventType.QueueContainsUnhandledRequests:
-                    report += $"Number of unhandled requests currently in queue: {ItemsInQueueCount}{Environment.NewLine}";
+                case ServerEventType.PendingFileTransfer:
+
+                    var fileTransferPlural = ItemsInQueueCount > 1
+                        ? "file transfers are"
+                        : "file transfer is";
+
+                    report += $"{ItemsInQueueCount} inbound {fileTransferPlural} waiting to be " +
+                              $"procesed{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ShutdownListenSocketStarted:
@@ -379,7 +385,7 @@
                     break;
 
                 case ServerEventType.RemoteServerRejectedFileTransfer:
-                    report += $"File transfer rejected by {RemoteServerIpAddress}:{RemoteServerPortNumber}";
+                    report += $"File transfer rejected by {RemoteServerIpAddress}:{RemoteServerPortNumber}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.SendFileBytesStarted:
