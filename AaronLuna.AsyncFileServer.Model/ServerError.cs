@@ -17,7 +17,7 @@
 
         public override string ToString()
         {
-            return $"[{TimeStamp:MM/dd/yyyy HH:mm:ss.fff}]:{Message}";
+            return $"[{TimeStamp:MM/dd/yyyy HH:mm:ss.fff}]: {Message}";
         }
     }
 }

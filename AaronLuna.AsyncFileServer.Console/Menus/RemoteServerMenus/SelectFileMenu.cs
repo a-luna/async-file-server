@@ -173,7 +173,7 @@
                 return Result.Fail<FileInfoList>("The requested folder does not exist on the remote server.");
             }
 
-            return Result.Ok(_state.LocalServer.RemoteServerFileList);
+            return Result.Ok(_state.RemoteServerFileList);
         }
 
         async Task FileListResponseTimeoutTask()

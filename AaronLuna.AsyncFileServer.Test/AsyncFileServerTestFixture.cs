@@ -1,3 +1,5 @@
+using AaronLuna.Common.Extensions;
+
 namespace AaronLuna.AsyncFileServer.Test
 {
     using System;
@@ -8,6 +10,7 @@ namespace AaronLuna.AsyncFileServer.Test
     using System.Threading.Tasks;
 
     using Microsoft.VisualStudio.TestTools.UnitTesting;
+    using SixLabors.ImageSharp;
 
     using Common.IO;
     using Common.Logging;
@@ -52,6 +55,7 @@ namespace AaronLuna.AsyncFileServer.Test
         IPAddress _remoteServerPublicIp;
         ServerPlatform _remoteServerPlatform;
         ServerPlatform _thisServerPlatform;
+        private FileInfoList _fileInfoList;
 
         bool _serverReceivedTextMessage;
         bool _serverNoFileTransferPending;
@@ -103,6 +107,8 @@ namespace AaronLuna.AsyncFileServer.Test
             _clientReceivedAllFileBytes = false;
             _clientReceivedFileInfoList = false;
             _clientErrorOccurred = false;
+
+            _fileInfoList = new FileInfoList();
 
             var currentPath = Directory.GetCurrentDirectory();
             var index = currentPath.IndexOf("bin", StringComparison.Ordinal);
@@ -172,14 +178,24 @@ namespace AaronLuna.AsyncFileServer.Test
             {
                 LocalServerFolderPath = _localFolder,
                 LocalNetworkCidrIp = _cidrIp,
-                SocketSettings = _socketSettings
+                SocketSettings = _socketSettings,
+                TransferUpdateInterval = 10,
+                FileTransferStalledTimeout = TimeSpan.FromSeconds(5),
+                TransferRetryLimit = 5,
+                RetryLimitLockout = TimeSpan.FromMinutes(5),
+                LogLevel = LogLevel.Info
             };
 
             var serverSettings = new ServerSettings
             {
                 LocalServerFolderPath = _remoteFolder,
                 LocalNetworkCidrIp = _cidrIp,
-                SocketSettings = _socketSettings
+                SocketSettings = _socketSettings,
+                TransferUpdateInterval = 10,
+                FileTransferStalledTimeout = TimeSpan.FromSeconds(5),
+                TransferRetryLimit = 5,
+                RetryLimitLockout = TimeSpan.FromMinutes(5),
+                LogLevel = LogLevel.Info
             };
 
             _server = new AsyncFileServer("Server", serverSettings);
@@ -338,7 +354,7 @@ namespace AaronLuna.AsyncFileServer.Test
 
             while (!_server.IsListening) { }
             while (!_client.IsListening) { }
-
+            
             var sizeOfFileToSend = new FileInfo(sendFilePath).Length;
             FileHelper.DeleteFileIfAlreadyExists(receiveFilePath, 3);
             Assert.IsFalse(File.Exists(receiveFilePath));
@@ -381,9 +397,36 @@ namespace AaronLuna.AsyncFileServer.Test
 
             Assert.IsTrue(File.Exists(receiveFilePath));
             Assert.AreEqual(FileName, Path.GetFileName(receiveFilePath));
-
+            
             var receivedFileSize = new FileInfo(receiveFilePath).Length;
             Assert.AreEqual(sizeOfFileToSend, receivedFileSize);
+
+            var height = 0;
+            var width = 0;
+
+            try
+            {
+                using (var receiveImage = Image.Load(receiveFilePath))
+                {
+                    height = receiveImage.Height;
+                    width = receiveImage.Width;
+                }
+            }
+            catch (NotSupportedException ex)
+            {
+                var error =
+                    $"An exception was thrown when attempting to load the image file " +
+                    $"which was trasferred to the remote server: {Environment.NewLine}" +
+                    ex.GetReport();
+
+                Assert.Fail(error);
+            }
+
+            using (var sentImage = Image.Load(sendFilePath))
+            {
+                Assert.AreEqual(sentImage.Height, height);
+                Assert.AreEqual(sentImage.Width, width);
+            }
         }
 
         [TestMethod]
@@ -463,7 +506,7 @@ namespace AaronLuna.AsyncFileServer.Test
 
             Assert.IsTrue(File.Exists(receivedFilePath));
             Assert.AreEqual(FileName, Path.GetFileName(receivedFilePath));
-
+            
             var receivedFileSize = new FileInfo(receivedFilePath).Length;
             Assert.AreEqual(sentFileSize, receivedFileSize);
         }
@@ -566,12 +609,11 @@ namespace AaronLuna.AsyncFileServer.Test
             }
 
             while (!_clientReceivedFileInfoList) { }
-
-            var fileInfoList = _client.RemoteServerFileList;
-            Assert.AreEqual(4, fileInfoList.Count);
+            
+            Assert.AreEqual(4, _fileInfoList.Count);
 
             var fiDictionaryActual = new Dictionary<string, long>();
-            foreach (var (fileName, folderPath, fileSizeBytes) in fileInfoList)
+            foreach (var (fileName, folderPath, fileSizeBytes) in _fileInfoList)
             {
                 var filePath = Path.Combine(folderPath, fileName);
                 fiDictionaryActual.Add(filePath, fileSizeBytes);
@@ -754,9 +796,8 @@ namespace AaronLuna.AsyncFileServer.Test
             }
 
             while (!_serverHasNoFilesAvailableToDownload) { }
-
-            var fileInfoList = _client.RemoteServerFileList;
-            Assert.AreEqual(0, fileInfoList.Count);
+            
+            Assert.AreEqual(0, _fileInfoList.Count);
 
             var fileListRequest2 =
                 await _client.RequestFileListAsync(
@@ -770,12 +811,11 @@ namespace AaronLuna.AsyncFileServer.Test
             }
 
             while (!_clientReceivedFileInfoList) { }
-
-            fileInfoList = _client.RemoteServerFileList;
-            Assert.AreEqual(4, fileInfoList.Count);
+            
+            Assert.AreEqual(4, _fileInfoList.Count);
 
             var fiDictionaryActual = new Dictionary<string, long>();
-            foreach (var (fileName, folderPath, fileSizeBytes) in fileInfoList)
+            foreach (var (fileName, folderPath, fileSizeBytes) in _fileInfoList)
             {
                 var filePath = Path.Combine(folderPath, fileName);
                 fiDictionaryActual.Add(filePath, fileSizeBytes);
@@ -850,9 +890,8 @@ namespace AaronLuna.AsyncFileServer.Test
             }
 
             while (!_serverTransferFolderDoesNotExist) { }
-
-            var fileInfoList = _client.RemoteServerFileList;
-            Assert.AreEqual(0, fileInfoList.Count);
+            
+            Assert.AreEqual(0, _fileInfoList.Count);
 
             var fileListRequest2 =
                 await _client.RequestFileListAsync(
@@ -866,12 +905,11 @@ namespace AaronLuna.AsyncFileServer.Test
             }
 
             while (!_clientReceivedFileInfoList) { }
-
-            fileInfoList = _client.RemoteServerFileList;
-            Assert.AreEqual(4, fileInfoList.Count);
+            
+            Assert.AreEqual(4, _fileInfoList.Count);
 
             var fiDictionaryActual = new Dictionary<string, long>();
-            foreach (var (fileName, folderPath, fileSizeBytes) in fileInfoList)
+            foreach (var (fileName, folderPath, fileSizeBytes) in _fileInfoList)
             {
                 var filePath = Path.Combine(folderPath, fileName);
                 fiDictionaryActual.Add(filePath, fileSizeBytes);
@@ -932,6 +970,7 @@ namespace AaronLuna.AsyncFileServer.Test
 
                 case ServerEventType.ReceivedFileList:
                     _clientReceivedFileInfoList = true;
+                    _fileInfoList = serverEvent.RemoteServerFileList;
                     break;
 
                 case ServerEventType.ReceiveFileBytesComplete:

@@ -3,6 +3,7 @@
 //TODO: To avoid crashes, when there is an error reading settings from xml, handle exception, create default settings object and proceed. Rename the offending xml file and write new settings.xml to file.
 //TODO: In the AaronLuna.AsyncFileServer.Test namespace, create a filetransfercontroller subclass that overrides the defaut SendFileAsync() behavior to send only 10% of a file in order to be used within a set of unit tests that verify the stalled timeout/retry counter/limit/lockout timespan settings are working correctly.
 //TODO: Need to create a test case to verify the behavior when server is busy and more requests are received but are not processed. The pending requests should be automatically processed once the server is no longer busy. Need to verify that all request types are processed correctly including text messages an inbound file transfer requests
+//TODO: On event log menus, enable filter functionality to allow user to view only desired request types, transfer types, events/requests/transfers for desired servers, request/transfer status types, etc.
 
 namespace AaronLuna.AsyncFileServer.Console
 {
@@ -142,11 +143,7 @@ namespace AaronLuna.AsyncFileServer.Console
                     _state.Settings.LocalNetworkCidrIp,
                     _state.Settings.LocalServerPortNumber).ConfigureAwait(false);
 
-            _state.LocalServer.Settings.SocketSettings = _state.Settings.SocketSettings;
-            _state.LocalServer.Settings.TransferUpdateInterval = _state.Settings.TransferUpdateInterval;
-            _state.LocalServer.Settings.TransferRetryLimit = _state.Settings.TransferRetryLimit;
-            _state.LocalServer.Settings.RetryLimitLockout = _state.Settings.RetryLimitLockout;
-            _state.LocalServer.MyInfo.TransferFolder = _state.Settings.LocalServerFolderPath;
+            _state.LocalServer.UpdateSettings(_state.Settings);
 
             var anySettingWasChanged = portNumberHasChanged || cidrIpHasChanged;
 
@@ -199,6 +196,7 @@ namespace AaronLuna.AsyncFileServer.Console
                     break;
 
                 case ServerEventType.ReceivedFileList:
+                    _state.RemoteServerFileList = serverEvent.RemoteServerFileList;
                     _state.WaitingForFileListResponse = false;
                     return;
 

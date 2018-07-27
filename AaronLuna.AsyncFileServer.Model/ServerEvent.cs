@@ -206,7 +206,7 @@
                         : "file transfer is";
 
                     report += $"{ItemsInQueueCount} inbound {fileTransferPlural} waiting to be " +
-                              $"procesed{Environment.NewLine}";
+                              $"processed{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ShutdownListenSocketStarted:

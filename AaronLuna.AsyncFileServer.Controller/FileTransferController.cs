@@ -369,7 +369,8 @@
             //      1. the entire file has been received OR 
             //      2. Data is no longer being received OR
             //      3, Transfer is canceled
-            while (BytesRemaining > 0)
+            var receivedZeroBytesFromSocket = false;
+            while (!receivedZeroBytesFromSocket)
             {
                 if (token.IsCancellationRequested)
                 {
@@ -395,12 +396,14 @@
                 }
 
                 CurrentBytesReceived = readFromSocket.Value;
-                var receivedBytes = new byte[CurrentBytesReceived];
-
                 if (CurrentBytesReceived == 0)
                 {
-                    return Result.Fail("Socket is no longer receiving data, must abort file transfer");
+                    receivedZeroBytesFromSocket = true;
+                    continue;
                 }
+
+                var receivedBytes = new byte[CurrentBytesReceived];
+                _buffer.ToList().CopyTo(0, receivedBytes, 0, CurrentBytesReceived);
 
                 int fileWriteAttempts;
                 lock (FileLock)
@@ -704,7 +707,7 @@
                 Environment.NewLine + Environment.NewLine;
 
             var fileInfo =
-                $"File Sender..: {remoteServerIp}:{remotePortNumber}" +
+                $"File Sender..: {remoteServerIp}:{remotePortNumber}{Environment.NewLine}" +
                 $"File Name....: {fileName}{Environment.NewLine}" +
                 $"File Size....: {fileSize}{Environment.NewLine}" +
                 $"Save To......: {localFolder}{Environment.NewLine}";

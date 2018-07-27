@@ -17,6 +17,7 @@
         {
             LocalServer = new AsyncFileServer();
             SelectedServerInfo = new ServerInfo();
+            RemoteServerFileList = new FileInfoList();
 
             WaitingForServerInfoResponse = true;
             WaitingForFileListResponse = true;
@@ -60,7 +61,7 @@
         public string UserEntryRemoteServerName { get; set; }
 
         public AsyncFileServer LocalServer { get; set; }
-        public FileInfoList RemoteServerFileList => LocalServer.RemoteServerFileList;
+        public FileInfoList RemoteServerFileList { get; set; }
         public string ErrorMessage { get; set; }
 
         public FileTransferProgressBar ProgressBar { get; set; }

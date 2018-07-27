@@ -91,33 +91,45 @@
         public event EventHandler<ServerEvent> EventOccurred;
         public event EventHandler<ServerEvent> SocketEventOccurred;
 
-        public override string ToString()
+        public string ItemText(int itemNumber)
         {
             if (_request == null)
             {
                 return string.Empty;
             }
 
+            var space = itemNumber >= 10
+                ? string.Empty
+                : " ";
+
             var direction = string.Empty;
-            if (_request.Direction == ServerRequestDirection.Sent)
+            var timeStamp = string.Empty;
+
+            switch (_request.Direction)
             {
-                direction = "Sent to:";
+                case ServerRequestDirection.Sent:
+                    direction = "Sent To........:";
+                    timeStamp = "Sent At........:";
+                    break;
+
+                case ServerRequestDirection.Received:
+                    direction = "Received From..:";
+                    timeStamp = "Received At....:";
+                    break;
             }
 
-            if (_request.Direction == ServerRequestDirection.Received)
-            {
-                direction = "Received from:";
-            }
-
-            return $" {RequestType.Name()} [{Status}]{Environment.NewLine}" +
+            return $"{space}Request Type...:{RequestType.Name()} [{Status}]{Environment.NewLine}" +
                    $"    {direction} {RemoteServerInfo}{Environment.NewLine}" +
-                   $"    At: {_request.TimeStamp:MM/dd/yyyy hh:mm tt}{Environment.NewLine}";
+                   $"    {timeStamp} {_request.TimeStamp:MM/dd/yyyy hh:mm tt}{Environment.NewLine}";
+        }
+
+        public override string ToString()
+        {
+            return ItemText(0);
         }
 
         public async Task<Result> SendServerRequestAsync(
             byte[] requestBytes,
-            IPAddress remoteServerIp,
-            int remoteServerPort,
             ServerEvent sendRequestStartedEvent,
             ServerEvent sendRequestCompleteEvent)
         {
@@ -134,7 +146,7 @@
             ReadRequestBytes(requestBytes);
 
             var connectToServer =
-                await ConnectToServerAsync(remoteServerIp, remoteServerPort).ConfigureAwait(false);
+                await ConnectToServerAsync().ConfigureAwait(false);
 
             if (connectToServer.Failure)
             {
@@ -164,15 +176,15 @@
             return Result.Ok();
         }
 
-        async Task<Result> ConnectToServerAsync(IPAddress remoteServerIp, int remoteServerPort)
+        async Task<Result> ConnectToServerAsync()
         {
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
             EventLog.Add(new ServerEvent
             {
                 EventType = ServerEventType.ConnectToRemoteServerStarted,
-                RemoteServerIpAddress = remoteServerIp,
-                RemoteServerPortNumber = remoteServerPort,
+                RemoteServerIpAddress = RemoteServerInfo.SessionIpAddress,
+                RemoteServerPortNumber = RemoteServerInfo.PortNumber,
                 RequestId = Id,
                 FileTransferId = FileTransferId
             });
@@ -181,8 +193,8 @@
 
             var connectToRemoteServer =
                 await _socket.ConnectWithTimeoutAsync(
-                    remoteServerIp,
-                    remoteServerPort,
+                    RemoteServerInfo.SessionIpAddress,
+                    RemoteServerInfo.PortNumber,
                     _timeoutMs).ConfigureAwait(false);
 
             if (connectToRemoteServer.Failure)
@@ -193,8 +205,8 @@
             EventLog.Add(new ServerEvent
             {
                 EventType = ServerEventType.ConnectToRemoteServerComplete,
-                RemoteServerIpAddress = remoteServerIp,
-                RemoteServerPortNumber = remoteServerPort,
+                RemoteServerIpAddress = RemoteServerInfo.SessionIpAddress,
+                RemoteServerPortNumber = RemoteServerInfo.PortNumber,
                 RequestId = Id,
                 FileTransferId = FileTransferId
             });
