@@ -107,6 +107,18 @@
             _fileTransfers = new List<FileTransferController>();
             _textSessions = new List<TextSession>();
             _settings = new ServerSettings();
+
+            string GetDefaultTransferFolder()
+            {
+                var defaultPath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}transfer";
+
+                if (!Directory.Exists(defaultPath))
+                {
+                    Directory.CreateDirectory(defaultPath);
+                }
+
+                return defaultPath;
+            }
         }
 
         public AsyncFileServer(string name, ServerSettings settings) :this()
@@ -139,6 +151,7 @@
         public bool NoRequests => _requestId == 1;
         public List<int> RequestIds => _requests.Select(r => r.Id).ToList();
         public int MostRecentRequestId => _requestId - 1;
+        public DateTime MostRecentRequestTime => MostRecentRequestTimeStamp();
 
         public bool AllErrorsHaveBeenRead => UnreadErrorCount() == 0;
         public List<ServerError> UnreadErrors => GetUnreadErrors();
@@ -176,18 +189,6 @@
             _settings = settings;
         }
 
-        static string GetDefaultTransferFolder()
-        {
-            var defaultPath = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}transfer";
-
-            if (!Directory.Exists(defaultPath))
-            {
-                Directory.CreateDirectory(defaultPath);
-            }
-
-            return defaultPath;
-        }
-        
         int PendingTransferCount()
         {
             var pendingTransfers =
@@ -207,6 +208,18 @@
                                  && ft.Status == FileTransferStatus.Pending)
                     .Select(ft => ft.Id)
                     .ToList();
+        }
+
+        DateTime MostRecentRequestTimeStamp()
+        {
+            var requestsDesc =
+                _requests.Select(r => r)
+                    .OrderByDescending(r => r.TimeStamp)
+                    .ToList();
+
+            return requestsDesc.Count == 0
+                ? DateTime.MinValue
+                : requestsDesc[0].TimeStamp;
         }
 
         int UnreadErrorCount()

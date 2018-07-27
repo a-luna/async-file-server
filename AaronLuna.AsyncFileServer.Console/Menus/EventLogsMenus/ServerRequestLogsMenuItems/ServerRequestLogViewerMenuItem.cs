@@ -21,7 +21,8 @@
             AppState state,
             ServerRequestController request,
             List<ServerEvent> eventLog,
-            LogLevel logLevel)
+            LogLevel logLevel,
+            int itemNumber)
         {
             _state = state;
             _request = request;
@@ -29,7 +30,7 @@
             _logLevel = logLevel;
 
             ReturnToParent = false;
-            ItemText = request.ToString();
+            ItemText = request.ItemText(itemNumber);
         }
 
         public string ItemText { get; set; }

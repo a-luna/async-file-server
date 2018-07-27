@@ -1,5 +1,3 @@
-using AaronLuna.Common.Extensions;
-
 namespace AaronLuna.AsyncFileServer.Test
 {
     using System;
@@ -12,13 +10,14 @@ namespace AaronLuna.AsyncFileServer.Test
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using SixLabors.ImageSharp;
 
+    using Common.Extensions;
     using Common.IO;
     using Common.Logging;
     using Common.Network;
     using Common.Result;
 
+    using AsyncFileServer.Model;
     using Controller;
-    using Model;
 
     [TestClass]
     public class AsyncFileServerTestFixture
@@ -415,7 +414,7 @@ namespace AaronLuna.AsyncFileServer.Test
             catch (NotSupportedException ex)
             {
                 var error =
-                    $"An exception was thrown when attempting to load the image file " +
+                    "An exception was thrown when attempting to load the image file " +
                     $"which was trasferred to the remote server: {Environment.NewLine}" +
                     ex.GetReport();
 

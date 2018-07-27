@@ -187,12 +187,11 @@ namespace AaronLuna.AsyncFileServer.Console
                 case ServerEventType.ReceivedTextMessage:
                 case ServerEventType.PendingFileTransfer:
                 case ServerEventType.SendFileTransferRejectedStarted:
-                    _mainMenu.DisplayMenu();
+                    RefreshMainMenu(serverEvent);
                     break;
 
                 case ServerEventType.ReceivedServerInfo:
                     ReceivedServerInfo(serverEvent);
-                    _mainMenu.DisplayMenu();
                     break;
 
                 case ServerEventType.ReceivedFileList:
@@ -259,14 +258,13 @@ namespace AaronLuna.AsyncFileServer.Console
 
             _state.DoNotRequestServerInfo = true;
             _state.DoNotRefreshMainMenu = true;
-            _state.DoNotPromptUserForServerName = true;
+            _state.PromptUserForServerName = false;
 
             await
                 SharedFunctions.RequestServerInfoAsync(
                     _state,
                     serverEvent.RemoteServerIpAddress,
-                    serverEvent.RemoteServerPortNumber,
-                    _state.DoNotPromptUserForServerName);
+                    serverEvent.RemoteServerPortNumber);
 
             _state.DoNotRequestServerInfo = false;
             _state.DoNotRefreshMainMenu = false;
@@ -312,7 +310,7 @@ namespace AaronLuna.AsyncFileServer.Console
                 Platform = serverEvent.RemoteServerPlatform
             };
 
-            if (!_state.DoNotPromptUserForServerName)
+            if (_state.PromptUserForServerName)
             {
                 _state.SelectedServerInfo = serverInfo;
                 SharedFunctions.DisplayLocalServerInfo(_state);

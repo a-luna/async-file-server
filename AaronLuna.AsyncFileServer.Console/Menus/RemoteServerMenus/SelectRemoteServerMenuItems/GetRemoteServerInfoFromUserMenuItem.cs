@@ -27,7 +27,7 @@
         {
             _state.DoNotRequestServerInfo = true;
             _state.DoNotRefreshMainMenu = true;
-            _state.DoNotPromptUserForServerName = false;
+            _state.PromptUserForServerName = true;
             _state.WaitingForUserToConfirmNewRemoteServerDetails = true;
 
             SharedFunctions.DisplayLocalServerInfo(_state);
@@ -54,8 +54,7 @@
                 SharedFunctions.RequestServerInfoAsync(
                     _state,
                     _state.SelectedServerInfo.SessionIpAddress,
-                    _state.SelectedServerInfo.PortNumber,
-                    _state.DoNotPromptUserForServerName);
+                    _state.SelectedServerInfo.PortNumber);
 
             while (_state.WaitingForUserToConfirmNewRemoteServerDetails) { }
 

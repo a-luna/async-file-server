@@ -1,11 +1,14 @@
 ﻿namespace AaronLuna.AsyncFileServer.Console.Menus.EventLogsMenus
 {
+    using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Threading.Tasks;
 
     using Common.Console.Menu;
     using Common.Result;
 
+    using Controller;
     using ServerRequestLogsMenuItems;
 
     class ServerRequestLogsMenu : IMenu
@@ -62,8 +65,8 @@
                 return true;
             }
 
-            var lastRequestId = _state.LocalServer.MostRecentRequestId;
-            if (lastRequestId > _state.LogViewerRequestId) return false;
+            var lastRequestTime = _state.LocalServer.MostRecentRequestTime;
+            if (lastRequestTime > _state.LogViewerRequestBoundary) return false;
 
             const string prompt =
                 "No server requests have been received since this list was cleared, would you like to view " +
@@ -75,7 +78,7 @@
                 return true;
             }
 
-            _state.LogViewerRequestId = 0;
+            _state.LogViewerRequestBoundary = DateTime.MinValue;
             return false;
         }
 
@@ -83,26 +86,34 @@
         {
             MenuItems.Clear();
 
-            foreach (var id in _requestIds)
+            var requestsDesc = new List<ServerRequestController>();
+            foreach (var i in Enumerable.Range(0, _requestIds.Count))
             {
-                if (id <= _state.LogViewerRequestId) continue;
+                var request = _state.LocalServer.GetRequestById(_requestIds[i]).Value;
+                if (request.TimeStamp <= _state.LogViewerRequestBoundary) continue;
 
-                var request = _state.LocalServer.GetRequestById(id).Value;
-                var eventLog = _state.LocalServer.GetEventLogForRequest(id);
+                requestsDesc.Add(request);
+            }
+
+            requestsDesc = requestsDesc.OrderByDescending(r => r.TimeStamp).ToList();
+
+            foreach (var i in Enumerable.Range(0, requestsDesc.Count))
+            {
+                var eventLog = _state.LocalServer.GetEventLogForRequest(requestsDesc[i].Id);
 
                 SharedFunctions.LookupRemoteServerName(
-                    request.RemoteServerInfo,
+                    requestsDesc[i].RemoteServerInfo,
                     _state.Settings.RemoteServers);
 
                 MenuItems.Add(
                     new ServerRequestLogViewerMenuItem(
                         _state,
-                        request,
+                        requestsDesc[i],
                         eventLog,
-                        _state.Settings.LogLevel));
+                        _state.Settings.LogLevel,
+                        i + 1));
             }
-
-            MenuItems.Reverse();
+            
             MenuItems.Add(new ClearServerRequestLogsMenuItem(_state));
             MenuItems.Add(new ReturnToParentMenuItem("Return to main menu"));
         }

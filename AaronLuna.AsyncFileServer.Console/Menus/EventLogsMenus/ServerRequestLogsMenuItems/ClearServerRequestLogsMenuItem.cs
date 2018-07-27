@@ -34,7 +34,7 @@
         {
             if (_requestIds.Count == 0) return Result.Ok();
 
-            _state.LogViewerRequestId = _requestIds.Last();
+            _state.LogViewerRequestBoundary = _state.LocalServer.MostRecentRequestTime;
 
             return Result.Ok();
         }

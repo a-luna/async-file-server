@@ -45,12 +45,12 @@
         public bool NoFilesAvailableForDownload { get; set; }
         public bool DoNotRefreshMainMenu { get; set; }
         public bool DoNotRequestServerInfo { get; set; }
-        public bool DoNotPromptUserForServerName { get; set; }
+        public bool PromptUserForServerName { get; set; }
         public bool RestartRequired { get; set; }
 
         public int InboundFileTransferId { get; set; }
         public int LogViewerFileTransferId { get; set; }
-        public int LogViewerRequestId { get; set; }
+        public DateTime LogViewerRequestBoundary { get; set; }
         public bool OutboundFileTransferInProgress { get; set; }
         public bool InboundFileTransferInProgress { get; set; }
 

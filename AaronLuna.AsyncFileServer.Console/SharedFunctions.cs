@@ -49,19 +49,20 @@
                     port);
         }
 
-        public static Task<Result> RequestServerInfoAsync(
-            AppState state,
+        public static Task<Result> RequestServerInfoAsync(AppState state,
             IPAddress remoteServerIpAddress,
-            int remoteServerPort,
-            bool runPassively)
+            int remoteServerPort)
         {
-            var timeout = state.Settings.SocketSettings.SocketTimeoutInMilliseconds;
-
-            if (!runPassively)
+            if (!state.PromptUserForServerName)
             {
-                DisplayLocalServerInfo(state);
-                Console.WriteLine("Requesting additional info from remote server...");
+                return RequestServerInfoTaskAsync(
+                    state,
+                    remoteServerIpAddress,
+                    remoteServerPort);
             }
+
+            DisplayLocalServerInfo(state);
+            Console.WriteLine("Requesting additional info from remote server...");
 
             return RequestServerInfoTaskAsync(state, remoteServerIpAddress, remoteServerPort);
         }
@@ -91,6 +92,8 @@
             {
                 if (serverInfoResponseTimeout) break;
             }
+
+            await timeoutTask;
 
             if (!state.WaitingForServerInfoResponse)
             {

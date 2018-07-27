@@ -83,6 +83,7 @@
         public ServerInfo RemoteServerInfo { get; set; }
         public int FileTransferId { get; set; }
 
+        public DateTime TimeStamp => _request.TimeStamp;
         public bool RequestHasNotBeenReceived => Status == ServerRequestStatus.NoData;
         public bool IsInboundFileTransferRequest => RequestType == ServerRequestType.InboundFileTransferRequest;
         public bool RequestTypeIsFileTransferResponse => RequestType.IsFileTransferResponse();
@@ -118,7 +119,7 @@
                     break;
             }
 
-            return $"{space}Request Type...:{RequestType.Name()} [{Status}]{Environment.NewLine}" +
+            return $"{space}Request Type...: {RequestType.Name()} [{Status}]{Environment.NewLine}" +
                    $"    {direction} {RemoteServerInfo}{Environment.NewLine}" +
                    $"    {timeStamp} {_request.TimeStamp:MM/dd/yyyy hh:mm tt}{Environment.NewLine}";
         }
