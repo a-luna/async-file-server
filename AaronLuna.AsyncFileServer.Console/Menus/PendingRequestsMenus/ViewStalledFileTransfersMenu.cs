@@ -29,7 +29,7 @@
 
         public async Task<Result> ExecuteAsync()
         {
-            if (_state.LocalServer.StalledTransferIds.Count == 0)
+            if (_state.StalledFileTransferIds.Count == 0)
             {
                 return Result.Fail("There are no stalled file transfers");
             }
@@ -45,7 +45,7 @@
         void PopulateMenu()
         {
             MenuItems.Clear();
-            foreach (var id in _state.LocalServer.StalledTransferIds)
+            foreach (var id in _state.StalledFileTransferIds)
             {
                 var fileTransfer = _state.LocalServer.GetFileTransferById(id).Value;
 

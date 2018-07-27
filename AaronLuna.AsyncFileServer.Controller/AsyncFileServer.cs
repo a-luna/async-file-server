@@ -33,15 +33,15 @@
 
         readonly Logger _log = new Logger(typeof(AsyncFileServer));
         readonly List<ServerEvent> _eventLog;
-        readonly List<ServerRequestController> _requests;
-        readonly List<FileTransferController> _fileTransfers;
-        readonly List<TextSession> _textSessions;
         readonly Socket _listenSocket;
         ServerSettings _settings;
 
         CancellationToken _token;
         static readonly object RequestQueueLock = new object();
         static readonly object TransferQueueLock = new object();
+        int TransferRetryLimit => _settings.TransferRetryLimit;
+        TimeSpan RetryLimitLockout => _settings.RetryLimitLockout;
+        int ListenBacklogSize => _settings.SocketSettings.ListenBacklogSize;
 
         bool ServerIsInitialized
         {
@@ -103,9 +103,9 @@
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _eventLog = new List<ServerEvent>();
             ErrorLog = new List<ServerError>();
-            _requests = new List<ServerRequestController>();
-            _fileTransfers = new List<FileTransferController>();
-            _textSessions = new List<TextSession>();
+            Requests = new List<ServerRequestController>();
+            FileTransfers = new List<FileTransferController>();
+            TextSessions = new List<TextSession>();
             _settings = new ServerSettings();
 
             string GetDefaultTransferFolder()
@@ -131,46 +131,14 @@
 
             _settings = settings;
         }
-
-        public ServerInfo MyInfo { get; set; }
-
-        public float TransferUpdateInterval => _settings.TransferUpdateInterval;
-        public int TransferRetryLimit => _settings.TransferRetryLimit;
-        public TimeSpan RetryLimitLockout => _settings.RetryLimitLockout;
-        public int ListenBacklogSize => _settings.SocketSettings.ListenBacklogSize;
-        public int BufferSize => _settings.SocketSettings.BufferSize;
-        public int SocketTimeoutInMilliseconds => _settings.SocketSettings.SocketTimeoutInMilliseconds;
-
+        
         public bool IsListening => ServerIsListening;
 
-        public bool NoFileTransfersPending => PendingTransferCount() == 0;
-        public bool FileTransferPending => PendingTransferCount() > 0;
-        public int PendingFileTransferCount => PendingTransferCount();
-        public List<int> PendingFileTransferIds => GetPendingFileTransferIds();
-
-        public bool NoRequests => _requestId == 1;
-        public List<int> RequestIds => _requests.Select(r => r.Id).ToList();
-        public int MostRecentRequestId => _requestId - 1;
-        public DateTime MostRecentRequestTime => MostRecentRequestTimeStamp();
-
-        public bool AllErrorsHaveBeenRead => UnreadErrorCount() == 0;
-        public List<ServerError> UnreadErrors => GetUnreadErrors();
+        public ServerInfo MyInfo { get; set; }
+        public List<TextSession> TextSessions { get; }
+        public List<FileTransferController> FileTransfers { get; }
+        public List<ServerRequestController> Requests { get; }
         public List<ServerError> ErrorLog { get; }
-
-        public bool NoTextSessions => NoValidTextSessions();
-        public List<int> TextSessionIds => _textSessions.Select(t => t.Id).ToList();
-
-        public int UnreadTextMessageCount => GetNumberOfUnreadTextMessages();
-        public List<int> TextSessionIdsWithUnreadMessages => GetTextSessionIdsWithUnreadMessages();
-
-        public bool NoFileTransfers => _fileTransferId == 1;
-        public List<int> FileTransferIds => _fileTransfers.Select(t => t.Id).ToList();
-        public int MostRecentFileTransferId => _fileTransferId - 1;
-
-        public List<int> StalledTransferIds =>
-            _fileTransfers.Select(t => t)
-                .Where(t => t.TransferStalled)
-                .Select(t => t.Id).ToList();
 
         public event EventHandler<ServerEvent> EventOccurred;
         public event EventHandler<ServerEvent> SocketEventOccurred;
@@ -178,9 +146,43 @@
 
         public override string ToString()
         {
-            return string.IsNullOrEmpty(MyInfo.Name)
+            var name = string.IsNullOrEmpty(MyInfo.Name)
                 ? "AsyncFileServer"
                 : MyInfo.Name;
+
+            var localEndPoint = $"{MyInfo.LocalIpAddress}:{MyInfo.PortNumber}";
+
+            var inRequestCount =
+                    Requests.Select(r => r)
+                        .Where(r => r.Direction == ServerRequestDirection.Received)
+                        .ToList().Count;
+
+            var outRequestCount =
+                Requests.Select(r => r)
+                    .Where(r => r.Direction == ServerRequestDirection.Sent)
+                    .ToList().Count;
+
+            var inTransferCount =
+                FileTransfers.Select(ft => ft)
+                    .Where(ft => ft.TransferDirection == FileTransferDirection.Inbound)
+                    .ToList().Count;
+
+            var outTransferCount =
+                FileTransfers.Select(ft => ft)
+                    .Where(ft => ft.TransferDirection == FileTransferDirection.Outbound)
+                    .ToList().Count;
+
+            var textMessageCount = 0;
+            foreach (var textSession in TextSessions)
+            {
+                textMessageCount += textSession.MessageCount;
+            }
+
+            return
+                $"{name} [{localEndPoint}] " +
+                $"[Requests In: {inRequestCount} Out: {outRequestCount}] " +
+                $"[Transfers In: {inTransferCount} Out: {outTransferCount}] " +
+                $"[Total Messages: {textMessageCount}/{TextSessions.Count} Sessions]";
         }
 
         public void UpdateSettings(ServerSettings settings)
@@ -189,70 +191,9 @@
             _settings = settings;
         }
 
-        int PendingTransferCount()
-        {
-            var pendingTransfers =
-                _fileTransfers.Select(ft => ft)
-                    .Where(ft => ft.TransferDirection == FileTransferDirection.Inbound
-                                && ft.Status == FileTransferStatus.Pending)
-                    .ToList();
-
-            return pendingTransfers.Count;
-        }
-
-        List<int> GetPendingFileTransferIds()
-        {
-            return
-                _fileTransfers.Select(ft => ft)
-                    .Where(ft => ft.TransferDirection == FileTransferDirection.Inbound
-                                 && ft.Status == FileTransferStatus.Pending)
-                    .Select(ft => ft.Id)
-                    .ToList();
-        }
-
-        DateTime MostRecentRequestTimeStamp()
-        {
-            var requestsDesc =
-                _requests.Select(r => r)
-                    .OrderByDescending(r => r.TimeStamp)
-                    .ToList();
-
-            return requestsDesc.Count == 0
-                ? DateTime.MinValue
-                : requestsDesc[0].TimeStamp;
-        }
-
-        int UnreadErrorCount()
-        {
-            var unreadErrors =
-                    ErrorLog.Select(e => e)
-                        .Where(e => e.Unread)
-                        .ToList();
-
-            return unreadErrors.Count;
-        }
-
-        List<ServerError> GetUnreadErrors()
-        {
-            return
-                ErrorLog.Select(e => e)
-                    .Where(e => e.Unread)
-                    .ToList();
-        }
-
-        public bool NoValidTextSessions()
-        {
-            if (_textSessionId == 1) return true;
-
-            var validTextSessions =
-                _textSessions.Select(ts => ts).Where(ts => ts.MessageCount > 0).ToList();
-
-            return validTextSessions.Count == 0;
-        }
-
         public Result<TextSession> GetTextSessionById(int id)
         {
-            var matches = _textSessions.Select(ts => ts).Where(ts => ts.Id == id).ToList();
+            var matches = TextSessions.Select(ts => ts).Where(ts => ts.Id == id).ToList();
 
             if (matches.Count == 0)
             {
@@ -267,38 +208,10 @@
             return Result.Ok(matches[0]);
         }
 
-        int GetTextSessionIdForRemoteServer(ServerInfo remoteServerInfo)
-        {
-            TextSession match = null;
-            foreach (var textSession in _textSessions)
-            {
-                if (!textSession.RemoteServerInfo.IsEqualTo(remoteServerInfo)) continue;
-
-                match = textSession;
-                break;
-            }
-
-            if (match != null)
-            {
-                return match.Id;
-            }
-
-            var newTextSession = new TextSession
-            {
-                Id = _textSessionId,
-                RemoteServerInfo = remoteServerInfo
-            };
-
-            _textSessions.Add(newTextSession);
-            _textSessionId++;
-
-            return newTextSession.Id;
-        }
-
         public Result<ServerRequestController> GetRequestById(int id)
         {
             var matches =
-                _requests.Select(r => r)
+                Requests.Select(r => r)
                     .Where(r => r.Id == id)
                     .ToList();
 
@@ -316,7 +229,7 @@
 
         public Result<FileTransferController> GetFileTransferById(int id)
         {
-            var matches = _fileTransfers.Select(t => t).Where(t => t.Id == id).ToList();
+            var matches = FileTransfers.Select(t => t).Where(t => t.Id == id).ToList();
             if (matches.Count == 0)
             {
                 return Result.Fail<FileTransferController>(
@@ -364,71 +277,6 @@
 
             return eventLog.ApplyFilter(logLevel);
 
-        }
-
-        Result<FileTransferController> GetFileTransferByResponseCode(ServerRequestController inboundRequest)
-        {
-            var getResponseCode = inboundRequest.GetFileTransferResponseCode();
-            if (getResponseCode.Failure)
-            {
-                return Result.Fail<FileTransferController>(getResponseCode.Error);
-            }
-
-            var responseCode = getResponseCode.Value;
-            var remoteServerInfo = inboundRequest.RemoteServerInfo;
-
-            var matches =
-                _fileTransfers.Select(t => t)
-                    .Where(t => t.TransferResponseCode == responseCode)
-                    .ToList();
-
-            if (matches.Count == 0)
-            {
-                var error =
-                    $"No file transfer was found with a response code value of {responseCode} " +
-                    $"(Request received from {remoteServerInfo.SessionIpAddress}:{remoteServerInfo.PortNumber})";
-
-                return Result.Fail<FileTransferController>(error);
-            }
-
-            return matches.Count == 1
-                ? Result.Ok(matches[0])
-                : Result.Fail<FileTransferController>(
-                    $"Found {matches.Count} file transfers with the same response code value of {responseCode}");
-        }
-
-        int GetNumberOfUnreadTextMessages()
-        {
-            var unreadCount = 0;
-            foreach (var textSession in _textSessions)
-            {
-                foreach (var textMessage in textSession.Messages)
-                {
-                    if (textMessage.Unread)
-                    {
-                        unreadCount++;
-                    }
-                }
-            }
-
-            return unreadCount;
-        }
-
-        List<int> GetTextSessionIdsWithUnreadMessages()
-        {
-            var sessionIds = new List<int>();
-            foreach (var textSession in _textSessions)
-            {
-                foreach (var textMessage in textSession.Messages)
-                {
-                    if (textMessage.Unread)
-                    {
-                        sessionIds.Add(textSession.Id);
-                    }
-                }
-            }
-
-            return sessionIds.Distinct().ToList();
         }
 
         public async Task InitializeAsync(string cidrIp, int port)
@@ -523,12 +371,12 @@
             // or an error is encountered
             while (true)
             {
-                if (FileTransferPending)
+                if (FileTransferPending())
                 {
                     _eventLog.Add(new ServerEvent
                     {
                         EventType = ServerEventType.PendingFileTransfer,
-                        ItemsInQueueCount = PendingFileTransferCount
+                        ItemsInQueueCount = PendingTransferCount()
                     });
 
                     EventOccurred?.Invoke(this, _eventLog.Last());
@@ -555,7 +403,7 @@
 
                 lock (RequestQueueLock)
                 {
-                    _requests.Add(inboundRequest);
+                    Requests.Add(inboundRequest);
                     _requestId++;
                 }
 
@@ -564,6 +412,22 @@
 
                 await ProcessRequestAsync(inboundRequest).ConfigureAwait(false);
                 await ProcessRequestBacklogAsync().ConfigureAwait(false);
+            }
+
+            bool FileTransferPending()
+            {
+                return PendingTransferCount() > 0;
+            }
+
+            int PendingTransferCount()
+            {
+                var pendingTransfers =
+                    FileTransfers.Select(ft => ft)
+                        .Where(ft => ft.TransferDirection == FileTransferDirection.Inbound
+                                     && ft.Status == FileTransferStatus.Pending)
+                        .ToList();
+
+                return pendingTransfers.Count;
             }
         }
 
@@ -773,7 +637,7 @@
             EventOccurred?.Invoke(this, _eventLog.Last());
 
             var backlog =
-                    _requests.Select(r => r)
+                    Requests.Select(r => r)
                         .Where(r => r.Status == ServerRequestStatus.Pending)
                         .ToList();
 
@@ -814,7 +678,7 @@
                 lock (RequestQueueLock)
                 {
                     pendingRequests =
-                        _requests.Select(r => r)
+                        Requests.Select(r => r)
                             .Where(r => r.Status == ServerRequestStatus.Pending)
                             .ToList();
                 }
@@ -829,7 +693,7 @@
                 lock (RequestQueueLock)
                 {
                     pendingRequests =
-                        _requests.Select(r => r)
+                        Requests.Select(r => r)
                             .Where(r => r.Status == ServerRequestStatus.Pending)
                             .ToList();
                 }
@@ -857,7 +721,7 @@
 
             lock (RequestQueueLock)
             {
-                _requests.Add(outboundRequest);
+                Requests.Add(outboundRequest);
                 _requestId++;
             }
             
@@ -953,6 +817,34 @@
             return Result.Ok();
         }
 
+        int GetTextSessionIdForRemoteServer(ServerInfo remoteServerInfo)
+        {
+            TextSession match = null;
+            foreach (var textSession in TextSessions)
+            {
+                if (!textSession.RemoteServerInfo.IsEqualTo(remoteServerInfo)) continue;
+
+                match = textSession;
+                break;
+            }
+
+            if (match != null)
+            {
+                return match.Id;
+            }
+
+            var newTextSession = new TextSession
+            {
+                Id = _textSessionId,
+                RemoteServerInfo = remoteServerInfo
+            };
+
+            TextSessions.Add(newTextSession);
+            _textSessionId++;
+
+            return newTextSession.Id;
+        }
+
         public async Task<Result> SendFileAsync
         (IPAddress remoteServerIpAddress,
             int remoteServerPort,
@@ -991,7 +883,7 @@
 
             lock (TransferQueueLock)
             {
-                _fileTransfers.Add(outboundFileTransfer);
+                FileTransfers.Add(outboundFileTransfer);
                 _fileTransferId++;
             }
 
@@ -1033,7 +925,7 @@
 
             lock (TransferQueueLock)
             {
-                _fileTransfers.Add(outboundFileTransfer);
+                FileTransfers.Add(outboundFileTransfer);
                 _fileTransferId++;
             }
 
@@ -1077,7 +969,7 @@
 
             lock (RequestQueueLock)
             {
-                _requests.Add(outboundRequest);
+                Requests.Add(outboundRequest);
                 _requestId++;
             }
 
@@ -1250,6 +1142,37 @@
             return Result.Ok();
         }
 
+        Result<FileTransferController> GetFileTransferByResponseCode(ServerRequestController inboundRequest)
+        {
+            var getResponseCode = inboundRequest.GetFileTransferResponseCode();
+            if (getResponseCode.Failure)
+            {
+                return Result.Fail<FileTransferController>(getResponseCode.Error);
+            }
+
+            var responseCode = getResponseCode.Value;
+            var remoteServerInfo = inboundRequest.RemoteServerInfo;
+
+            var matches =
+                FileTransfers.Select(t => t)
+                    .Where(t => t.TransferResponseCode == responseCode)
+                    .ToList();
+
+            if (matches.Count == 0)
+            {
+                var error =
+                    $"No file transfer was found with a response code value of {responseCode} " +
+                    $"(Request received from {remoteServerInfo.SessionIpAddress}:{remoteServerInfo.PortNumber})";
+
+                return Result.Fail<FileTransferController>(error);
+            }
+
+            return matches.Count == 1
+                ? Result.Ok(matches[0])
+                : Result.Fail<FileTransferController>(
+                    $"Found {matches.Count} file transfers with the same response code value of {responseCode}");
+        }
+
         public async Task<Result> GetFileAsync(
             IPAddress remoteServerIpAddress,
             int remoteServerPort,
@@ -1285,7 +1208,7 @@
 
             lock (TransferQueueLock)
             {
-                _fileTransfers.Add(inboundFileTransfer);
+                FileTransfers.Add(inboundFileTransfer);
                 _fileTransferId++;
             }
 
@@ -1298,7 +1221,7 @@
 
             lock (RequestQueueLock)
             {
-                _requests.Add(outboundRequest);
+                Requests.Add(outboundRequest);
                 _requestId++;
             }
 
@@ -1501,7 +1424,7 @@
 
                 lock (TransferQueueLock)
                 {
-                    _fileTransfers.Add(inboundFileTransfer);
+                    FileTransfers.Add(inboundFileTransfer);
                     _fileTransferId++;
                 }
             }
@@ -1863,7 +1786,7 @@
 
             lock (RequestQueueLock)
             {
-                _requests.Add(outboundRequest);
+                Requests.Add(outboundRequest);
                 _requestId++;
             }
 
@@ -1989,7 +1912,7 @@
 
             lock (RequestQueueLock)
             {
-                _requests.Add(outboundRequest);
+                Requests.Add(outboundRequest);
                 _requestId++;
             }
 
@@ -2051,7 +1974,7 @@
 
             lock (RequestQueueLock)
             {
-                _requests.Add(outboundRequest);
+                Requests.Add(outboundRequest);
                 _requestId++;
             }
 
@@ -2136,7 +2059,7 @@
 
             lock (RequestQueueLock)
             {
-                _requests.Add(outboundRequest);
+                Requests.Add(outboundRequest);
                 _requestId++;
             }
 
@@ -2240,7 +2163,7 @@
 
             lock (RequestQueueLock)
             {
-                _requests.Add(outboundRequest);
+                Requests.Add(outboundRequest);
                 _requestId++;
             }
 
@@ -2336,7 +2259,7 @@
 
             lock (RequestQueueLock)
             {
-                _requests.Add(outboundRequest);
+                Requests.Add(outboundRequest);
                 _requestId++;
             }
 

@@ -39,7 +39,7 @@
 
         Result Execute()
         {
-            if (_state.LocalServer.AllErrorsHaveBeenRead)
+            if (_state.AllErrorsHaveBeenRead)
             {
                 return Result.Fail("There are no unread error messages at this time.");
             }

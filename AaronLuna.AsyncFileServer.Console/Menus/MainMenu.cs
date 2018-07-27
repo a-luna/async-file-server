@@ -126,27 +126,27 @@
         {
             var pendingRequestsMenuTier = new MenuTier(Resources.MenuTierLabel_PendingRequests);
 
-            if (_state.LocalServer.UnreadErrors.Count > 0)
+            if (_state.UnreadErrors.Count > 0)
             {
                 pendingRequestsMenuTier.MenuItems.Add(
-                    new ReadNewErrorMessagesMenuItem(_state, _state.LocalServer.UnreadErrors));
+                    new ReadNewErrorMessagesMenuItem(_state, _state.UnreadErrors));
             }
 
-            if (_state.LocalServer.PendingFileTransferCount > 0)
+            if (_state.PendingFileTransferCount > 0)
             {
                 pendingRequestsMenuTier.MenuItems.Add(
                     new ViewPendingFileTransfersMenu(_state));
             }
 
-            if (_state.LocalServer.StalledTransferIds.Count > 0)
+            if (_state.StalledFileTransferIds.Count > 0)
             {
                 pendingRequestsMenuTier.MenuItems.Add(
                     new ViewStalledFileTransfersMenu(_state));
             }
 
-            if (_state.LocalServer.UnreadTextMessageCount > 0)
+            if (_state.UnreadTextMessageCount > 0)
             {
-                foreach (var id in _state.LocalServer.TextSessionIdsWithUnreadMessages)
+                foreach (var id in _state.TextSessionIdsWithUnreadMessages)
                 {
                     var textSession = _state.LocalServer.GetTextSessionById(id).Value;
 
@@ -191,17 +191,17 @@
         {
             var viewLogsMenuTier = new MenuTier(Resources.MenuTierLabel_ViewLogs);
 
-            if (!_state.LocalServer.NoFileTransfers)
+            if (!_state.NoFileTransfers)
             {
                 viewLogsMenuTier.MenuItems.Add(new FileTransferLogsMenu(_state));
             }
 
-            if (!_state.LocalServer.NoTextSessions)
+            if (!_state.NoTextSessions)
             {
                 viewLogsMenuTier.MenuItems.Add(new TextMessageLogsMenu(_state));
             }
 
-            if (!_state.LocalServer.NoRequests)
+            if (!_state.NoRequests)
             {
                 viewLogsMenuTier.MenuItems.Add(new ServerRequestLogsMenu(_state));
             }

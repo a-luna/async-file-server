@@ -1,5 +1,4 @@
-﻿//TODO: Update AsyncFileServer.ToString() to be more useful when debugging. New format should possibly incorporate: Name, Local IP, Port #, request/transfer counts?
-//TODO: Determine if it will be simple or difficult to show deconstructed request bytes and how each region maps to fileNameLen, fileName, portNumLen, portNum, etc
+﻿//TODO: Determine if it will be simple or difficult to show deconstructed request bytes and how each region maps to fileNameLen, fileName, portNumLen, portNum, etc
 //TODO: To avoid crashes, when there is an error reading settings from xml, handle exception, create default settings object and proceed. Rename the offending xml file and write new settings.xml to file.
 //TODO: In the AaronLuna.AsyncFileServer.Test namespace, create a filetransfercontroller subclass that overrides the defaut SendFileAsync() behavior to send only 10% of a file in order to be used within a set of unit tests that verify the stalled timeout/retry counter/limit/lockout timespan settings are working correctly.
 //TODO: Need to create a test case to verify the behavior when server is busy and more requests are received but are not processed. The pending requests should be automatically processed once the server is no longer busy. Need to verify that all request types are processed correctly including text messages an inbound file transfer requests
@@ -25,7 +24,6 @@ namespace AaronLuna.AsyncFileServer.Console
     public class ServerApplication
     {
         const string SettingsFileName = "settings.xml";
-        readonly int _messageDisplayTime = Constants.TwoSecondsInMilliseconds;
 
         readonly Logger _log = new Logger(typeof(ServerApplication));
         readonly string _settingsFilePath;
@@ -39,7 +37,7 @@ namespace AaronLuna.AsyncFileServer.Console
                 $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}";
 
             _cts = new CancellationTokenSource();
-            _state = new AppState {MessageDisplayTime = _messageDisplayTime};
+            _state = new AppState();
             _state.LocalServer.EventOccurred += HandleServerEventAsync;
             _state.LocalServer.SocketEventOccurred += HandleServerEventAsync;
             _state.LocalServer.FileTransferProgress += HandleFileTransferProgress;
@@ -318,7 +316,7 @@ namespace AaronLuna.AsyncFileServer.Console
                 _state.SelectedServerInfo.Name =
                     SharedFunctions.SetSelectedServerName(_state, _state.SelectedServerInfo);
 
-                _state.WaitingForUserToConfirmNewRemoteServerDetails = false;
+                _state.WaitingForUserToConfirmServerDetails = false;
             }
 
             _state.Settings.RemoteServers.Add(serverInfo);

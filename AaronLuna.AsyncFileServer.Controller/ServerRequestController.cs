@@ -83,6 +83,7 @@
         public ServerInfo RemoteServerInfo { get; set; }
         public int FileTransferId { get; set; }
 
+        public ServerRequestDirection Direction => _request.Direction;
         public DateTime TimeStamp => _request.TimeStamp;
         public bool RequestHasNotBeenReceived => Status == ServerRequestStatus.NoData;
         public bool IsInboundFileTransferRequest => RequestType == ServerRequestType.InboundFileTransferRequest;

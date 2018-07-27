@@ -7,30 +7,23 @@
     using Common.Console.Menu;
     using Common.Result;
 
-    using Controller;
     using Model;
 
     class ServerRequestLogViewerMenuItem : IMenuItem
     {
         readonly AppState _state;
-        readonly ServerRequestController _request;
         readonly List<ServerEvent> _eventLog;
-        readonly LogLevel _logLevel;
 
         public ServerRequestLogViewerMenuItem(
             AppState state,
-            ServerRequestController request,
             List<ServerEvent> eventLog,
-            LogLevel logLevel,
-            int itemNumber)
+            string itemText)
         {
             _state = state;
-            _request = request;
             _eventLog = eventLog;
-            _logLevel = logLevel;
 
             ReturnToParent = false;
-            ItemText = request.ItemText(itemNumber);
+            ItemText = itemText;
         }
 
         public string ItemText { get; set; }

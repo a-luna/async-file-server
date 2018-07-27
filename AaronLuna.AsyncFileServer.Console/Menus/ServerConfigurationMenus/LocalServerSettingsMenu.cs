@@ -84,6 +84,7 @@
         {
             _state.Settings.LocalServerPortNumber = _state.LocalServer.MyInfo.PortNumber;
             _state.Settings.LocalNetworkCidrIp = _state.UserEntryLocalNetworkCidrIp;
+            _state.LocalServer.UpdateSettings(_state.Settings);
 
             return ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
         }

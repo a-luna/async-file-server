@@ -29,6 +29,8 @@ namespace AaronLuna.AsyncFileServer.Test
         SocketSettings _socketSettings;
         AsyncFileServer _server;
         AsyncFileServer _client;
+        ServerState _serverState;
+        ServerState _clientState;
         Task<Result> _runServerTask;
         Task<Result> _runClientTask;
         List<string> _clientLogMessages;
@@ -200,6 +202,8 @@ namespace AaronLuna.AsyncFileServer.Test
             _server = new AsyncFileServer("Server", serverSettings);
             _client = new AsyncFileServer("Client", clientSettings);
 
+            _serverState = new ServerState(_server);
+            _clientState = new ServerState(_client);
         }
 
         [TestCleanup]
@@ -375,7 +379,7 @@ namespace AaronLuna.AsyncFileServer.Test
 
             while (_serverNoFileTransferPending) { }
 
-            var pendingFileTransferId = _server.PendingFileTransferIds[0];
+            var pendingFileTransferId = _serverState.PendingFileTransferIds[0];
             var pendingFileTransfer = _server.GetFileTransferById(pendingFileTransferId).Value;
 
             var transferResult = await _server.AcceptInboundFileTransferAsync(pendingFileTransfer);
@@ -400,15 +404,15 @@ namespace AaronLuna.AsyncFileServer.Test
             var receivedFileSize = new FileInfo(receiveFilePath).Length;
             Assert.AreEqual(sizeOfFileToSend, receivedFileSize);
 
-            var height = 0;
-            var width = 0;
+            var receiveImageHeight = 0;
+            var receiveImageWidth = 0;
 
             try
             {
                 using (var receiveImage = Image.Load(receiveFilePath))
                 {
-                    height = receiveImage.Height;
-                    width = receiveImage.Width;
+                    receiveImageHeight = receiveImage.Height;
+                    receiveImageWidth = receiveImage.Width;
                 }
             }
             catch (NotSupportedException ex)
@@ -423,8 +427,8 @@ namespace AaronLuna.AsyncFileServer.Test
 
             using (var sentImage = Image.Load(sendFilePath))
             {
-                Assert.AreEqual(sentImage.Height, height);
-                Assert.AreEqual(sentImage.Width, width);
+                Assert.AreEqual(sentImage.Height, receiveImageHeight);
+                Assert.AreEqual(sentImage.Width, receiveImageWidth);
             }
         }
 
@@ -484,7 +488,7 @@ namespace AaronLuna.AsyncFileServer.Test
 
             while (_clientNoFileTransferPending) { }
 
-            var pendingFileTransferId = _client.PendingFileTransferIds[0];
+            var pendingFileTransferId = _clientState.PendingFileTransferIds[0];
             var pendingFileTransfer = _client.GetFileTransferById(pendingFileTransferId).Value;
 
             var transferResult = await _client.AcceptInboundFileTransferAsync(pendingFileTransfer);

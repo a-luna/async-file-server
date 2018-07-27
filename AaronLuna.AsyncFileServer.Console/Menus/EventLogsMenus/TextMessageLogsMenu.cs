@@ -52,10 +52,10 @@ namespace AaronLuna.AsyncFileServer.Console.Menus.EventLogsMenus
         {
             MenuItems.Clear();
 
-            var menuItemsCount = _state.LocalServer.TextSessionIds.Count;
+            var menuItemsCount = _state.TextSessionIds.Count;
             foreach (var i in Enumerable.Range(0, menuItemsCount))
             {
-                var id = _state.LocalServer.TextSessionIds[i];
+                var id = _state.TextSessionIds[i];
                 var textSession = _state.LocalServer.GetTextSessionById(id).Value;
 
                 SharedFunctions.LookupRemoteServerName(

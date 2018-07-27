@@ -29,7 +29,7 @@
         
         public async Task<Result> ExecuteAsync()
         {
-            if (_state.LocalServer.NoFileTransfersPending)
+            if (_state.NoFileTransfersPending)
             {
                 return Result.Fail("There are no pending file transfers");
             }
@@ -45,7 +45,7 @@
         void PopulateMenu()
         {
             MenuItems.Clear();
-            foreach (var id in _state.LocalServer.PendingFileTransferIds)
+            foreach (var id in _state.PendingFileTransferIds)
             {
                 var fileTransfer = _state.LocalServer.GetFileTransferById(id).Value;
 

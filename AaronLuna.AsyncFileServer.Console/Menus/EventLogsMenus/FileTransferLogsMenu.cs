@@ -17,7 +17,7 @@
         public FileTransferLogsMenu(AppState state)
         {
             _state = state;
-            _fileTransferIds = _state.LocalServer.FileTransferIds;
+            _fileTransferIds = _state.FileTransferIds;
 
             ReturnToParent = false;
             ItemText = "File transfer logs";
@@ -57,13 +57,13 @@
 
         bool NoFileTransfersToDisplay()
         {
-            if (_state.LocalServer.NoFileTransfers)
+            if (_state.NoFileTransfers)
             {
                 SharedFunctions.NotifyUserErrorOccurred("There are no file transfer logs available");
                 return true;
             }
 
-            var lastTransferId = _state.LocalServer.MostRecentFileTransferId;
+            var lastTransferId = _state.MostRecentFileTransferId;
             if (lastTransferId > _state.LogViewerFileTransferId) return false;
 
             const string prompt =

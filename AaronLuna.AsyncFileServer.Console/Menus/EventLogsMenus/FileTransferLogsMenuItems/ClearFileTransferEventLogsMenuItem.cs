@@ -16,7 +16,7 @@
         public ClearFileTransferEventLogsMenuItem(AppState state)
         {
             _state = state;
-            _fileTransferIds = _state.LocalServer.FileTransferIds;
+            _fileTransferIds = _state.FileTransferIds;
 
             ReturnToParent = true;
             ItemText = $"Clear file transfer list{Environment.NewLine}";

@@ -8,7 +8,6 @@
     using Common.Console.Menu;
     using Common.Result;
 
-    using Controller;
     using ServerRequestLogsMenuItems;
 
     class ServerRequestLogsMenu : IMenu
@@ -19,7 +18,7 @@
         public ServerRequestLogsMenu(AppState state)
         {
             _state = state;
-            _requestIds = _state.LocalServer.RequestIds;
+            _requestIds = _state.RequestIds;
 
             ReturnToParent = false;
             ItemText = "Server request logs";
@@ -59,13 +58,13 @@
 
         bool NoRequestsToDisplay()
         {
-            if (_state.LocalServer.NoRequests)
+            if (_state.NoRequests)
             {
                 SharedFunctions.NotifyUserErrorOccurred("There are no server request logs available");
                 return true;
             }
 
-            var lastRequestTime = _state.LocalServer.MostRecentRequestTime;
+            var lastRequestTime = _state.MostRecentRequestTime;
             if (lastRequestTime > _state.LogViewerRequestBoundary) return false;
 
             const string prompt =
@@ -86,16 +85,12 @@
         {
             MenuItems.Clear();
 
-            var requestsDesc = new List<ServerRequestController>();
-            foreach (var i in Enumerable.Range(0, _requestIds.Count))
-            {
-                var request = _state.LocalServer.GetRequestById(_requestIds[i]).Value;
-                if (request.TimeStamp <= _state.LogViewerRequestBoundary) continue;
-
-                requestsDesc.Add(request);
-            }
-
-            requestsDesc = requestsDesc.OrderByDescending(r => r.TimeStamp).ToList();
+            var requestsDesc =
+                Enumerable.Range(0, _requestIds.Count)
+                    .Select(i => _state.LocalServer.GetRequestById(_requestIds[i]).Value)
+                    .Where(request => request.TimeStamp > _state.LogViewerRequestBoundary)
+                    .OrderByDescending(r => r.TimeStamp)
+                    .ToList();
 
             foreach (var i in Enumerable.Range(0, requestsDesc.Count))
             {
@@ -105,13 +100,13 @@
                     requestsDesc[i].RemoteServerInfo,
                     _state.Settings.RemoteServers);
 
+                var itemText = requestsDesc[i].ItemText(i + 1);
+
                 MenuItems.Add(
                     new ServerRequestLogViewerMenuItem(
                         _state,
-                        requestsDesc[i],
                         eventLog,
-                        _state.Settings.LogLevel,
-                        i + 1));
+                        itemText));
             }
             
             MenuItems.Add(new ClearServerRequestLogsMenuItem(_state));

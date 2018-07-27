@@ -16,7 +16,7 @@
         public ClearServerRequestLogsMenuItem(AppState state)
         {
             _state = state;
-            _requestIds = _state.LocalServer.RequestIds;
+            _requestIds = _state.RequestIds;
 
             ReturnToParent = true;
             ItemText = $"Clear server request list{Environment.NewLine}";
@@ -34,7 +34,7 @@
         {
             if (_requestIds.Count == 0) return Result.Ok();
 
-            _state.LogViewerRequestBoundary = _state.LocalServer.MostRecentRequestTime;
+            _state.LogViewerRequestBoundary = _state.MostRecentRequestTime;
 
             return Result.Ok();
         }
