@@ -1,4 +1,6 @@
-﻿ namespace AaronLuna.AsyncFileServer.Model
+﻿ using AaronLuna.Common.Extensions;
+
+namespace AaronLuna.AsyncFileServer.Model
 {
     using System;
     using System.Collections.Generic;
@@ -70,54 +72,24 @@
         public SocketSettings SocketSettings { get; set; }
         public List<ServerInfo> RemoteServers { get; set; }
 
-        public static Result<ServerSettings> ReadFromFile(string filePath)
+        public static ServerSettings GetDefaultSettings()
         {
-            if (!File.Exists(filePath))
+            var defaultTransferFolderPath
+                = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}transfer";
+
+            return new ServerSettings
             {
-                var defaultSettings = GetDefaultSettings();
-
-                var saveSettings = SaveToFile(defaultSettings, filePath);
-                if (saveSettings.Failure)
-                {
-                    return Result.Fail<ServerSettings>(saveSettings.Error);
-                }
-
-                return Result.Ok(defaultSettings);
-            }
-
-            var deserializeResult = Deserialize(filePath);
-            if (deserializeResult.Failure)
-            {
-                return deserializeResult;
-            }
-
-            var settings = deserializeResult.Value;
-            settings.InitializeIpAddresses();
-
-            return Result.Ok(settings);
-        }
-
-        public static Result<ServerSettings> Deserialize(string filePath)
-        {
-            ServerSettings settings;
-            try
-            {
-                var deserializer = XmlSerializer.FromTypes(new[] { typeof(ServerSettings) })[0];
-                using (var reader = new StreamReader(filePath))
-                {
-                    settings = (ServerSettings)deserializer.Deserialize(reader);
-                }
-            }
-            catch (FileNotFoundException ex)
-            {
-                return Result.Fail<ServerSettings>($"{ex.Message} ({ex.GetType()})");
-            }
-            catch (Exception ex)
-            {
-                return Result.Fail<ServerSettings>($"{ex.Message} ({ex.GetType()})");
-            }
-
-            return Result.Ok(settings);
+                LogLevel = LogLevel.Info,
+                TransferRetryLimit = 3,
+                RetryLimitLockout = TimeSpan.FromMinutes(10),
+                LocalServerFolderPath = defaultTransferFolderPath,
+                TransferUpdateInterval = 0.0025f,
+                FileTransferStalledTimeout = TimeSpan.FromSeconds(5),
+                LocalNetworkCidrIp = string.Empty,
+                LocalServerPortNumber = 0,
+                SocketSettings = new SocketSettings(),
+                RemoteServers = new List<ServerInfo>()
+            };
         }
 
         public static Result SaveToFile(ServerSettings settings, string filePath)
@@ -132,19 +104,64 @@
             }
             catch (FileNotFoundException ex)
             {
-                return Result.Fail($"{ex.Message} ({ex.GetType()})");
+                return Result.Fail(Environment.NewLine + ex.GetReport());
             }
             catch (Exception ex)
             {
-                return Result.Fail($"{ex.Message} ({ex.GetType()})");
+                return Result.Fail(Environment.NewLine + ex.GetReport());
             }
 
             return Result.Ok();
         }
 
-        public void InitializeIpAddresses()
+        public static Result<ServerSettings> ReadFromFile(string filePath)
         {
-            foreach (var server in RemoteServers)
+            if (!File.Exists(filePath))
+            {
+                var error =
+                    $"The settings file does not exist at the specified location:{Environment.NewLine}{filePath}";
+
+                Result.Fail<ServerSettings>(error);
+            }
+
+            var deserializeResult = Deserialize(filePath);
+            if (deserializeResult.Failure)
+            {
+                return Result.Fail<ServerSettings>(deserializeResult.Error);
+            }
+
+            var settings = deserializeResult.Value;
+            InitializeIpAddresses(settings.RemoteServers);
+
+            return Result.Ok(settings);
+        }
+
+        static Result<ServerSettings> Deserialize(string filePath)
+        {
+            ServerSettings settings;
+            try
+            {
+                var deserializer = XmlSerializer.FromTypes(new[] {typeof(ServerSettings)})[0];
+                using (var reader = new StreamReader(filePath))
+                {
+                    settings = (ServerSettings) deserializer.Deserialize(reader);
+                }
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Result.Fail<ServerSettings>(Environment.NewLine + ex.GetReport());
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail<ServerSettings>(Environment.NewLine + ex.GetReport());
+            }
+
+            return Result.Ok(settings);
+        }
+
+        static void InitializeIpAddresses(List<ServerInfo> remoteServers)
+        {
+            foreach (var server in remoteServers)
             {
                 var localIp = server.LocalIpString;
                 var publicIp = server.PublicIpString;
@@ -181,26 +198,6 @@
                     }
                 }
             }
-        }
-
-        static ServerSettings GetDefaultSettings()
-        {
-            var defaultTransferFolderPath
-                = $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}transfer";
-
-            return new ServerSettings
-            {
-                LogLevel = LogLevel.Info,
-                TransferRetryLimit = 3,
-                RetryLimitLockout = TimeSpan.FromMinutes(10),
-                LocalServerFolderPath = defaultTransferFolderPath,
-                TransferUpdateInterval = 0.0025f,
-                FileTransferStalledTimeout = TimeSpan.FromSeconds(5),
-                LocalNetworkCidrIp = string.Empty,
-                LocalServerPortNumber = 0,
-                SocketSettings = new SocketSettings(),
-                RemoteServers = new List<ServerInfo>()
-            };
         }
     }
 }

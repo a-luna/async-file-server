@@ -34,7 +34,7 @@
             Console.WriteLine($"############### IPV4 GLOBAL STATS ###############{Environment.NewLine}");
             NetworkUtilities.DisplayIPv4GlobalStatistics();
 
-            Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
+            Console.WriteLine(Environment.NewLine + Resources.Prompt_ReturnToPreviousMenu);
             Console.ReadLine();
 
             return Result.Ok();

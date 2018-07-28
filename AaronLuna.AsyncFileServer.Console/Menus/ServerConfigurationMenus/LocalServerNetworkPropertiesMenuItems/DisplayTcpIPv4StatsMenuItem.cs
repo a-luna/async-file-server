@@ -34,7 +34,7 @@
             Console.WriteLine($"################# TCP IPV4 STATS ################{Environment.NewLine}");
             NetworkUtilities.DisplayIPv4TcpStatistics();
 
-            Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
+            Console.WriteLine(Environment.NewLine + Resources.Prompt_ReturnToPreviousMenu);
             Console.ReadLine();
 
             return Result.Ok();

@@ -60,7 +60,10 @@
         {
             if (_state.NoRequests)
             {
-                SharedFunctions.NotifyUserErrorOccurred("There are no server request logs available");
+                SharedFunctions.ModalMessage(
+                    "There are no server request logs available",
+                    Resources.Prompt_ReturnToPreviousMenu);
+
                 return true;
             }
 

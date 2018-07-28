@@ -34,7 +34,7 @@
             Console.WriteLine($"################## ICMPV4 STATS #################{Environment.NewLine}");
             NetworkUtilities.DisplayIcmpV4Statistics();
 
-            Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
+            Console.WriteLine(Environment.NewLine + Resources.Prompt_ReturnToPreviousMenu);
             Console.ReadLine();
 
             return Result.Ok();

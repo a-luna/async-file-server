@@ -40,7 +40,7 @@
                 var rejectPrompt =
                     $"Would you like to reject the file transfer?{Environment.NewLine}{Environment.NewLine}" +
                     $"If you select No, the file transfer will remain in Pending state allowing you to download the file at a later time.{Environment.NewLine}{Environment.NewLine}" +
-                    $"If you select Yes, the file transfer will be rejected and removed from this list.{Environment.NewLine}";
+                    $"If you select Yes, the file transfer will be rejected and removed from this list.";
 
                 var rejectTransfer = SharedFunctions.PromptUserYesOrNo(_state, rejectPrompt);
                 if (!rejectTransfer) return Result.Ok();
@@ -58,7 +58,7 @@
             System.Console.WriteLine(transferRequest);
             var transferResult = await _state.LocalServer.AcceptInboundFileTransferAsync(_fileTransfer);
 
-            System.Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
+            System.Console.WriteLine(Environment.NewLine + Resources.Prompt_ReturnToPreviousMenu);
             System.Console.ReadLine();
 
             _state.SignalReturnToMainMenu.Set();

@@ -10,7 +10,9 @@ namespace AaronLuna.AsyncFileServer.Console
         internal static readonly string MenuTierLabel_ServerConfiguration = "Server Configuration:";
         internal static readonly string MenuTierLabel_LocalServerOptions = "Local Server Options:";
 
-        internal static readonly string Menu_ChangeSettings =
+        internal static readonly string MenuItemText_LocalServerSettings = "Local server settings";
+
+        internal static readonly string MenuText_LocalServerSettings =
             "Items marked with an asterisk (*) will cause the server to restart after any change is made";
 
         internal static readonly string Menu_NetworkProperties =
@@ -18,6 +20,12 @@ namespace AaronLuna.AsyncFileServer.Console
 
         internal static readonly string Prompt_SetLocalPortNumber =
             "Enter the port number where this server will listen for incoming connections";
+
+        internal static readonly string Prompt_PressEnterToContinue =
+            "Press enter to continue.";
+
+        internal static readonly string Prompt_ReturnToPreviousMenu =
+            "Press enter to return to the previous menu.";
 
         internal static readonly string Prompt_GetCidrIp =
             "Enter the CIDR IP that describes the configuration of this local network " +
@@ -50,7 +58,7 @@ namespace AaronLuna.AsyncFileServer.Console
         internal static readonly string Prompt_DeleteSelectedServerInfo =
             $"Would you like to delete this remote server?{Environment.NewLine}{Environment.NewLine}" +
             "This cannot be undone and will remove all information related to this remote server " +
-            $"from the settings.xml file.{Environment.NewLine}";
+            "from the settings.xml file.";
 
         internal static readonly string Warning_UseLoopbackIp =
             "Unable to determine the local IP address for this machine, please " +

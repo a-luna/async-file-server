@@ -48,7 +48,7 @@
 
             Console.WriteLine($"{Environment.NewLine}############  FILE TRANSFER DETAILS  ############{Environment.NewLine}");
             Console.WriteLine(_fileTransfer.TransferDetails());
-            Console.WriteLine($"{Environment.NewLine}Press enter to return to the previous menu.");
+            Console.WriteLine(Environment.NewLine + Resources.Prompt_ReturnToPreviousMenu);
             Console.ReadLine();
 
             return Result.Ok();

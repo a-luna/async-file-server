@@ -59,7 +59,10 @@
         {
             if (_state.NoFileTransfers)
             {
-                SharedFunctions.NotifyUserErrorOccurred("There are no file transfer logs available");
+                SharedFunctions.ModalMessage(
+                    "There are no file transfer logs available",
+                    Resources.Prompt_ReturnToPreviousMenu);
+
                 return true;
             }
 

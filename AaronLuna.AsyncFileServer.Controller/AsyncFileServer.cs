@@ -522,88 +522,88 @@
             ServerIsBusy = false;
 
             return Result.Ok();
-        }
 
-        async Task<Result> ProcessRequestTypeAsync(ServerRequestController inboundRequest)
-        {
-            var result = Result.Ok();
-
-            switch (inboundRequest.RequestType)
+            async Task<Result> ProcessRequestTypeAsync(ServerRequestController request)
             {
-                case ServerRequestType.TextMessage:
-                    result = ReceiveTextMessage(inboundRequest);
-                    break;
+                result = Result.Ok();
 
-                case ServerRequestType.InboundFileTransferRequest:
-                    result = await HandleInboundFileTransferRequestAsync(inboundRequest).ConfigureAwait(false);
-                    break;
+                switch (request.RequestType)
+                {
+                    case ServerRequestType.TextMessage:
+                        result = ReceiveTextMessage(request);
+                        break;
 
-                case ServerRequestType.OutboundFileTransferRequest:
-                    result = await HandleOutboundFileTransferRequestAsync(inboundRequest).ConfigureAwait(false);
-                    break;
+                    case ServerRequestType.InboundFileTransferRequest:
+                        result = await HandleInboundFileTransferRequestAsync(request).ConfigureAwait(false);
+                        break;
 
-                case ServerRequestType.RequestedFileDoesNotExist:
-                    result = HandleRequestedFileDoesNotExist(inboundRequest);
-                    break;
+                    case ServerRequestType.OutboundFileTransferRequest:
+                        result = await HandleOutboundFileTransferRequestAsync(request).ConfigureAwait(false);
+                        break;
 
-                case ServerRequestType.FileTransferRejected:
-                    result = HandleFileTransferRejected(inboundRequest);
-                    break;
+                    case ServerRequestType.RequestedFileDoesNotExist:
+                        result = HandleRequestedFileDoesNotExist(request);
+                        break;
 
-                case ServerRequestType.FileTransferAccepted:
-                    result = await HandleFileTransferAcceptedAsync(inboundRequest, _token).ConfigureAwait(false);
-                    break;
+                    case ServerRequestType.FileTransferRejected:
+                        result = HandleFileTransferRejected(request);
+                        break;
 
-                case ServerRequestType.FileTransferStalled:
-                    result = HandleFileTransferStalled(inboundRequest);
-                    break;
+                    case ServerRequestType.FileTransferAccepted:
+                        result = await HandleFileTransferAcceptedAsync(request, _token).ConfigureAwait(false);
+                        break;
 
-                case ServerRequestType.FileTransferComplete:
-                    result = HandleFileTransferComplete(inboundRequest);
-                    break;
+                    case ServerRequestType.FileTransferStalled:
+                        result = HandleFileTransferStalled(request);
+                        break;
 
-                case ServerRequestType.RetryOutboundFileTransfer:
-                    result = await HandleRetryFileTransferAsync(inboundRequest).ConfigureAwait(false);
-                    break;
+                    case ServerRequestType.FileTransferComplete:
+                        result = HandleFileTransferComplete(request);
+                        break;
 
-                case ServerRequestType.RetryLimitExceeded:
-                    result = HandleRetryLimitExceeded(inboundRequest);
-                    break;
+                    case ServerRequestType.RetryOutboundFileTransfer:
+                        result = await HandleRetryFileTransferAsync(request).ConfigureAwait(false);
+                        break;
 
-                case ServerRequestType.FileListRequest:
-                    result = await HandleFileListRequestAsync(inboundRequest).ConfigureAwait(false);
-                    break;
+                    case ServerRequestType.RetryLimitExceeded:
+                        result = HandleRetryLimitExceeded(request);
+                        break;
 
-                case ServerRequestType.FileListResponse:
-                    HandleFileListResponse(inboundRequest);
-                    break;
+                    case ServerRequestType.FileListRequest:
+                        result = await HandleFileListRequestAsync(request).ConfigureAwait(false);
+                        break;
 
-                case ServerRequestType.NoFilesAvailableForDownload:
-                    HandleNoFilesAvailableForDownload(inboundRequest);
-                    break;
+                    case ServerRequestType.FileListResponse:
+                        HandleFileListResponse(request);
+                        break;
 
-                case ServerRequestType.RequestedFolderDoesNotExist:
-                    HandleRequestedFolderDoesNotExist(inboundRequest);
-                    break;
+                    case ServerRequestType.NoFilesAvailableForDownload:
+                        HandleNoFilesAvailableForDownload(request);
+                        break;
 
-                case ServerRequestType.ServerInfoRequest:
-                    result = await HandleServerInfoRequest(inboundRequest).ConfigureAwait(false);
-                    break;
+                    case ServerRequestType.RequestedFolderDoesNotExist:
+                        HandleRequestedFolderDoesNotExist(request);
+                        break;
 
-                case ServerRequestType.ServerInfoResponse:
-                    HandleServerInfoResponse(inboundRequest);
-                    break;
+                    case ServerRequestType.ServerInfoRequest:
+                        result = await HandleServerInfoRequest(request).ConfigureAwait(false);
+                        break;
 
-                case ServerRequestType.ShutdownServerCommand:
-                    HandleShutdownServerCommand(inboundRequest);
-                    break;
+                    case ServerRequestType.ServerInfoResponse:
+                        HandleServerInfoResponse(request);
+                        break;
 
-                default:
-                    var error = $"Unable to determine request type, value of '{inboundRequest.RequestType}' is invalid.";
-                    return Result.Fail(error);
+                    case ServerRequestType.ShutdownServerCommand:
+                        HandleShutdownServerCommand(request);
+                        break;
+
+                    default:
+                        var error = $"Unable to determine request type, value of '{request.RequestType}' is invalid.";
+                        return Result.Fail(error);
+                }
+
+                return result;
             }
-
-            return result;
         }
 
         void HandleEventOccurred(object sender, ServerEvent e)
@@ -1329,7 +1329,7 @@
 
         async Task<Result> HandleInboundFileTransferRequestAsync(ServerRequestController inboundRequest)
         {
-            var getFileTransfer = GetInboundFileTransfer(inboundRequest);
+            var getFileTransfer = GetInboundFileTransfer();
             if (getFileTransfer.Failure)
             {
                 return getFileTransfer;
@@ -1382,54 +1382,53 @@
                 ServerEventType.SendFileTransferRejectedStarted,
                 ServerEventType.SendFileTransferRejectedComplete).ConfigureAwait(false);
 
-        }
-
-        Result<FileTransferController> GetInboundFileTransfer(ServerRequestController inboundRequest)
-        {
-            FileTransferController inboundFileTransfer;
-            var getFileTransferId = inboundRequest.GetInboundFileTransferId();
-            if (getFileTransferId.Success)
+            Result<FileTransferController> GetInboundFileTransfer()
             {
-                var fileTransferId = getFileTransferId.Value;
-                var getFileTransfer = GetFileTransferById(fileTransferId);
-                if (getFileTransfer.Failure)
+                var getFileTransferId = inboundRequest.GetInboundFileTransferId();
+                if (getFileTransferId.Success)
                 {
-                    return Result.Fail<FileTransferController>(getFileTransfer.Error);
+                    var fileTransferId = getFileTransferId.Value;
+                    var getinboundFileTransfer = GetFileTransferById(fileTransferId);
+                    if (getinboundFileTransfer.Failure)
+                    {
+                        return Result.Fail<FileTransferController>(getinboundFileTransfer.Error);
+                    }
+
+                    inboundFileTransfer = getinboundFileTransfer.Value;
+
+                    var syncFileTransfer = inboundRequest.UpdateInboundFileTransfer(inboundFileTransfer);
+                    if (syncFileTransfer.Failure)
+                    {
+                        return Result.Fail<FileTransferController>(syncFileTransfer.Error);
+                    }
+
+                    inboundFileTransfer = syncFileTransfer.Value;
+                }
+                else
+                {
+                    var getinboundFileTransfer =
+                        inboundRequest.GetInboundFileTransfer(_fileTransferId, MyInfo, _settings);
+
+                    if (getinboundFileTransfer.Failure)
+                    {
+                        return getinboundFileTransfer;
+                    }
+
+                    inboundFileTransfer = getinboundFileTransfer.Value;
+                    inboundFileTransfer.EventOccurred += HandleEventOccurred;
+                    inboundFileTransfer.SocketEventOccurred += HandleSocketEventOccurred;
+                    inboundFileTransfer.FileTransferProgress += HandleFileTransferProgress;
+
+                    lock (TransferQueueLock)
+                    {
+                        FileTransfers.Add(inboundFileTransfer);
+                        _fileTransferId++;
+                    }
                 }
 
-                inboundFileTransfer = getFileTransfer.Value;
-
-                var syncFileTransfer = inboundRequest.UpdateInboundFileTransfer(inboundFileTransfer);
-                if (syncFileTransfer.Failure)
-                {
-                    return Result.Fail<FileTransferController>(syncFileTransfer.Error);
-                }
-
-                inboundFileTransfer = syncFileTransfer.Value;
+                return Result.Ok(inboundFileTransfer);
             }
-            else
-            {
-                var getFileTransfer =
-                    inboundRequest.GetInboundFileTransfer(_fileTransferId, MyInfo, _settings);
 
-                if (getFileTransfer.Failure)
-                {
-                    return getFileTransfer;
-                }
-
-                inboundFileTransfer = getFileTransfer.Value;
-                inboundFileTransfer.EventOccurred += HandleEventOccurred;
-                inboundFileTransfer.SocketEventOccurred += HandleSocketEventOccurred;
-                inboundFileTransfer.FileTransferProgress += HandleFileTransferProgress;
-
-                lock (TransferQueueLock)
-                {
-                    FileTransfers.Add(inboundFileTransfer);
-                    _fileTransferId++;
-                }
-            }
-
-            return Result.Ok(inboundFileTransfer);
         }
 
         public async Task<Result> AcceptInboundFileTransferAsync(FileTransferController inboundFileTransfer)

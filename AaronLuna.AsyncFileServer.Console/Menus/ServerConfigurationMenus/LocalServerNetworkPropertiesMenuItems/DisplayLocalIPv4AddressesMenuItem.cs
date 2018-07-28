@@ -34,7 +34,7 @@
             Console.WriteLine($"############ LOCAL IPV4 ADDRESS INFO ############{Environment.NewLine}");
             NetworkUtilities.DisplayLocalIPv4AddressInfo();
 
-            Console.WriteLine($"{Environment.NewLine}Press enter to return to the main menu.");
+            Console.WriteLine(Environment.NewLine + Resources.Prompt_ReturnToPreviousMenu);
             Console.ReadLine();
 
             return Result.Ok();

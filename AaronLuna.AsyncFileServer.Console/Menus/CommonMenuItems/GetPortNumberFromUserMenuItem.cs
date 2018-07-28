@@ -41,7 +41,7 @@
                 : Resources.Prompt_ChangeRemoteServerPortNumber;
 
             _serverInfo.PortNumber =
-                SharedFunctions.GetPortNumberFromUser(prompt, _localPort);
+                SharedFunctions.GetPortNumberFromUser(_state, prompt, _localPort);
 
             _state.RestartRequired = _localPort;
 

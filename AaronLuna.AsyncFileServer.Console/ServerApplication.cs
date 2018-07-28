@@ -1,5 +1,4 @@
 ﻿//TODO: Determine if it will be simple or difficult to show deconstructed request bytes and how each region maps to fileNameLen, fileName, portNumLen, portNum, etc
-//TODO: To avoid crashes, when there is an error reading settings from xml, handle exception, create default settings object and proceed. Rename the offending xml file and write new settings.xml to file.
 //TODO: In the AaronLuna.AsyncFileServer.Test namespace, create a filetransfercontroller subclass that overrides the defaut SendFileAsync() behavior to send only 10% of a file in order to be used within a set of unit tests that verify the stalled timeout/retry counter/limit/lockout timespan settings are working correctly.
 //TODO: Need to create a test case to verify the behavior when server is busy and more requests are received but are not processed. The pending requests should be automatically processed once the server is no longer busy. Need to verify that all request types are processed correctly including text messages an inbound file transfer requests
 //TODO: On event log menus, enable filter functionality to allow user to view only desired request types, transfer types, events/requests/transfers for desired servers, request/transfer status types, etc.
@@ -112,7 +111,22 @@ namespace AaronLuna.AsyncFileServer.Console
 
         async Task<Result> InitializeServerAsync()
         {
-            InitializeSettings();
+            var getSettings = GetServerSettings(_settingsFilePath);
+            if (getSettings.Failure)
+            {
+                var error =
+                    "Unable to write to settings.xml file, must abort server program. For more information " +
+                    "please see the error message below:" +
+                    Environment.NewLine + Environment.NewLine + getSettings.Error;
+
+                return Result.Fail(error);
+            }
+
+            _state.Settings = getSettings.Value;
+            _state.SettingsFile = new FileInfo(_settingsFilePath);
+            _state.UserEntryPortNumber = _state.Settings.LocalServerPortNumber;
+            _state.UserEntryLocalNetworkCidrIp = _state.Settings.LocalNetworkCidrIp;
+
             var portNumberHasChanged = false;
             bool cidrIpHasChanged;
 
@@ -120,6 +134,7 @@ namespace AaronLuna.AsyncFileServer.Console
             {
                 _state.Settings.LocalServerPortNumber =
                     SharedFunctions.GetPortNumberFromUser(
+                        _state,
                         Resources.Prompt_SetLocalPortNumber,
                         true);
 
@@ -150,19 +165,61 @@ namespace AaronLuna.AsyncFileServer.Console
                 : Result.Ok();
         }
 
-        void InitializeSettings()
+        static Result<ServerSettings> GetServerSettings(string filePath)
         {
-            _state.SettingsFile = new FileInfo(_settingsFilePath);
-
-            var readSettingsFileResult = ServerSettings.ReadFromFile(_state.SettingsFilePath);
-            if (readSettingsFileResult.Failure)
+            if (!File.Exists(filePath))
             {
-                Console.WriteLine(readSettingsFileResult.Error);
+                return GetDefaultSettings(filePath);
             }
 
-            _state.Settings = readSettingsFileResult.Value;
-            _state.UserEntryPortNumber = _state.Settings.LocalServerPortNumber;
-            _state.UserEntryLocalNetworkCidrIp = _state.Settings.LocalNetworkCidrIp;
+            var getSettingsFromFile = ServerSettings.ReadFromFile(filePath);
+            if (getSettingsFromFile.Failure)
+            {
+                var settingsFileName = Path.GetFileName(filePath);
+                var folderPath = Path.GetDirectoryName(filePath);
+
+                var error =
+                    $"Unable to deserialize the settings XML file \"{settingsFileName}\" " +
+                    $"located in folder:{Environment.NewLine}{Environment.NewLine}" +
+                    folderPath + Environment.NewLine + Environment.NewLine +
+                    $"The following error was encountered:{Environment.NewLine}{getSettingsFromFile.Error}";
+
+                Console.Clear();
+                SharedFunctions.ModalMessage(error, Resources.Prompt_PressEnterToContinue);
+
+                var badXmlFileName = $"settings_backup_{Logging.GetTimeStampForFileName()}.xml";
+                var backupFilePath = Path.Combine(folderPath, badXmlFileName);
+                File.Move(filePath, backupFilePath);
+
+                var getDefaultSettings = GetDefaultSettings(filePath);
+                if (getDefaultSettings.Failure)
+                {
+                    return getDefaultSettings;
+                }
+
+                var message =
+                    $"Created new settings xml file \"{settingsFileName}\" with default values.{Environment.NewLine}" +
+                    $"The XML file that could not be deserialized has been saved as \"{badXmlFileName}\"." +
+                    $"{Environment.NewLine}{Environment.NewLine}You can change the default settings " +
+                    $"at any time from the \"{Resources.MenuItemText_LocalServerSettings}\" menu item";
+
+                Console.Clear();
+                SharedFunctions.ModalMessage(message, Resources.Prompt_PressEnterToContinue);
+
+                return Result.Ok(getDefaultSettings.Value);
+            }
+            
+            return Result.Ok(getSettingsFromFile.Value);
+        }
+
+        static Result<ServerSettings> GetDefaultSettings(string filePath)
+        {
+            var defaultSettings = ServerSettings.GetDefaultSettings();
+            var saveSettings = ServerSettings.SaveToFile(defaultSettings, filePath);
+
+            return saveSettings.Success
+                ? Result.Ok(defaultSettings)
+                : Result.Fail<ServerSettings>(saveSettings.Error);
         }
 
         void HandleException(Exception ex)
@@ -347,7 +404,10 @@ namespace AaronLuna.AsyncFileServer.Console
             var getFileTransfer = _state.LocalServer.GetFileTransferById(_state.InboundFileTransferId);
             if (getFileTransfer.Failure)
             {
-                SharedFunctions.NotifyUserErrorOccurred(getFileTransfer.Error);
+                SharedFunctions.ModalMessage(
+                    getFileTransfer.Error,
+                    Resources.Prompt_PressEnterToContinue);
+
                 return;
             }
 

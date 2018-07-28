@@ -29,7 +29,7 @@
         Result Execute()
         {
             _state.SelectedServerInfo.SessionIpAddress =
-                SharedFunctions.GetIpAddressFromUser(Resources.Prompt_ChangeRemoteServerIp);
+                SharedFunctions.GetIpAddressFromUser(_state, Resources.Prompt_ChangeRemoteServerIp);
 
             return Result.Ok();
         }

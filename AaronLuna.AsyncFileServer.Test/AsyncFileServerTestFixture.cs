@@ -520,6 +520,31 @@ namespace AaronLuna.AsyncFileServer.Test
             _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestServerInfo_client.log";
             _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestServerInfo_server.log";
 
+            if (_publicIp.IsEqualTo(IPAddress.None))
+            {
+                var attemptCounter = 1;
+                const int maxAttempts = 5;
+                var getPublicIpSucceeded = false;
+
+                while (!getPublicIpSucceeded && attemptCounter <= maxAttempts)
+                {
+                    var getPublicIpResult = await NetworkUtilities.GetPublicIPv4AddressAsync().ConfigureAwait(false);
+                    if (getPublicIpResult.Success)
+                    {
+                        _publicIp = getPublicIpResult.Value;
+                    }
+
+                    if (_publicIp.IsEqualTo(IPAddress.None))
+                    {
+                        attemptCounter++;
+                    }
+                    else
+                    {
+                        getPublicIpSucceeded = true;
+                    }
+                }
+            }
+
             const int localPort = 8021;
             const int remoteServerPort = 8022;
 
@@ -556,16 +581,20 @@ namespace AaronLuna.AsyncFileServer.Test
                     remoteServerPort).ConfigureAwait(false);
 
             if (serverInfoRequest.Failure)
-            {
+            { 
                 Assert.Fail("Error sending request for server connection info.");
             }
 
             while (!_clientReceivedServerInfo) { }
 
             Assert.AreEqual(_remoteFolder, _transferFolderPath);
-            Assert.IsTrue(_remoteServerPublicIp.Equals(_publicIp));
-            Assert.IsTrue(_remoteServerLocalIp.Equals(_localIp));
+            Assert.IsTrue(_remoteServerLocalIp.IsEqualTo(_localIp));
             Assert.AreEqual(_thisServerPlatform, _remoteServerPlatform);
+
+            if (!_remoteServerPublicIp.IsEqualTo(IPAddress.None))
+            {
+                Assert.IsTrue(_remoteServerPublicIp.IsEqualTo(_publicIp));
+            }   
         }
 
         [TestMethod]

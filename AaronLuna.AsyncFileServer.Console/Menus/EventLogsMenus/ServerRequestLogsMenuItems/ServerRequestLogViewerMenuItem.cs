@@ -43,7 +43,7 @@
                 Console.WriteLine(serverEvent.ToString());
             }
 
-            Console.WriteLine($"{Environment.NewLine}Press enter to return to the previous menu.");
+            Console.WriteLine(Environment.NewLine + Resources.Prompt_ReturnToPreviousMenu);
             Console.ReadLine();
 
             return Result.Ok();

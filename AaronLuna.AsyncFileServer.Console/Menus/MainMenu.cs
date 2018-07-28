@@ -76,7 +76,7 @@
                 _state.DoNotRefreshMainMenu = true;
 
                 Console.WriteLine(string.Empty);
-                SharedFunctions.NotifyUserErrorOccurred(result.Error);
+                SharedFunctions.ModalMessage(result.Error, Resources.Prompt_PressEnterToContinue);
             }
 
             return result;
@@ -106,7 +106,10 @@
 
                 if (inputValidation.Failure)
                 {
-                    SharedFunctions.NotifyUserErrorOccurred(inputValidation.Error);
+                    SharedFunctions.ModalMessage(
+                        inputValidation.Error,
+                        Resources.Prompt_PressEnterToContinue);
+
                     SharedFunctions.DisplayLocalServerInfo(_state);
                     continue;
                 }

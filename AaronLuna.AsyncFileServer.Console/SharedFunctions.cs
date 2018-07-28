@@ -25,10 +25,10 @@
             Console.WriteLine(state.LocalServerInfo());
         }
 
-        public static void NotifyUserErrorOccurred(string error)
+        public static void ModalMessage(string error, string prompt)
         {
             Console.WriteLine(error + Environment.NewLine);
-            Console.WriteLine("Press enter to return to the previous menu.");
+            Console.WriteLine(prompt);
             Console.ReadLine();
         }
 
@@ -120,7 +120,7 @@
                 var inputValidation = ValidateNumberIsWithinRange(input, 1, menuItems.Count);
                 if (inputValidation.Failure)
                 {
-                    NotifyUserErrorOccurred(inputValidation.Error);
+                    ModalMessage(inputValidation.Error, Resources.Prompt_ReturnToPreviousMenu);
                     DisplayLocalServerInfo(state);
                     continue;
                 }
@@ -164,26 +164,26 @@
             var getCidrIp = NetworkUtilities.GetCidrIp();
             if (getCidrIp.Failure)
             {
-                return GetCidrIpFromUser();
+                return GetCidrIpFromUser(state);
             }
 
             var cidrIp = getCidrIp.Value;
-            var prompt = "Found a single IPv4 address assiciated with the only ethernet adapter " +
+            var prompt = "Found a single IPv4 address associated with the only ethernet adapter " +
                          $"on this machine, is it ok to use {cidrIp} as the CIDR IP?";
 
             return PromptUserYesOrNo(state, prompt)
                 ? cidrIp
-                : GetCidrIpFromUser();
+                : GetCidrIpFromUser(state);
         }
 
-        public static string GetCidrIpFromUser()
+        public static string GetCidrIpFromUser(AppState state)
         {
-            var cidrIp = GetIpAddressFromUser(Resources.Prompt_GetCidrIp);
-            var cidrNetworkBitCount = GetCidrIpNetworkBitCountFromUser();
+            var cidrIp = GetIpAddressFromUser(state, Resources.Prompt_GetCidrIp);
+            var cidrNetworkBitCount = GetCidrIpNetworkBitCountFromUser(state);
             return $"{cidrIp}/{cidrNetworkBitCount}";
         }
 
-        public static int GetCidrIpNetworkBitCountFromUser()
+        public static int GetCidrIpNetworkBitCountFromUser(AppState state)
         {
             var bitCount = 0;
             while (bitCount is 0)
@@ -192,13 +192,14 @@
                     $"{Environment.NewLine}{Resources.Prompt_GetCidrIpNetworkBitCount} " +
                     $"(range {CidrPrefixBitsCountMin}-{CidrPrefixBitsCountMax}):";
 
+                DisplayLocalServerInfo(state);
                 Console.WriteLine(prompt);
                 var input = Console.ReadLine();
 
                 var inputValidation = ValidateNumberIsWithinRange(input, CidrPrefixBitsCountMin, CidrPrefixBitsCountMax);
                 if (inputValidation.Failure)
                 {
-                    NotifyUserErrorOccurred(inputValidation.Error);
+                    ModalMessage(inputValidation.Error, Resources.Prompt_PressEnterToContinue);
                     continue;
                 }
 
@@ -208,12 +209,13 @@
             return bitCount;
         }
 
-        public static IPAddress GetIpAddressFromUser(string prompt)
+        public static IPAddress GetIpAddressFromUser(AppState state, string prompt)
         {
             var ipAddress = IPAddress.None;
 
             while (ipAddress.Equals(IPAddress.None))
             {
+                DisplayLocalServerInfo(state);
                 Console.WriteLine(prompt);
                 var input = Console.ReadLine();
 
@@ -231,11 +233,12 @@
             return ipAddress;
         }
 
-        public static int GetPortNumberFromUser(string prompt, bool allowRandom)
+        public static int GetPortNumberFromUser(AppState state, string prompt, bool allowRandom)
         {
             var portNumber = 0;
             while (portNumber is 0)
             {
+                DisplayLocalServerInfo(state);
                 Console.WriteLine($"{prompt} (range {PortRangeMin}-{PortRangeMax}):");
 
                 if (allowRandom)
@@ -254,14 +257,17 @@
 
                     var rnd = new Random();
                     portNumber = rnd.Next(PortRangeMin, PortRangeMax + 1);
-                    Console.WriteLine($"Your randomly chosen port number is: {portNumber}");
+
+                    var randomPort = $"Your randomly chosen port number is: {portNumber}";
+                    ModalMessage(randomPort, Resources.Prompt_PressEnterToContinue);
+
                     break;
                 }
 
                 var inputValidation = ValidateNumberIsWithinRange(input, PortRangeMin, PortRangeMax);
                 if (inputValidation.Failure)
                 {
-                    NotifyUserErrorOccurred(inputValidation.Error);
+                    ModalMessage(inputValidation.Error, Resources.Prompt_PressEnterToContinue);
                     continue;
                 }
 
@@ -350,9 +356,10 @@
             var defaultServerName = $"{serverInfo.SessionIpAddress}:{serverInfo.PortNumber}-{serverInfo.Platform}";
 
             var initialPrompt =
-                $"Would you like to enter a name to help you identify this server? {Environment.NewLine}" +
-                Environment.NewLine +
-                $"If you select no, a default name will be used ({defaultServerName}). You can edit this name at any time.{Environment.NewLine}";
+                "Would you like to enter a name to help you identify this server? " +
+                Environment.NewLine + Environment.NewLine +
+                $"If you select no, a default name will be used ({defaultServerName}). " +
+                "You can edit this name at any time.";
 
             var enterCustomName = PromptUserYesOrNo(state, initialPrompt);
 
@@ -373,7 +380,7 @@
                 var userEnteredAnything = UserEnteredAnything(input);
                 if (userEnteredAnything.Failure)
                 {
-                   NotifyUserErrorOccurred(userEnteredAnything.Error);
+                   ModalMessage(userEnteredAnything.Error, Resources.Prompt_PressEnterToContinue);
                     continue;
                 }
 
@@ -384,7 +391,7 @@
                         $"\"{input}\" contains invalid characters, only a-z, A-Z, 0-9 " +
                         "and \'.\' (period) \'_\' (underscore) \'-\' (hyphen) are allowed.";
 
-                    NotifyUserErrorOccurred(error);
+                    ModalMessage(error, Resources.Prompt_PressEnterToContinue);
                     continue;
                 }
 
@@ -423,7 +430,7 @@
             {
                 DisplayLocalServerInfo(state);
 
-                Console.WriteLine(prompt);
+                Console.WriteLine(prompt + Environment.NewLine);
                 Console.WriteLine("1. Yes");
                 Console.WriteLine("2. No");
 
@@ -432,7 +439,7 @@
                 var inputValidation = ValidateNumberIsWithinRange(input, 1, 2);
                 if (inputValidation.Failure)
                 {
-                    NotifyUserErrorOccurred(inputValidation.Error);
+                    ModalMessage(inputValidation.Error, Resources.Prompt_PressEnterToContinue);
                     continue;
                 }
 

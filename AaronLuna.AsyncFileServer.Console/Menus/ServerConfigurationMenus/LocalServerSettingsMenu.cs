@@ -19,8 +19,8 @@
             _state = state;
 
             ReturnToParent = false;
-            ItemText = "Local server settings";
-            MenuText = Resources.Menu_ChangeSettings;
+            ItemText = Resources.MenuItemText_LocalServerSettings;
+            MenuText = Resources.MenuText_LocalServerSettings;
             MenuItems = new List<IMenuItem>();
         }
 

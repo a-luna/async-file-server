@@ -33,12 +33,13 @@
             SharedFunctions.DisplayLocalServerInfo(_state);
 
             var remoteServerIp =
-                SharedFunctions.GetIpAddressFromUser(Resources.Prompt_SetRemoteServerIp);
+                SharedFunctions.GetIpAddressFromUser(_state, Resources.Prompt_SetRemoteServerIp);
 
             SharedFunctions.DisplayLocalServerInfo(_state);
 
             var remoteServerPort =
                 SharedFunctions.GetPortNumberFromUser(
+                    _state,
                     Resources.Prompt_SetRemoteServerPortNumber,
                     false);
 

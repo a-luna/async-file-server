@@ -18,19 +18,16 @@
 
         public AppState()
         {
-            LocalServer = new AsyncFileServer();            
-            SelectedServerInfo = new ServerInfo();
-            RemoteServerFileList = new FileInfoList();
-
             WaitingForServerInfoResponse = true;
             WaitingForFileListResponse = true;
-
-            SignalReturnToMainMenu = new AutoResetEvent(false);
-
-            UserEntryRemoteServerName = string.Empty;
-            UserEntryIpAddress = IPAddress.None;
             UserEntryPortNumber = 0;
+            UserEntryIpAddress = IPAddress.None;
+            UserEntryRemoteServerName = string.Empty;
 
+            LocalServer = new AsyncFileServer();
+            SelectedServerInfo = new ServerInfo();
+            RemoteServerFileList = new FileInfoList();
+            SignalReturnToMainMenu = new AutoResetEvent(false);
             _localServerState = new ServerState(LocalServer);
         }
 
@@ -94,9 +91,8 @@
 
         public string LocalServerInfo()
         {
-            var serverIsListening = LocalServer.IsListening
-                ? $"Server is listening on port {LocalServer.MyInfo.PortNumber}"
-                : "SERVER IS NOT RUNNING";
+            var localServerPort = "Server is listening on port " +
+                                  $"{LocalServer.MyInfo.PortNumber}{Environment.NewLine}";
 
             var localServerIp =
                 $"LAN CIDR IP..: {Settings.LocalNetworkCidrIp}{Environment.NewLine}" +
@@ -123,11 +119,23 @@
                 ? "No unread messages"
                 : $"{UnreadTextMessageCount} unread {messagePlural}";
 
-            return
-                serverIsListening + Environment.NewLine +
+            var isListening =
+                localServerPort + Environment.NewLine +
                 localServerIp + Environment.NewLine +
                 transferInProgress + Environment.NewLine +
                 unreadTextMessages + Environment.NewLine;
+
+            var isNotListening =
+                $"SERVER IS NOT RUNNING {Environment.NewLine}{Environment.NewLine}" +
+                $"LAN CIDR IP..: {Environment.NewLine}" +
+                $"Local IP.....: {Environment.NewLine}" +
+                $"Public IP....: {Environment.NewLine}{Environment.NewLine}" +
+                $"No pending file transfers {Environment.NewLine}" +
+                $"No unread messages {Environment.NewLine}";
+
+            return LocalServer.IsListening
+                ? isListening
+                : isNotListening;
         }
 
         public string RemoteServerInfo()

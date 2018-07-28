@@ -20,7 +20,7 @@
         public int PendingFileTransferCount => PendingTransferCount();
         public List<int> PendingFileTransferIds => GetPendingFileTransferIds();
 
-        public bool NoRequests => RequestCount() > 0;
+        public bool NoRequests => RequestCount() == 0;
         public List<int> RequestIds => AllRequestIds();
         public DateTime MostRecentRequestTime => MostRecentRequestTimeStamp();
 
@@ -32,7 +32,7 @@
         public int UnreadTextMessageCount => GetNumberOfUnreadTextMessages();
         public List<int> TextSessionIdsWithUnreadMessages => GetTextSessionIdsWithUnreadMessages();
 
-        public bool NoFileTransfers => FileTransferCount() > 0;
+        public bool NoFileTransfers => FileTransferCount() == 0;
         public List<int> FileTransferIds => AllFileTransferIds();
         public int MostRecentFileTransferId => MostRecentTransferId();
         public List<int> StalledFileTransferIds => StalledTransferIds();
