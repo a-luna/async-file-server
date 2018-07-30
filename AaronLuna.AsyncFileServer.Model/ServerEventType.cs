@@ -95,6 +95,7 @@
         SendRetryLimitExceededStarted,
         SendRetryLimitExceededCompleted,
         ReceivedRetryLimitExceeded,
+        RetryLimitLockoutExpired,
 
         RequestFileListStarted,
         RequestFileListComplete,
@@ -132,7 +133,9 @@
         SendServerInfoComplete,
         ReceivedServerInfo,
 
-        ErrorOccurred
+        ErrorOccurred,
+
+        StoppedSendingFileBytes
     }
 
     public static class ServerEventTypeExtensions

@@ -188,7 +188,7 @@
 
                 case ServerEventType.DetermineRequestTypeComplete:
                     report +=
-                        $"Successfully determined type of incoming request: {RequestType.Name()}";
+                        $"Successfully determined type of incoming request: {RequestType.Name()}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ProcessRequestStarted:
@@ -450,7 +450,7 @@
                     break;
 
                 case ServerEventType.FileTransferStalled:
-                    report += $"Received notification from {RemoteServerIpAddress}:{RemoteServerPortNumber} that file transfer is incomplete and data has stopped being received";
+                    report += $"Received notification from {RemoteServerIpAddress}:{RemoteServerPortNumber} that file transfer is incomplete and data has stopped being received{Environment.NewLine}";
                     break;
 
                 case ServerEventType.RetryOutboundFileTransferStarted:
@@ -510,18 +510,29 @@
                         $"{indentLevel1}File Name.................: {FileName}{Environment.NewLine}" +
                         $"{indentLevel1}Download Attempts.........: {RetryCounter}{Environment.NewLine}" +
                         $"{indentLevel1}Max Attempts Allowed......: {RemoteServerRetryLimit}{Environment.NewLine}" +
-                        $"{indentLevel1}Download Lockout Expires..: {FileTransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Lockout Expires..: {RetryLockoutExpireTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
                         $"{indentLevel1}Remaining Lockout Time....: {RetryLockoutTimeRemianing}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ReceivedRetryLimitExceeded:
                     report +=
-                        "Maximum # of attempts to complete stalled file transfer reached or exceeded: " +
+                        $"Maximum # of attempts to complete stalled file transfer reached or exceeded: {Environment.NewLine}{Environment.NewLine}" +
                         $"{indentLevel1}File Name.................: {FileName}{Environment.NewLine}" +
                         $"{indentLevel1}Download Attempts.........: {RetryCounter}{Environment.NewLine}" +
                         $"{indentLevel1}Max Attempts Allowed......: {RemoteServerRetryLimit}{Environment.NewLine}" +
-                        $"{indentLevel1}Download Lockout Expires..: {FileTransferCompleteTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                        $"{indentLevel1}Current Time..............: {DateTime.Now:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Lockout Expires..: {RetryLockoutExpireTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
                         $"{indentLevel1}Remaining Lockout Time....: {RetryLockoutTimeRemianing}{Environment.NewLine}";
+                    break;
+
+                case ServerEventType.RetryLimitLockoutExpired:
+                    report +=
+                        "The lockout period for exceeding the maximum number of download attempts has expired " +
+                        $"for the file below:{Environment.NewLine}{Environment.NewLine}" +
+                        $"{indentLevel1}File Name.................: {FileName}{Environment.NewLine}" +
+                        $"{indentLevel1}Current Time..............: {DateTime.Now:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                        $"{indentLevel1}Download Lockout Expires..: {RetryLockoutExpireTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}";
+
                     break;
 
                 case ServerEventType.SendNotificationFileDoesNotExistStarted:
@@ -530,6 +541,10 @@
 
                 case ServerEventType.ReceivedNotificationFileDoesNotExist:
                     report += $"Received notification from {RemoteServerIpAddress}:{RemoteServerPortNumber} that the requested file does not exist";
+                    break;
+
+                case ServerEventType.StoppedSendingFileBytes:
+                    report += $"No longer sending file bytes to remote server, file transfer is incomplete{Environment.NewLine}";
                     break;
 
                 default:

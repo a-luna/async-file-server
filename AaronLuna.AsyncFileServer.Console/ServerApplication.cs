@@ -22,18 +22,18 @@ namespace AaronLuna.AsyncFileServer.Console
 
     public class ServerApplication
     {
-        const string SettingsFileName = "settings.xml";
+        const string XmlSettingsFileName = "settings.xml";
 
         readonly Logger _log = new Logger(typeof(ServerApplication));
-        readonly string _settingsFilePath;
+        readonly string _xmlSettingsFilePath;
         readonly CancellationTokenSource _cts;
         readonly AppState _state;
         MainMenu _mainMenu;
 
         public ServerApplication()
         {
-            _settingsFilePath =
-                $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{SettingsFileName}";
+            _xmlSettingsFilePath =
+                $"{Directory.GetCurrentDirectory()}{Path.DirectorySeparatorChar}{XmlSettingsFileName}";
 
             _cts = new CancellationTokenSource();
             _state = new AppState();
@@ -66,12 +66,14 @@ namespace AaronLuna.AsyncFileServer.Console
                 var userInterface = await _mainMenu.ExecuteAsync().ConfigureAwait(false);
                 if (userInterface.Failure)
                 {
-                    Console.WriteLine($"Error: {userInterface.Error}");
+                    SharedFunctions.ModalMessage(userInterface.Error, Resources.Prompt_PressEnterToContinue);
                 }
 
-                if (runServerTask == await Task.WhenAny(
-                    runServerTask,
-                    Task.Delay(Constants.OneSecondInMilliseconds, token)).ConfigureAwait(false))
+                if (runServerTask == await
+                        Task.WhenAny(
+                            runServerTask,
+                            Task.Delay(Constants.ThreeSecondsInMilliseconds, token))
+                            .ConfigureAwait(false))
                 {
                     runServerResult = await runServerTask;
                 }
@@ -111,7 +113,7 @@ namespace AaronLuna.AsyncFileServer.Console
 
         async Task<Result> InitializeServerAsync()
         {
-            var getSettings = GetServerSettings(_settingsFilePath);
+            var getSettings = GetServerSettings(_xmlSettingsFilePath);
             if (getSettings.Failure)
             {
                 var error =
@@ -123,10 +125,82 @@ namespace AaronLuna.AsyncFileServer.Console
             }
 
             _state.Settings = getSettings.Value;
-            _state.SettingsFile = new FileInfo(_settingsFilePath);
+            _state.SettingsFile = new FileInfo(_xmlSettingsFilePath);
             _state.UserEntryPortNumber = _state.Settings.LocalServerPortNumber;
             _state.UserEntryLocalNetworkCidrIp = _state.Settings.LocalNetworkCidrIp;
 
+            CheckLocalServerSettings();
+
+            await _state.LocalServer.InitializeAsync(_state.Settings).ConfigureAwait(false);
+            
+            return Result.Ok();
+        }
+
+        static Result<ServerSettings> GetServerSettings(string filePath)
+        {
+            if (!File.Exists(filePath))
+            {
+                return GetDefaultSettings(filePath);
+            }
+
+            var getSettingsFromFile = ServerSettings.ReadFromFile(filePath);
+            if (getSettingsFromFile.Success) return Result.Ok(getSettingsFromFile.Value);
+
+            var getDefaultSettings = HandleXmlDeserializationError(filePath, getSettingsFromFile.Error);
+
+            return getDefaultSettings.Success
+                ? Result.Ok(getDefaultSettings.Value)
+                : getDefaultSettings;
+        }
+
+        static Result<ServerSettings> GetDefaultSettings(string filePath)
+        {
+            var defaultSettings = ServerSettings.GetDefaultSettings();
+            var saveSettings = ServerSettings.SaveToFile(defaultSettings, filePath);
+
+            return saveSettings.Success
+                ? Result.Ok(defaultSettings)
+                : Result.Fail<ServerSettings>(saveSettings.Error);
+        }
+
+        static Result<ServerSettings> HandleXmlDeserializationError(string filePath, string xmlError)
+        {
+            var settingsFileName = Path.GetFileName(filePath);
+            var folderPath = Path.GetDirectoryName(filePath);
+
+            var error =
+                $"Unable to deserialize the settings XML file \"{settingsFileName}\" " +
+                $"located in folder:{Environment.NewLine}{Environment.NewLine}" +
+                folderPath + Environment.NewLine + Environment.NewLine +
+                $"The following error was encountered:{Environment.NewLine}{xmlError}";
+
+            Console.Clear();
+            SharedFunctions.ModalMessage(error, Resources.Prompt_PressEnterToContinue);
+
+            var badXmlFileName = $"settings_backup_{Logging.GetTimeStampForFileName()}.xml";
+            var backupFilePath = Path.Combine(folderPath, badXmlFileName);
+            File.Move(filePath, backupFilePath);
+
+            var getDefaultSettings = GetDefaultSettings(filePath);
+            if (getDefaultSettings.Failure)
+            {
+                return getDefaultSettings;
+            }
+
+            var message =
+                $"Created new settings xml file \"{settingsFileName}\" with default values.{Environment.NewLine}" +
+                $"The XML file that could not be deserialized has been saved as \"{badXmlFileName}\"." +
+                $"{Environment.NewLine}{Environment.NewLine}You can change the default settings " +
+                $"at any time from the \"{Resources.MenuItemText_LocalServerSettings}\" menu item";
+
+            Console.Clear();
+            SharedFunctions.ModalMessage(message, Resources.Prompt_PressEnterToContinue);
+
+            return Result.Ok(getDefaultSettings.Value);
+        }
+
+        void CheckLocalServerSettings()
+        {
             var portNumberHasChanged = false;
             bool cidrIpHasChanged;
 
@@ -151,81 +225,10 @@ namespace AaronLuna.AsyncFileServer.Console
                 cidrIpHasChanged = SharedFunctions.CidrIpHasChanged(_state);
             }
 
-            await
-                _state.LocalServer.InitializeAsync(
-                    _state.Settings.LocalNetworkCidrIp,
-                    _state.Settings.LocalServerPortNumber).ConfigureAwait(false);
-
-            _state.LocalServer.UpdateSettings(_state.Settings);
-
-            var anySettingWasChanged = portNumberHasChanged || cidrIpHasChanged;
-
-            return anySettingWasChanged
-                ? ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath)
-                : Result.Ok();
-        }
-
-        static Result<ServerSettings> GetServerSettings(string filePath)
-        {
-            if (!File.Exists(filePath))
+            if (portNumberHasChanged || cidrIpHasChanged)
             {
-                return GetDefaultSettings(filePath);
+                _state.SaveSettingsToFile();
             }
-
-            var getSettingsFromFile = ServerSettings.ReadFromFile(filePath);
-            if (getSettingsFromFile.Failure)
-            {
-                var settingsFileName = Path.GetFileName(filePath);
-                var folderPath = Path.GetDirectoryName(filePath);
-
-                var error =
-                    $"Unable to deserialize the settings XML file \"{settingsFileName}\" " +
-                    $"located in folder:{Environment.NewLine}{Environment.NewLine}" +
-                    folderPath + Environment.NewLine + Environment.NewLine +
-                    $"The following error was encountered:{Environment.NewLine}{getSettingsFromFile.Error}";
-
-                Console.Clear();
-                SharedFunctions.ModalMessage(error, Resources.Prompt_PressEnterToContinue);
-
-                var badXmlFileName = $"settings_backup_{Logging.GetTimeStampForFileName()}.xml";
-                var backupFilePath = Path.Combine(folderPath, badXmlFileName);
-                File.Move(filePath, backupFilePath);
-
-                var getDefaultSettings = GetDefaultSettings(filePath);
-                if (getDefaultSettings.Failure)
-                {
-                    return getDefaultSettings;
-                }
-
-                var message =
-                    $"Created new settings xml file \"{settingsFileName}\" with default values.{Environment.NewLine}" +
-                    $"The XML file that could not be deserialized has been saved as \"{badXmlFileName}\"." +
-                    $"{Environment.NewLine}{Environment.NewLine}You can change the default settings " +
-                    $"at any time from the \"{Resources.MenuItemText_LocalServerSettings}\" menu item";
-
-                Console.Clear();
-                SharedFunctions.ModalMessage(message, Resources.Prompt_PressEnterToContinue);
-
-                return Result.Ok(getDefaultSettings.Value);
-            }
-            
-            return Result.Ok(getSettingsFromFile.Value);
-        }
-
-        static Result<ServerSettings> GetDefaultSettings(string filePath)
-        {
-            var defaultSettings = ServerSettings.GetDefaultSettings();
-            var saveSettings = ServerSettings.SaveToFile(defaultSettings, filePath);
-
-            return saveSettings.Success
-                ? Result.Ok(defaultSettings)
-                : Result.Fail<ServerSettings>(saveSettings.Error);
-        }
-
-        void HandleException(Exception ex)
-        {
-            _log.Error("Exception caught:", ex);
-            Console.WriteLine(Environment.NewLine + ex.GetReport());
         }
 
         async void HandleServerEventAsync(object sender, ServerEvent serverEvent)
@@ -297,6 +300,21 @@ namespace AaronLuna.AsyncFileServer.Console
                 default:
                     return;
             }
+        }
+
+        void HandleFileTransferProgress(object sender, ServerEvent serverEvent)
+        {
+            if (_state.OutboundFileTransferInProgress) return;
+
+            _state.InboundFileTransferId = serverEvent.FileTransferId;
+            _state.ProgressBar.BytesReceived = serverEvent.TotalFileBytesReceived;
+            _state.ProgressBar.Report(serverEvent.PercentComplete);
+        }
+
+        void HandleException(Exception ex)
+        {
+            _log.Error("Exception caught:", ex);
+            Console.WriteLine(ex.GetReport());
         }
 
         private async Task CheckIfRemoteServerAlreadySavedAsync(ServerEvent serverEvent)
@@ -415,15 +433,6 @@ namespace AaronLuna.AsyncFileServer.Console
 
             SharedFunctions.DisplayLocalServerInfo(_state);
             Console.WriteLine(inboundFileTransfer.InboundRequestDetails(true));
-        }
-
-        void HandleFileTransferProgress(object sender, ServerEvent serverEvent)
-        {
-            if (_state.OutboundFileTransferInProgress) return;
-
-            _state.InboundFileTransferId = serverEvent.FileTransferId;
-            _state.ProgressBar.BytesReceived = serverEvent.TotalFileBytesReceived;
-            _state.ProgressBar.Report(serverEvent.PercentComplete);
         }
 
         async Task ReceiveFileBytesCompleteAsync(ServerEvent serverEvent)

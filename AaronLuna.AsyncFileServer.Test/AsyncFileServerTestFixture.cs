@@ -16,8 +16,9 @@ namespace AaronLuna.AsyncFileServer.Test
     using Common.Network;
     using Common.Result;
 
-    using AsyncFileServer.Model;
+    using Model;
     using Controller;
+    using TestClasses;
 
     [TestClass]
     public class AsyncFileServerTestFixture
@@ -27,6 +28,9 @@ namespace AaronLuna.AsyncFileServer.Test
 
         CancellationTokenSource _cts;
         SocketSettings _socketSettings;
+        ServerSettings _clientSettings;
+        ServerSettings _serverSettings;
+        AsyncFileServerTest _testServer;
         AsyncFileServer _server;
         AsyncFileServer _client;
         ServerState _serverState;
@@ -35,6 +39,7 @@ namespace AaronLuna.AsyncFileServer.Test
         Task<Result> _runClientTask;
         List<string> _clientLogMessages;
         List<string> _serverLogMessages;
+        private bool _usedTestServer;
         string _clientLogFilePath;
         string _serverLogFilePath;
 
@@ -51,7 +56,6 @@ namespace AaronLuna.AsyncFileServer.Test
         string _transferFolderPath;
         string _cidrIp;
         IPAddress _localIp;
-        IPAddress _publicIp;
         IPAddress _remoteServerLocalIp;
         IPAddress _remoteServerPublicIp;
         ServerPlatform _remoteServerPlatform;
@@ -66,6 +70,8 @@ namespace AaronLuna.AsyncFileServer.Test
         bool _serverHasNoFilesAvailableToDownload;
         bool _serverTransferFolderDoesNotExist;
         bool _serverErrorOccurred;
+        bool _serverStoppedSendingFileBytes;
+        bool _serverReceivedTransferStalledNotification;
 
         bool _clientReceivedTextMessage;
         bool _clientNoFileTransferPending;
@@ -75,9 +81,10 @@ namespace AaronLuna.AsyncFileServer.Test
         bool _clientReceivedServerInfo;
         bool _clientReceivedFileInfoList;
         bool _clientErrorOccurred;
+        bool _clientReceivedRetryLimitExceededNotification;
 
         [TestInitialize]
-        public async Task Setup()
+        public void Setup()
         {
             _messageFromClient = string.Empty;
             _messageFromServer = string.Empty;
@@ -90,6 +97,7 @@ namespace AaronLuna.AsyncFileServer.Test
             _clientLogFilePath = string.Empty;
             _serverLogFilePath = string.Empty;
 
+            _usedTestServer = false;
             _serverReceivedTextMessage = false;
             _serverNoFileTransferPending = true;
             _serverReceivedAllFileBytes = false;
@@ -98,6 +106,8 @@ namespace AaronLuna.AsyncFileServer.Test
             _serverHasNoFilesAvailableToDownload = false;
             _serverTransferFolderDoesNotExist = false;
             _serverErrorOccurred = false;
+            _serverStoppedSendingFileBytes = false;
+            _serverReceivedTransferStalledNotification = false;
 
             _clientReceivedTextMessage = false;
             _clientNoFileTransferPending = true;
@@ -108,6 +118,7 @@ namespace AaronLuna.AsyncFileServer.Test
             _clientReceivedAllFileBytes = false;
             _clientReceivedFileInfoList = false;
             _clientErrorOccurred = false;
+            _clientReceivedRetryLimitExceededNotification = false;
 
             _fileInfoList = new FileInfoList();
 
@@ -141,7 +152,6 @@ namespace AaronLuna.AsyncFileServer.Test
             }
 
             _localIp = IPAddress.Loopback;
-            _publicIp = IPAddress.None;
             _remoteServerPlatform = ServerPlatform.None;
             _thisServerPlatform = Environment.OSVersion.Platform.ToServerPlatform();
 
@@ -159,13 +169,7 @@ namespace AaronLuna.AsyncFileServer.Test
             {
                 _localIp = getLocalIpResult.Value;
             }
-
-            var getPublicIpResult = await NetworkUtilities.GetPublicIPv4AddressAsync().ConfigureAwait(false);
-            if (getPublicIpResult.Success)
-            {
-                _publicIp = getPublicIpResult.Value;
-            }
-
+            
             _cts = new CancellationTokenSource();
 
             _socketSettings = new SocketSettings
@@ -175,32 +179,33 @@ namespace AaronLuna.AsyncFileServer.Test
                 SocketTimeoutInMilliseconds = 5000
             };
 
-            var clientSettings = new ServerSettings
+            _clientSettings = new ServerSettings
             {
                 LocalServerFolderPath = _localFolder,
                 LocalNetworkCidrIp = _cidrIp,
                 SocketSettings = _socketSettings,
-                TransferUpdateInterval = 10,
+                TransferUpdateInterval = 0.10f,
                 FileTransferStalledTimeout = TimeSpan.FromSeconds(5),
-                TransferRetryLimit = 5,
-                RetryLimitLockout = TimeSpan.FromMinutes(5),
+                TransferRetryLimit = 2,
+                RetryLimitLockout = TimeSpan.FromSeconds(3),
                 LogLevel = LogLevel.Info
             };
 
-            var serverSettings = new ServerSettings
+            _serverSettings = new ServerSettings
             {
                 LocalServerFolderPath = _remoteFolder,
                 LocalNetworkCidrIp = _cidrIp,
                 SocketSettings = _socketSettings,
-                TransferUpdateInterval = 10,
+                TransferUpdateInterval = 0.10f,
                 FileTransferStalledTimeout = TimeSpan.FromSeconds(5),
-                TransferRetryLimit = 5,
-                RetryLimitLockout = TimeSpan.FromMinutes(5),
+                TransferRetryLimit = 2,
+                RetryLimitLockout = TimeSpan.FromSeconds(3),
                 LogLevel = LogLevel.Info
             };
 
-            _server = new AsyncFileServer("Server", serverSettings);
-            _client = new AsyncFileServer("Client", clientSettings);
+            _server = new AsyncFileServer("Server", _serverSettings);
+            _testServer = new AsyncFileServerTest("Test Server", _serverSettings);
+            _client = new AsyncFileServer("Client", _clientSettings);
 
             _serverState = new ServerState(_server);
             _clientState = new ServerState(_client);
@@ -220,10 +225,21 @@ namespace AaronLuna.AsyncFileServer.Test
                     runClientResult = await _runClientTask;
                 }
 
-                await _server.ShutdownAsync().ConfigureAwait(false);
-                if (_runServerTask == await Task.WhenAny(_runServerTask, Task.Delay(1000)).ConfigureAwait(false))
+                if (_usedTestServer)
                 {
-                    runServerResult = await _runServerTask;
+                    await _testServer.ShutdownAsync().ConfigureAwait(false);
+                    if (_runServerTask == await Task.WhenAny(_runServerTask, Task.Delay(1000)).ConfigureAwait(false))
+                    {
+                        runServerResult = await _runServerTask;
+                    }
+                }
+                else
+                {
+                    await _server.ShutdownAsync().ConfigureAwait(false);
+                    if (_runServerTask == await Task.WhenAny(_runServerTask, Task.Delay(1000)).ConfigureAwait(false))
+                    {
+                        runServerResult = await _runServerTask;
+                    }
                 }
 
                 var combinedResult = Result.Combine(runClientResult, runServerResult);
@@ -258,16 +274,17 @@ namespace AaronLuna.AsyncFileServer.Test
             _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifySendTextMessage_client.log";
             _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifySendTextMessage_server.log";
 
-            const int localPort = 8001;
-            const int remoteServerPort = 8002;
+            _clientSettings.LocalServerPortNumber = 8001;
+            _serverSettings.LocalServerPortNumber = 8002;
+
             const string messageForServer = "Hello, fellow TPL $ocket Server! This is a text message with a few special ch@r@cters. `~/|\\~'";
             const string messageForClient = "I don't know who or what you are referring to. I am a normal human, sir, and most definitely NOT some type of server. Good day.";
 
-            await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
+            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
@@ -293,7 +310,7 @@ namespace AaronLuna.AsyncFileServer.Test
                 await _client.SendTextMessageAsync(
                         messageForServer,
                         _localIp,
-                        remoteServerPort)
+                        _serverSettings.LocalServerPortNumber)
                     .ConfigureAwait(false);
 
             if (sendMessageResult1.Failure)
@@ -310,7 +327,7 @@ namespace AaronLuna.AsyncFileServer.Test
                 await _server.SendTextMessageAsync(
                         messageForClient,
                         _localIp,
-                        localPort)
+                        _clientSettings.LocalServerPortNumber)
                     .ConfigureAwait(false);
 
             if (sendMessageResult2.Failure)
@@ -330,18 +347,18 @@ namespace AaronLuna.AsyncFileServer.Test
             _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifySendFile_client.log";
             _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifySendFile_server.log";
 
-            const int remoteServerPort = 8003;
-            const int localPort = 8004;
+            _serverSettings.LocalServerPortNumber = 8003;
+            _clientSettings.LocalServerPortNumber = 8004;
 
             var sendFilePath = _localFilePath;
             var receiveFilePath = _remoteFilePath;
             var receiveFolderPath = _remoteFolder;
 
-            await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
+            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
@@ -365,7 +382,7 @@ namespace AaronLuna.AsyncFileServer.Test
             var sendFileResult =
                 await _client.SendFileAsync(
                     _localIp,
-                    remoteServerPort,
+                    _serverSettings.LocalServerPortNumber,
                     _server.MyInfo.Name,
                     FileName,
                     sizeOfFileToSend,
@@ -438,30 +455,31 @@ namespace AaronLuna.AsyncFileServer.Test
             _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyGetFile_client.log";
             _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyGetFile_server.log";
 
-            const int localPort = 8005;
-            const int remoteServerPort = 8006;
+            _clientSettings.LocalServerPortNumber = 8005;
+            _serverSettings.LocalServerPortNumber = 8006;
+
             var getFilePath = _remoteFilePath;
             var sentFileSize = new FileInfo(getFilePath).Length;
             var receivedFilePath = _localFilePath;
 
-            await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
+            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
             var token = _cts.Token;
 
-           _runServerTask =
+            _runServerTask =
                 Task.Run(() =>
-                    _server.RunAsync(token),
+                        _server.RunAsync(token),
                     token);
 
-           _runClientTask =
+            _runClientTask =
                 Task.Run(() =>
-                    _client.RunAsync(token),
+                        _client.RunAsync(token),
                     token);
 
             while (!_server.IsListening) { }
@@ -473,11 +491,11 @@ namespace AaronLuna.AsyncFileServer.Test
             var getFileResult =
                 await _client.GetFileAsync(
                     _localIp,
-                    remoteServerPort,
+                    _serverSettings.LocalServerPortNumber,
                     _server.MyInfo.Name,
-                    Path.GetFileName(getFilePath),
+                    FileName,
                     sentFileSize,
-                    Path.GetDirectoryName(getFilePath),
+                    _remoteFolder,
                     _localFolder).ConfigureAwait(false);
 
             if (getFileResult.Failure)
@@ -515,44 +533,423 @@ namespace AaronLuna.AsyncFileServer.Test
         }
 
         [TestMethod]
+        public async Task VerifyGetFileAfterStalledFileTransfer()
+        {
+            _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyGetFileAfterStalledFileTransfer_client.log";
+            _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyGetFileAfterStalledFileTransfer_server.log";
+
+            _clientSettings.LocalServerPortNumber = 8007;
+            _serverSettings.LocalServerPortNumber = 8008;
+
+            var getFilePath = _remoteFilePath;
+            var sentFileSize = new FileInfo(getFilePath).Length;
+            var receivedFilePath = _localFilePath;
+            _usedTestServer = true;
+
+            await _testServer.InitializeAsync(_serverSettings).ConfigureAwait(false);
+            _testServer.EventOccurred += HandleServerEvent;
+            _testServer.SocketEventOccurred += HandleServerEvent;
+            _testServer.TestEventOccurred += HandleServerEvent;
+            _testServer.TestSocketEventOccurred += HandleServerEvent;
+
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
+            _client.EventOccurred += HandleClientEvent;
+            _client.SocketEventOccurred += HandleClientEvent;
+
+            var token = _cts.Token;
+
+            _runServerTask =
+                Task.Run(() =>
+                        _testServer.RunAsync(token),
+                    token);
+
+            _runClientTask =
+                Task.Run(() =>
+                        _client.RunAsync(token),
+                    token);
+
+            while (!_testServer.IsListening) { }
+            while (!_client.IsListening) { }
+
+            FileHelper.DeleteFileIfAlreadyExists(receivedFilePath, 3);
+            Assert.IsFalse(File.Exists(receivedFilePath));
+
+            // 1st transfer attempt
+            var getFileResult =
+                await _client.GetFileAsync(
+                    _localIp,
+                    _serverSettings.LocalServerPortNumber,
+                    _testServer.MyInfo.Name,
+                    FileName,
+                    sentFileSize,
+                    _remoteFolder,
+                    _localFolder).ConfigureAwait(false);
+
+            if (getFileResult.Failure)
+            {
+                var getFileError = "There was an error requesting the file from the remote server: " + getFileResult.Error;
+                Assert.Fail(getFileError);
+            }
+
+            // Wait for 1st transfer attempt
+            while (_clientNoFileTransferPending) { }
+
+            var changeController = _testServer.ChangeRegularControllerToStalledController(5);
+            if (changeController.Failure)
+            {
+                Assert.Fail(changeController.Error);
+            }
+
+            var pendingId = _clientState.PendingFileTransferIds[0];
+            var pendingFiletransfer = _client.GetFileTransferById(pendingId).Value;
+
+            var transferResult = await _client.AcceptInboundFileTransferAsync(pendingFiletransfer);
+            if (transferResult.Failure)
+            {
+                Assert.Fail("There was an error receiving the file from the remote server: " + transferResult.Error);
+            }
+
+            // Wait for 1st transfer attempt stalled notification 
+            while (!_serverStoppedSendingFileBytes)
+            {
+                if (_clientErrorOccurred)
+                {
+                    Assert.Fail("File transfer failed");
+                }
+            }
+
+            var stalledId = 0;
+            while (stalledId == 0)
+            {
+                stalledId = _clientState.StalledFileTransferIds[0];
+            }
+            
+            // Notify server that 1st transfer attempt is stalled
+            var notifyTransferStalled =
+                await _client.SendNotificationFileTransferStalledAsync(stalledId).ConfigureAwait(false);
+
+            if (notifyTransferStalled.Failure)
+            {
+                Assert.Fail("There was an error notifying the remote server that the file transfer has stalled: " + transferResult.Error);
+            }
+            
+            // Wait for 1st transfer attempt cancelled notification
+            while (!_serverReceivedTransferStalledNotification) { }
+            var changeControllerBack = _testServer.ChangeStalledControllerBackToRegularController(5);
+            if (changeControllerBack.Failure)
+            {
+                Assert.Fail(changeControllerBack.Error);
+            }
+
+            _clientNoFileTransferPending = true;
+
+            // 2nd transfer attempt
+            var retryFileTransfer = await 
+                _client.RetryFileTransferAsync(stalledId).ConfigureAwait(false);
+
+            if (retryFileTransfer.Failure)
+            {
+                Assert.Fail("There was an error attempting to retry the stalled file transfer: " + transferResult.Error);
+            }
+
+            // Wait for 2nd transfer attempt
+            while (_clientNoFileTransferPending) { }
+            
+            var pendingId2 = _clientState.PendingFileTransferIds[0];
+            var pendingFiletransfer2 = _client.GetFileTransferById(pendingId2).Value;
+
+            var transferResult2 = await _client.AcceptInboundFileTransferAsync(pendingFiletransfer2);
+            if (transferResult2.Failure)
+            {
+                Assert.Fail("There was an error receiving the file from the remote server: " + transferResult2.Error);
+            }
+
+            // Wait for all file bytes to be received
+            while (!_clientReceivedAllFileBytes)
+            {
+                if (_clientErrorOccurred)
+                {
+                    Assert.Fail("File transfer failed");
+                }
+            }
+
+            // Wait for server to receive confirmation message
+            while (!_serverReceivedConfirmationMessage) { }
+
+            Assert.IsTrue(File.Exists(receivedFilePath));
+            Assert.AreEqual(FileName, Path.GetFileName(receivedFilePath));
+
+            var receivedFileSize = new FileInfo(receivedFilePath).Length;
+            Assert.AreEqual(sentFileSize, receivedFileSize);
+        }
+
+        [TestMethod]
+        public async Task VerifyGetFileAfterRetryLimitExceeded()
+        {
+            _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyGetFileAfterRetryLimitExceeded_client.log";
+            _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyGetFileAfterRetryLimitExceeded_server.log";
+
+            _clientSettings.LocalServerPortNumber = 8009;
+            _serverSettings.LocalServerPortNumber = 8010;
+
+            var getFilePath = _remoteFilePath;
+            var sentFileSize = new FileInfo(getFilePath).Length;
+            var receivedFilePath = _localFilePath;
+            _usedTestServer = true;
+
+            await _testServer.InitializeAsync(_serverSettings).ConfigureAwait(false);
+            _testServer.EventOccurred += HandleServerEvent;
+            _testServer.SocketEventOccurred += HandleServerEvent;
+            _testServer.TestEventOccurred += HandleServerEvent;
+            _testServer.TestSocketEventOccurred += HandleServerEvent;
+
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
+            _client.EventOccurred += HandleClientEvent;
+            _client.SocketEventOccurred += HandleClientEvent;
+
+            var token = _cts.Token;
+
+            _runServerTask =
+                Task.Run(() =>
+                        _testServer.RunAsync(token),
+                    token);
+
+            _runClientTask =
+                Task.Run(() =>
+                        _client.RunAsync(token),
+                    token);
+
+            while (!_testServer.IsListening) { }
+            while (!_client.IsListening) { }
+
+            FileHelper.DeleteFileIfAlreadyExists(receivedFilePath, 3);
+            Assert.IsFalse(File.Exists(receivedFilePath));
+
+            // 1st transfer attempt
+            var getFileResult =
+                await _client.GetFileAsync(
+                    _localIp,
+                    _serverSettings.LocalServerPortNumber,
+                    _testServer.MyInfo.Name,
+                    FileName,
+                    sentFileSize,
+                    _remoteFolder,
+                    _localFolder).ConfigureAwait(false);
+
+            if (getFileResult.Failure)
+            {
+                var getFileError = "There was an error requesting the file from the remote server: " + getFileResult.Error;
+                Assert.Fail(getFileError);
+            }
+
+            // Wait for 1st transfer attempt
+            while (_clientNoFileTransferPending) { }
+
+            var changeController = _testServer.ChangeRegularControllerToStalledController(5);
+            if (changeController.Failure)
+            {
+                Assert.Fail(changeController.Error);
+            }
+
+            var pendingId = _clientState.PendingFileTransferIds[0];
+            var pendingFiletransfer = _client.GetFileTransferById(pendingId).Value;
+
+            var transferResult = await _client.AcceptInboundFileTransferAsync(pendingFiletransfer);
+            if (transferResult.Failure)
+            {
+                Assert.Fail("There was an error receiving the file from the remote server: " + transferResult.Error);
+            }
+
+            // Wait for 1st transfer attempt stalled notification 
+            while (!_serverStoppedSendingFileBytes)
+            {
+                if (_clientErrorOccurred)
+                {
+                    Assert.Fail("File transfer failed");
+                }
+            }
+
+            var stalledId = 0;
+            while (stalledId == 0)
+            {
+                stalledId = _clientState.StalledFileTransferIds[0];
+            }
+
+            // Notify server that 1st transfer attempt is stalled
+            var notifyTransferStalled =
+                await _client.SendNotificationFileTransferStalledAsync(stalledId).ConfigureAwait(false);
+
+            if (notifyTransferStalled.Failure)
+            {
+                Assert.Fail("There was an error notifying the remote server that the file transfer has stalled: " + transferResult.Error);
+            }
+
+            // Wait for 1st transfer attempt cancelled notification
+            while (!_serverReceivedTransferStalledNotification) { }
+            var changeControllerBack = _testServer.ChangeStalledControllerBackToRegularController(5);
+            if (changeControllerBack.Failure)
+            {
+                Assert.Fail(changeControllerBack.Error);
+            }
+
+            _clientNoFileTransferPending = true;
+            _serverStoppedSendingFileBytes = false;
+            _serverReceivedTransferStalledNotification = false;
+
+            /////////////////////////////////////////////////////////////////////////////////////////////
+            //
+            // 2nd transfer attempt
+            var retryFileTransfer = await
+                _client.RetryFileTransferAsync(stalledId).ConfigureAwait(false);
+
+            if (retryFileTransfer.Failure)
+            {
+                Assert.Fail("There was an error attempting to retry the stalled file transfer: " + transferResult.Error);
+            }
+
+            // Wait for 2nd transfer attempt
+            while (_clientNoFileTransferPending) { }
+
+            var changeController2 = _testServer.ChangeRegularControllerToStalledController(5);
+            if (changeController2.Failure)
+            {
+                Assert.Fail(changeController2.Error);
+            }
+
+            var pendingId2 = _clientState.PendingFileTransferIds[0];
+            var pendingFiletransfer2 = _client.GetFileTransferById(pendingId2).Value;
+
+            var transferResult2 = await _client.AcceptInboundFileTransferAsync(pendingFiletransfer2);
+            if (transferResult2.Failure)
+            {
+                Assert.Fail("There was an error receiving the file from the remote server: " + transferResult2.Error);
+            }
+
+            // Wait for 2nd transfer attempt stalled notification 
+            while (!_serverStoppedSendingFileBytes)
+            {
+                if (_clientErrorOccurred)
+                {
+                    Assert.Fail("File transfer failed");
+                }
+            }
+
+            var stalledId2 = 0;
+            while (stalledId2 == 0)
+            {
+                stalledId2 = _clientState.StalledFileTransferIds[0];
+            }
+
+            // Notify server that 2nd transfer attempt is stalled
+            var notifyTransferStalled2 =
+                await _client.SendNotificationFileTransferStalledAsync(stalledId2).ConfigureAwait(false);
+
+            if (notifyTransferStalled2.Failure)
+            {
+                Assert.Fail("There was an error notifying the remote server that the file transfer has stalled: " + notifyTransferStalled2.Error);
+            }
+
+            // Wait for 2nd transfer attempt cancelled notification
+            while (!_serverReceivedTransferStalledNotification) { }
+            var changeControllerBack2 = _testServer.ChangeStalledControllerBackToRegularController(5);
+            if (changeControllerBack2.Failure)
+            {
+                Assert.Fail(changeControllerBack2.Error);
+            }
+
+            _clientNoFileTransferPending = true;
+            _serverStoppedSendingFileBytes = false;
+            _serverReceivedTransferStalledNotification = false;
+            _clientReceivedRetryLimitExceededNotification = false;
+
+            /////////////////////////////////////////////////////////////////////////////////////////////
+            //
+            // 3rd transfer attempt
+            var retryFileTransfer2 = await
+                _client.RetryFileTransferAsync(stalledId2).ConfigureAwait(false);
+
+            if (retryFileTransfer2.Failure)
+            {
+                Assert.Fail("There was an error attempting to retry the stalled file transfer: " + retryFileTransfer2.Error);
+            }
+
+            while (!_clientReceivedRetryLimitExceededNotification) { }
+
+            var stalledFileTransfer2 = _client.GetFileTransferById(stalledId2).Value;
+            Assert.IsFalse(stalledFileTransfer2.RetryLockoutExpired);
+
+            _clientReceivedRetryLimitExceededNotification = false;
+
+            /////////////////////////////////////////////////////////////////////////////////////////////
+            //
+            // 4th transfer attempt
+            var retryFileTransfer3 = await
+                _client.RetryFileTransferAsync(stalledId2).ConfigureAwait(false);
+
+            if (retryFileTransfer3.Failure)
+            {
+                Assert.Fail("There was an error attempting to retry the stalled file transfer: " + retryFileTransfer3.Error);
+            }
+            
+            await Task.Delay(_serverSettings.RetryLimitLockout);
+            Assert.IsTrue(stalledFileTransfer2.RetryLockoutExpired);
+
+            /////////////////////////////////////////////////////////////////////////////////////////////
+            //
+            // 5th transfer attempt
+            var retryFileTransfer4 = await
+                _client.RetryFileTransferAsync(stalledId2).ConfigureAwait(false);
+
+            if (retryFileTransfer4.Failure)
+            {
+                Assert.Fail("There was an error attempting to retry the stalled file transfer: " + retryFileTransfer4.Error);
+            }
+
+            // Wait for 5th transfer attempt
+            while (_clientNoFileTransferPending) { }
+
+            var pendingId3 = _clientState.PendingFileTransferIds[0];
+            var pendingFiletransfer3 = _client.GetFileTransferById(pendingId3).Value;
+
+            var transferResult3 = await _client.AcceptInboundFileTransferAsync(pendingFiletransfer3);
+            if (transferResult3.Failure)
+            {
+                Assert.Fail("There was an error receiving the file from the remote server: " + transferResult3.Error);
+            }
+
+            // Wait for all file bytes to be received
+            while (!_clientReceivedAllFileBytes)
+            {
+                if (_clientErrorOccurred)
+                {
+                    Assert.Fail("File transfer failed");
+                }
+            }
+
+            // Wait for server to receive confirmation message
+            while (!_serverReceivedConfirmationMessage) { }
+
+            Assert.IsTrue(File.Exists(receivedFilePath));
+            Assert.AreEqual(FileName, Path.GetFileName(receivedFilePath));
+
+            var receivedFileSize = new FileInfo(receivedFilePath).Length;
+            Assert.AreEqual(sentFileSize, receivedFileSize);
+        }
+
+        [TestMethod]
         public async Task VerifyRequestServerInfo()
         {
             _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestServerInfo_client.log";
             _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestServerInfo_server.log";
+            
+            _clientSettings.LocalServerPortNumber = 8011;
+            _serverSettings.LocalServerPortNumber = 8012;
 
-            if (_publicIp.IsEqualTo(IPAddress.None))
-            {
-                var attemptCounter = 1;
-                const int maxAttempts = 5;
-                var getPublicIpSucceeded = false;
-
-                while (!getPublicIpSucceeded && attemptCounter <= maxAttempts)
-                {
-                    var getPublicIpResult = await NetworkUtilities.GetPublicIPv4AddressAsync().ConfigureAwait(false);
-                    if (getPublicIpResult.Success)
-                    {
-                        _publicIp = getPublicIpResult.Value;
-                    }
-
-                    if (_publicIp.IsEqualTo(IPAddress.None))
-                    {
-                        attemptCounter++;
-                    }
-                    else
-                    {
-                        getPublicIpSucceeded = true;
-                    }
-                }
-            }
-
-            const int localPort = 8021;
-            const int remoteServerPort = 8022;
-
-            await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
+            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
@@ -578,7 +975,8 @@ namespace AaronLuna.AsyncFileServer.Test
             var serverInfoRequest =
                 await _client.RequestServerInfoAsync(
                     _localIp,
-                    remoteServerPort).ConfigureAwait(false);
+                    _serverSettings.LocalServerPortNumber)
+                    .ConfigureAwait(false);
 
             if (serverInfoRequest.Failure)
             { 
@@ -586,15 +984,22 @@ namespace AaronLuna.AsyncFileServer.Test
             }
 
             while (!_clientReceivedServerInfo) { }
-
+            
             Assert.AreEqual(_remoteFolder, _transferFolderPath);
-            Assert.IsTrue(_remoteServerLocalIp.IsEqualTo(_localIp));
             Assert.AreEqual(_thisServerPlatform, _remoteServerPlatform);
 
-            if (!_remoteServerPublicIp.IsEqualTo(IPAddress.None))
-            {
-                Assert.IsTrue(_remoteServerPublicIp.IsEqualTo(_publicIp));
-            }   
+            var localIpExpected = _server.MyInfo.LocalIpAddress;
+
+            Assert.IsNotNull(_remoteServerLocalIp);
+            Assert.AreEqual(localIpExpected.ToString(), _remoteServerLocalIp.ToString());
+            Assert.IsTrue(_remoteServerLocalIp.IsEqualTo(localIpExpected));
+
+            var publicIpExpected = _server.MyInfo.PublicIpAddress;
+
+            Assert.IsNotNull(_remoteServerPublicIp);
+            Assert.AreEqual(publicIpExpected.ToString(), _remoteServerPublicIp.ToString());
+            Assert.IsTrue(_remoteServerPublicIp.IsEqualTo(publicIpExpected));
+            
         }
 
         [TestMethod]
@@ -603,14 +1008,14 @@ namespace AaronLuna.AsyncFileServer.Test
             _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestFileList_client.log";
             _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestFileList_server.log";
 
-            const int localPort = 8011;
-            const int remoteServerPort = 8012;
+            _clientSettings.LocalServerPortNumber = 8013;
+            _serverSettings.LocalServerPortNumber = 8014;
 
-            await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
+            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
@@ -632,8 +1037,9 @@ namespace AaronLuna.AsyncFileServer.Test
             var fileListRequest =
                 await _client.RequestFileListAsync(
                         _localIp,
-                        remoteServerPort,
-                        _testFilesFolder).ConfigureAwait(false);
+                        _serverSettings.LocalServerPortNumber,
+                        _testFilesFolder)
+                    .ConfigureAwait(false);
 
             if (fileListRequest.Failure)
             {
@@ -680,22 +1086,20 @@ namespace AaronLuna.AsyncFileServer.Test
             _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyOutboundFileTransferRejected_client.log";
             _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyOutboundFileTransferRejected_server.log";
 
-            const int remoteServerPort = 8013;
-            const int localPort = 8014;
+            _serverSettings.LocalServerPortNumber = 8015;
+            _clientSettings.LocalServerPortNumber = 8016;
 
-            await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
+            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
             var token = _cts.Token;
-
             var sendFilePath = _localFilePath;
             var receiveFilePath = _remoteFilePath;
-            var receiveFolderPath = _remoteFolder;
 
             _runServerTask =
                 Task.Run(() =>
@@ -711,17 +1115,18 @@ namespace AaronLuna.AsyncFileServer.Test
             var sizeOfFileToSend = new FileInfo(sendFilePath).Length;
             Assert.IsTrue(File.Exists(receiveFilePath));
 
-            var sendFileResult1 =
+            var sendFileResult =
                 await _client.SendFileAsync(
                     _localIp,
-                    remoteServerPort,
+                    _serverSettings.LocalServerPortNumber,
                     _server.MyInfo.Name,
                     FileName,
                     sizeOfFileToSend,
                     _localFolder,
-                    receiveFolderPath).ConfigureAwait(false);
+                    _remoteFolder)
+                    .ConfigureAwait(false);
 
-            if (sendFileResult1.Failure)
+            if (sendFileResult.Failure)
             {
                 Assert.Fail("Error occurred sending outbound file request to server");
             }
@@ -735,17 +1140,17 @@ namespace AaronLuna.AsyncFileServer.Test
             _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyInboundFileTransferRejected_client.log";
             _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyInboundFileTransferRejected_server.log";
 
-            const int localPort = 8015;
-            const int remoteServerPort = 8016;
+            _clientSettings.LocalServerPortNumber = 8017;
+            _serverSettings.LocalServerPortNumber = 8018;
             var getFilePath = _remoteFilePath;
             var sentFileSize = new FileInfo(getFilePath).Length;
             var receivedFilePath = _localFilePath;
 
-            await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
+            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
@@ -766,19 +1171,20 @@ namespace AaronLuna.AsyncFileServer.Test
 
             Assert.IsTrue(File.Exists(receivedFilePath));
 
-            var getFileResult1 =
+            var getFileResult =
                 await _client.GetFileAsync(
                     _localIp,
-                    remoteServerPort,
+                    _serverSettings.LocalServerPortNumber,
                     _server.MyInfo.Name,
-                    Path.GetFileName(getFilePath),
+                    FileName,
                     sentFileSize,
-                    Path.GetDirectoryName(getFilePath),
-                    _localFolder).ConfigureAwait(false);
+                    _remoteFolder,
+                    _localFolder)
+                    .ConfigureAwait(false);
 
-            if (getFileResult1.Failure)
+            if (getFileResult.Failure)
             {
-                Assert.Fail("There was an error requesting the file from the remote server: " + getFileResult1.Error);
+                Assert.Fail("There was an error requesting the file from the remote server: " + getFileResult.Error);
             }
             
             while (!_clientRejectedFileTransfer) { }
@@ -790,14 +1196,14 @@ namespace AaronLuna.AsyncFileServer.Test
             _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyNoFilesAvailableToDownload_client.log";
             _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyNoFilesAvailableToDownload_server.log";
 
-            const int localPort = 8017;
-            const int remoteServerPort = 8018;
+            _clientSettings.LocalServerPortNumber = 8019;
+            _serverSettings.LocalServerPortNumber = 8020;
 
-            await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
+            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
@@ -819,7 +1225,7 @@ namespace AaronLuna.AsyncFileServer.Test
             var fileListRequest1 =
                 await _client.RequestFileListAsync(
                     _localIp,
-                    remoteServerPort,
+                    _serverSettings.LocalServerPortNumber,
                     _emptyFolder).ConfigureAwait(false);
 
             if (fileListRequest1.Failure)
@@ -834,8 +1240,9 @@ namespace AaronLuna.AsyncFileServer.Test
             var fileListRequest2 =
                 await _client.RequestFileListAsync(
                     _localIp,
-                    remoteServerPort,
-                    _testFilesFolder).ConfigureAwait(false);
+                    _serverSettings.LocalServerPortNumber,
+                    _testFilesFolder)
+                    .ConfigureAwait(false);
 
             if (fileListRequest2.Failure)
             {
@@ -882,14 +1289,14 @@ namespace AaronLuna.AsyncFileServer.Test
             _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestedFolderDoesNotExist_client.log";
             _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestedFolderDoesNotExist_server.log";
 
-            const int localPort = 8019;
-            const int remoteServerPort = 8020;
+            _clientSettings.LocalServerPortNumber = 8021;
+            _serverSettings.LocalServerPortNumber = 8022;
 
-            await _server.InitializeAsync(_cidrIp,  remoteServerPort).ConfigureAwait(false);
+            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
             _server.EventOccurred += HandleServerEvent;
             _server.SocketEventOccurred += HandleServerEvent;
 
-            await _client.InitializeAsync(_cidrIp,  localPort).ConfigureAwait(false);
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
             _client.EventOccurred += HandleClientEvent;
             _client.SocketEventOccurred += HandleClientEvent;
 
@@ -913,8 +1320,9 @@ namespace AaronLuna.AsyncFileServer.Test
             var fileListRequest1 =
                 await _client.RequestFileListAsync(
                     _localIp,
-                    remoteServerPort,
-                    _tempFolder).ConfigureAwait(false);
+                    _serverSettings.LocalServerPortNumber,
+                    _tempFolder)
+                    .ConfigureAwait(false);
 
             if (fileListRequest1.Failure)
             {
@@ -928,8 +1336,9 @@ namespace AaronLuna.AsyncFileServer.Test
             var fileListRequest2 =
                 await _client.RequestFileListAsync(
                     _localIp,
-                    remoteServerPort,
-                    _testFilesFolder).ConfigureAwait(false);
+                    _serverSettings.LocalServerPortNumber,
+                    _testFilesFolder)
+                    .ConfigureAwait(false);
 
             if (fileListRequest2.Failure)
             {
@@ -1009,6 +1418,10 @@ namespace AaronLuna.AsyncFileServer.Test
                     _clientReceivedAllFileBytes = true;
                     break;
 
+                case ServerEventType.ReceivedRetryLimitExceeded:
+                    _clientReceivedRetryLimitExceededNotification = true;
+                    break;
+
                 case ServerEventType.RemoteServerRejectedFileTransfer:
                     _serverRejectedFileTransfer = true;
                     break;
@@ -1051,6 +1464,14 @@ namespace AaronLuna.AsyncFileServer.Test
                 case ServerEventType.ReceivedTextMessage:
                     _serverReceivedTextMessage = true;
                     _messageFromClient = serverEvent.TextMessage;
+                    break;
+
+                case ServerEventType.StoppedSendingFileBytes:
+                    _serverStoppedSendingFileBytes = true;
+                    break;
+
+                case ServerEventType.FileTransferStalled:
+                    _serverReceivedTransferStalledNotification = true;
                     break;
 
                 case ServerEventType.ReceiveFileBytesComplete:

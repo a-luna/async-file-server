@@ -83,7 +83,7 @@
             serverFromFile.PortNumber = _state.SelectedServerInfo.PortNumber;
             serverFromFile.Name = _state.SelectedServerInfo.Name;
 
-            return ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
+            return _state.SaveSettingsToFile();
         }
     }
 }

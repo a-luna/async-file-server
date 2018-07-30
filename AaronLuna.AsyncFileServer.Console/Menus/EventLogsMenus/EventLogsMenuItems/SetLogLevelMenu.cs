@@ -59,7 +59,7 @@
 
             _state.Settings.LogLevel = _logLevels[menuIndex - 1];
 
-            return ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
+            return _state.SaveSettingsToFile();
         }
     }
 }

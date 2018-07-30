@@ -104,11 +104,11 @@ namespace AaronLuna.AsyncFileServer.Model
             }
             catch (FileNotFoundException ex)
             {
-                return Result.Fail(Environment.NewLine + ex.GetReport());
+                return Result.Fail(ex.GetReport());
             }
             catch (Exception ex)
             {
-                return Result.Fail(Environment.NewLine + ex.GetReport());
+                return Result.Fail(ex.GetReport());
             }
 
             return Result.Ok();
@@ -149,11 +149,11 @@ namespace AaronLuna.AsyncFileServer.Model
             }
             catch (InvalidOperationException ex)
             {
-                return Result.Fail<ServerSettings>(Environment.NewLine + ex.GetReport());
+                return Result.Fail<ServerSettings>(ex.GetReport());
             }
             catch (Exception ex)
             {
-                return Result.Fail<ServerSettings>(Environment.NewLine + ex.GetReport());
+                return Result.Fail<ServerSettings>(ex.GetReport());
             }
 
             return Result.Ok(settings);

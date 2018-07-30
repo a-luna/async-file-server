@@ -86,7 +86,7 @@
             _state.Settings.LocalNetworkCidrIp = _state.UserEntryLocalNetworkCidrIp;
             _state.LocalServer.UpdateSettings(_state.Settings);
 
-            return ServerSettings.SaveToFile(_state.Settings, _state.SettingsFilePath);
+            return _state.SaveSettingsToFile();
         }
     }
 }

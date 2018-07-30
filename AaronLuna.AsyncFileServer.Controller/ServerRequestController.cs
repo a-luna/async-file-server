@@ -732,7 +732,7 @@
                 : Result.Fail<Socket>($"Request received is not valid for this operation ({RequestType}).");
         }
 
-        public Result<FileTransferController> GetRetryLockoutDetails(FileTransferController fileTransfer)
+        public Result<FileTransferController>  GetRetryLockoutDetails(FileTransferController fileTransfer)
         {
             if (RequestHasNotBeenReceived)
             {
@@ -746,7 +746,6 @@
 
         FileTransferController ApplyRetryLockoutDetails(FileTransferController fileTransfer)
         {
-            fileTransfer.RemoteServerRetryLimit = _fileTransferRetryLimit;
             fileTransfer.RetryLockoutExpireTime = new DateTime(_lockoutExpireTimeTicks);
 
             return fileTransfer;

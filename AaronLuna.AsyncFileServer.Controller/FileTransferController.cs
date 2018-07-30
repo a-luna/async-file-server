@@ -45,6 +45,7 @@
 
             ErrorMessage = string.Empty;
 
+            RemoteServerRetryLimit = settings.TransferRetryLimit;
             RetryCounter = 1;
             RemoteServerTransferId = 0;
             TransferResponseCode = 0;
@@ -93,7 +94,7 @@
         public int RemoteServerRetryLimit { get; set; }
         public DateTime RetryLockoutExpireTime { get; set; }
         public string RetryLockoutTimeRemianing => (RetryLockoutExpireTime - DateTime.Now).ToFormattedString();
-        public bool RetryLockoutExpired => RetryLockoutExpireTime > DateTime.Now;
+        public bool RetryLockoutExpired => RetryLockoutExpireTime < DateTime.Now;
 
         public int CurrentBytesReceived { get; set; }
         public long TotalBytesReceived { get; set; }
@@ -113,7 +114,7 @@
         public event EventHandler<ServerEvent> SocketEventOccurred;
         public event EventHandler<ServerEvent> FileTransferProgress;
 
-        public void Initialize(
+        public virtual void Initialize(
             FileTransferDirection direction, 
             FileTransferInitiator initiator,
             ServerInfo localServerInfo,
@@ -161,7 +162,7 @@
             PercentComplete = 0;
         }
 
-        public async Task<Result> SendFileAsync(Socket socket, CancellationToken token)
+        public virtual async Task<Result> SendFileAsync(Socket socket, CancellationToken token)
         {
             _socket = socket;
             Status = FileTransferStatus.InProgress;
@@ -480,7 +481,8 @@
                 });
             }
 
-            if (InboundFileTransferStalled)
+            var fileTransferIsIncomplete = (TotalBytesReceived / (float) FileSizeInBytes) < 1;
+            if (InboundFileTransferStalled || fileTransferIsIncomplete)
             {
                 const string fileTransferStalledErrorMessage =
                     "Data is no longer bring received from remote client, file transfer has been canceled (ReceiveFileAsync)";

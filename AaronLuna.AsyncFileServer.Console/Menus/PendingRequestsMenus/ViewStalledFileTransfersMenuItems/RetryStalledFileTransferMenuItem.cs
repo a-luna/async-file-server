@@ -24,12 +24,12 @@
 
         public async Task<Result> ExecuteAsync()
         {
-            var retryFileTransferesult = await _state.LocalServer.RetryFileTransferAsync(
+            var retryFileTransfer = await _state.LocalServer.RetryFileTransferAsync(
                 _fileTransferId).ConfigureAwait(false);
 
-            return retryFileTransferesult.Success
+            return retryFileTransfer.Success
                 ? Result.Ok()
-                : retryFileTransferesult;
+                : retryFileTransfer;
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace AaronLuna.AsyncFileServer.Controller
+﻿using AaronLuna.Common.IO;
+
+namespace AaronLuna.AsyncFileServer.Controller
 {
     using System;
     using System.Collections.Generic;
@@ -21,8 +23,7 @@
     {
         const string NotInitializedMessage =
             "Server is unitialized and cannot handle incoming connections";
-
-        string _myLanCidrIp;
+        
         int _initialized;
         int _busy;
         int _shutdownInitiated;
@@ -96,16 +97,16 @@
                 Name = "AsyncFileServer"
             };
 
-            _textSessionId = 1;
-            _requestId = 1;
-            _fileTransferId = 1;
-            _myLanCidrIp = string.Empty;
-            _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            _eventLog = new List<ServerEvent>();
             ErrorLog = new List<ServerError>();
             Requests = new List<ServerRequestController>();
             FileTransfers = new List<FileTransferController>();
             TextSessions = new List<TextSession>();
+
+            _textSessionId = 1;
+            _requestId = 1;
+            _fileTransferId = 1;
+            _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            _eventLog = new List<ServerEvent>();            
             _settings = new ServerSettings();
 
             string GetDefaultTransferFolder()
@@ -129,7 +130,7 @@
                 Name = name
             };
 
-            _settings = settings;
+            UpdateSettings(settings);
         }
         
         public bool IsListening => ServerIsListening;
@@ -279,9 +280,13 @@
 
         }
 
-        public async Task InitializeAsync(string cidrIp, int port)
+        public async Task InitializeAsync(ServerSettings settings)
         {
             if (ServerIsInitialized) return;
+
+            UpdateSettings(settings);
+            var cidrIp = _settings.LocalNetworkCidrIp;
+            var port = _settings.LocalServerPortNumber;
 
             var getLocalIp = NetworkUtilities.GetLocalIPv4Address(cidrIp);
 
@@ -309,8 +314,7 @@
             {
                 MyInfo.SessionIpAddress = publicIp;
             }
-
-            _myLanCidrIp = cidrIp;
+            
             ServerIsInitialized = true;
         }
 
@@ -1513,6 +1517,8 @@
                 return receiveFile;
             }
 
+            if (inboundFileTransfer.Status == FileTransferStatus.Stalled) return Result.Ok();
+
             var confirmFileTransfer =
                 await SendFileTransferResponseAsync(
                     ServerRequestType.FileTransferComplete,
@@ -1683,6 +1689,58 @@
             }
 
             var stalledFileTransfer = getFileTransfer.Value;
+            FileHelper.DeleteFileIfAlreadyExists(stalledFileTransfer.LocalFilePath, 5);
+
+            if (stalledFileTransfer.Status == FileTransferStatus.RetryLimitExceeded)
+            {
+                if (stalledFileTransfer.RetryLockoutExpired)
+                {
+                    stalledFileTransfer.ResetTransferValues();
+                    stalledFileTransfer.RetryCounter = 1;
+
+                    _eventLog.Add(new ServerEvent
+                    {
+                        EventType = ServerEventType.RetryLimitLockoutExpired,
+                        LocalFolder = stalledFileTransfer.LocalFolderPath,
+                        FileName = stalledFileTransfer.FileName,
+                        FileSizeInBytes = stalledFileTransfer.FileSizeInBytes,
+                        RemoteServerIpAddress = stalledFileTransfer.RemoteServerInfo.SessionIpAddress,
+                        RemoteServerPortNumber = stalledFileTransfer.RemoteServerInfo.PortNumber,
+                        RetryCounter = stalledFileTransfer.RetryCounter,
+                        RemoteServerRetryLimit = stalledFileTransfer.RemoteServerRetryLimit,
+                        RetryLockoutExpireTime = stalledFileTransfer.RetryLockoutExpireTime,
+                        FileTransferId = stalledFileTransfer.Id
+                    });
+
+                    EventOccurred?.Invoke(this, _eventLog.Last());
+                }
+                else
+                {
+                    var lockoutTimeRemaining =
+                        (stalledFileTransfer.RetryLockoutExpireTime - DateTime.Now).ToFormattedString();
+
+                    var retryLimitExceeded =
+                        $"Maximum # of attempts to complete stalled file transfer reached or exceeded: {Environment.NewLine}" +
+                        $"File Name.................: {stalledFileTransfer.FileName}{Environment.NewLine}" +
+                        $"Download Attempts.........: {stalledFileTransfer.RetryCounter}{Environment.NewLine}" +
+                        $"Max Attempts Allowed......: {stalledFileTransfer.RemoteServerRetryLimit}{Environment.NewLine}" +
+                        $"Current Time..............: {DateTime.Now:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                        $"Download Lockout Expires..: {stalledFileTransfer.RetryLockoutExpireTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
+                        $"Remaining Lockout Time....: {lockoutTimeRemaining}{Environment.NewLine}";
+
+                    ErrorLog.Add(new ServerError(retryLimitExceeded));
+
+                    _eventLog.Add(new ServerEvent
+                    {
+                        EventType = ServerEventType.ErrorOccurred,
+                        ErrorMessage = retryLimitExceeded
+                    });
+
+                    EventOccurred?.Invoke(this, _eventLog.Last());
+
+                    return Result.Ok();
+                }
+            }
 
             var retryTransfer =
                 await SendFileTransferResponseAsync(
@@ -1742,12 +1800,41 @@
 
             EventOccurred?.Invoke(this, _eventLog.Last());
 
+            if (canceledFileTransfer.Status == FileTransferStatus.RetryLimitExceeded)
+            {
+                if (canceledFileTransfer.RetryLockoutExpired)
+                {
+                    canceledFileTransfer.RetryCounter = 0;
+                    canceledFileTransfer.ResetTransferValues();
+
+                    _eventLog.Add(new ServerEvent
+                    {
+                        EventType = ServerEventType.RetryLimitLockoutExpired,
+                        LocalFolder = canceledFileTransfer.LocalFolderPath,
+                        FileName = canceledFileTransfer.FileName,
+                        FileSizeInBytes = canceledFileTransfer.FileSizeInBytes,
+                        RemoteServerIpAddress = canceledFileTransfer.RemoteServerInfo.SessionIpAddress,
+                        RemoteServerPortNumber = canceledFileTransfer.RemoteServerInfo.PortNumber,
+                        RetryCounter = canceledFileTransfer.RetryCounter,
+                        RemoteServerRetryLimit = canceledFileTransfer.RemoteServerRetryLimit,
+                        RetryLockoutExpireTime = canceledFileTransfer.RetryLockoutExpireTime,
+                        FileTransferId = canceledFileTransfer.Id
+                    });
+
+                    EventOccurred?.Invoke(this, _eventLog.Last());
+
+                    return await SendOutboundFileTransferRequestAsync(canceledFileTransfer).ConfigureAwait(false);
+                }
+
+                return await SendRetryLimitExceededAsync(canceledFileTransfer).ConfigureAwait(false);
+            }
+
             if (canceledFileTransfer.RetryCounter >= TransferRetryLimit)
             {
                 var retryLimitExceeded =
                     "Maximum # of attempts to complete stalled file transfer reached or " +
                     $"exceeded ({TransferRetryLimit} failed attempts for " +
-                    $"\"{Path.GetFileName(canceledFileTransfer.LocalFilePath)}\"):" +
+                    $"\"{canceledFileTransfer.FileName}\"):" +
                     Environment.NewLine + Environment.NewLine + canceledFileTransfer.OutboundRequestDetails();
 
                 canceledFileTransfer.Status = FileTransferStatus.RetryLimitExceeded;
@@ -1769,7 +1856,6 @@
             }
 
             canceledFileTransfer.ResetTransferValues();
-            canceledFileTransfer.RemoteServerRetryLimit = TransferRetryLimit;
 
             return await SendOutboundFileTransferRequestAsync(canceledFileTransfer).ConfigureAwait(false);
         }
@@ -1868,10 +1954,11 @@
                 (inboundFileTransfer.RetryLockoutExpireTime - DateTime.Now).ToFormattedString();
 
             var retryLimitExceeded =
-                "Maximum # of attempts to complete stalled file transfer reached or exceeded: " +
+                $"Maximum # of attempts to complete stalled file transfer reached or exceeded: {Environment.NewLine}" +
                 $"File Name.................: {inboundFileTransfer.FileName}{Environment.NewLine}" +
                 $"Download Attempts.........: {inboundFileTransfer.RetryCounter}{Environment.NewLine}" +
                 $"Max Attempts Allowed......: {inboundFileTransfer.RemoteServerRetryLimit}{Environment.NewLine}" +
+                $"Current Time..............: {DateTime.Now:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
                 $"Download Lockout Expires..: {inboundFileTransfer.RetryLockoutExpireTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
                 $"Remaining Lockout Time....: {lockoutTimeRemaining}{Environment.NewLine}";
 
@@ -2309,7 +2396,7 @@
 
         void HandleServerInfoResponse(ServerRequestController inboundRequest)
         {
-            inboundRequest.RemoteServerInfo.DetermineSessionIpAddress(_myLanCidrIp);
+            inboundRequest.RemoteServerInfo.DetermineSessionIpAddress(_settings.LocalNetworkCidrIp);
 
             _eventLog.Add(new ServerEvent
             {
@@ -2340,7 +2427,7 @@
                     ServerRequestType.ShutdownServerCommand,
                     ServerEventType.SendShutdownServerCommandStarted,
                     ServerEventType.SendShutdownServerCommandComplete).ConfigureAwait(false);
-
+            
             return sendShutdownCommand.Success
                 ? Result.Ok()
                 : Result.Fail($"Error occurred shutting down the server + {sendShutdownCommand.Error}");

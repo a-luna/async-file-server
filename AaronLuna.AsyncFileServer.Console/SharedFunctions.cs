@@ -189,14 +189,14 @@
             while (bitCount is 0)
             {
                 var prompt =
-                    $"{Environment.NewLine}{Resources.Prompt_GetCidrIpNetworkBitCount} " +
-                    $"(range {CidrPrefixBitsCountMin}-{CidrPrefixBitsCountMax}):";
+                    $"{Resources.Prompt_GetCidrIpNetworkBitCount} (range {CidrPrefixBitsCountMin}-{CidrPrefixBitsCountMax}):";
 
                 DisplayLocalServerInfo(state);
                 Console.WriteLine(prompt);
-                var input = Console.ReadLine();
 
+                var input = Console.ReadLine();
                 var inputValidation = ValidateNumberIsWithinRange(input, CidrPrefixBitsCountMin, CidrPrefixBitsCountMax);
+
                 if (inputValidation.Failure)
                 {
                     ModalMessage(inputValidation.Error, Resources.Prompt_PressEnterToContinue);
