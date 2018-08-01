@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace AaronLuna.AsyncFileServer.Model
+﻿namespace AaronLuna.AsyncFileServer.Model
 {
     using System.Collections.Generic;
     using System.IO;
@@ -8,8 +6,8 @@ namespace AaronLuna.AsyncFileServer.Model
 
     public class FileInfoList : List<(string fileName, string folderPath, long fileSizeBytes)>
     {
-        public const string UnitSeparator = "\u001f";
-        public const string RecordSeparator = "\u001e";
+        public const string FileInfoSeparator = "\u001f";
+        public const string FileSeparator = "\u001e";
 
         public FileInfoList() { }
 

@@ -347,11 +347,11 @@
 
             var fileInfoLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 5 + remoteServerIpLen + targetFolderLen);
             var fileInfo = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 6 + remoteServerIpLen + targetFolderLen, fileInfoLen);
-            
+
             var fileInfoList = new FileInfoList();
-            foreach (var infoString in fileInfo.Split(FileInfoList.RecordSeparator))
+            foreach (var infoString in fileInfo.Split(FileInfoList.FileSeparator))
             {
-                var infoSplit = infoString.Split(FileInfoList.UnitSeparator);
+                var infoSplit = infoString.Split(FileInfoList.FileInfoSeparator);
                 if (infoSplit.Length != 3) continue;
 
                 var fileName = infoSplit[0];

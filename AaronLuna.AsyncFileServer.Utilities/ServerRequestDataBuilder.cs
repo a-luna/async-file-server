@@ -2,8 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Globalization;
-    using System.IO;
     using System.Linq;
     using System.Text;
 
@@ -257,20 +255,18 @@
                 var fileName = fileInfoList[i].fileName;
                 var folderPath = fileInfoList[i].folderPath;
                 var fileSize = fileInfoList[i].fileSizeBytes;
-                var fileInfoString = fileName + FileInfoList.UnitSeparator +
-                                     folderPath + FileInfoList.UnitSeparator +
-                                     fileSize;
+                var fileInfoString = $"{fileName}{FileInfoList.FileInfoSeparator}{folderPath}{FileInfoList.FileInfoSeparator}{fileSize}";
 
                 allFileInfo += fileInfoString;
 
                 if (!i.IsLastIteration(fileInfoList.Count))
                 {
-                    allFileInfo += FileInfoList.RecordSeparator;
+                    allFileInfo += FileInfoList.FileSeparator;
                 }
             }
 
             var fileInfoListData = Encoding.UTF8.GetBytes(allFileInfo);
-            var fileInfoListLen = BitConverter.GetBytes(fileInfoListData.Length);;
+            var fileInfoListLen = BitConverter.GetBytes(fileInfoListData.Length);
 
             var wrappedRequest = new List<byte>();
             wrappedRequest.AddRange(requestType);
