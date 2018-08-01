@@ -83,6 +83,7 @@ namespace AaronLuna.AsyncFileServerTest
         bool _clientReceivedFileInfoList;
         bool _clientErrorOccurred;
         bool _clientReceivedRetryLimitExceededNotification;
+        bool _clientReceivedNotificationFileDoesNotExist;
 
         [TestInitialize]
         public void Setup()
@@ -107,6 +108,7 @@ namespace AaronLuna.AsyncFileServerTest
             _serverErrorOccurred = false;
             _serverStoppedSendingFileBytes = false;
             _serverReceivedTransferStalledNotification = false;
+            _clientReceivedNotificationFileDoesNotExist = false;
 
             _clientReceivedTextMessage = false;
             _clientNoFileTransferPending = true;
@@ -118,6 +120,7 @@ namespace AaronLuna.AsyncFileServerTest
             _clientReceivedFileInfoList = false;
             _clientErrorOccurred = false;
             _clientReceivedRetryLimitExceededNotification = false;
+            _clientReceivedNotificationFileDoesNotExist = false;
 
             _fileInfoList1 = new FileInfoList();
             _fileInfoList2 = new FileInfoList();
@@ -415,10 +418,10 @@ namespace AaronLuna.AsyncFileServerTest
         }
 
         [TestMethod]
-        public async Task VerifyNoFilesAvailableToDownload()
+        public async Task VerifyRequestFileListAndFolderIsEmpty()
         {
-            _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyNoFilesAvailableToDownload_client.log";
-            _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyNoFilesAvailableToDownload_server.log";
+            _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestFileListAndFolderIsEmpty_client.log";
+            _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestFileListAndFolderIsEmpty_server.log";
 
             _clientSettings.LocalServerPortNumber = 8019;
             _serverSettings.LocalServerPortNumber = 8020;
@@ -509,10 +512,10 @@ namespace AaronLuna.AsyncFileServerTest
         }
 
         [TestMethod]
-        public async Task VerifyRequestedFolderDoesNotExist()
+        public async Task VerifyRequestFileListAndFolderDoesNotExist()
         {
-            _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestedFolderDoesNotExist_client.log";
-            _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestedFolderDoesNotExist_server.log";
+            _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestFileListAndFolderDoesNotExist_client.log";
+            _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestFileListAndFolderDoesNotExist_server.log";
 
             _clientSettings.LocalServerPortNumber = 8021;
             _serverSettings.LocalServerPortNumber = 8022;
@@ -1001,6 +1004,68 @@ namespace AaronLuna.AsyncFileServerTest
             
             var receivedFileSize = new FileInfo(receivedFilePath).Length;
             Assert.AreEqual(sentFileSize, receivedFileSize);
+        }
+
+        [TestMethod]
+        public async Task VerifyGetFileAndFileDoesNotExist()
+        {
+
+            _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyGetFile_client.log";
+            _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyGetFile_server.log";
+
+            _clientSettings.LocalServerPortNumber = 8025;
+            _serverSettings.LocalServerPortNumber = 8026;
+
+            var getFilePath = _remoteFilePath;
+            var sentFileSize = new FileInfo(getFilePath).Length;
+            var receivedFilePath = _localFilePath;
+
+            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
+            _server.EventOccurred += HandleServerEvent;
+            _server.SocketEventOccurred += HandleServerEvent;
+
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
+            _client.EventOccurred += HandleClientEvent;
+            _client.SocketEventOccurred += HandleClientEvent;
+
+            var token = _cts.Token;
+
+            _runServerTask =
+                Task.Run(() =>
+                        _server.RunAsync(token),
+                    token);
+
+            _runClientTask =
+                Task.Run(() =>
+                        _client.RunAsync(token),
+                    token);
+
+            while (!_server.IsListening) { }
+            while (!_client.IsListening) { }
+
+            FileHelper.DeleteFileIfAlreadyExists(getFilePath, 3);
+            Assert.IsFalse(File.Exists(getFilePath));
+
+            FileHelper.DeleteFileIfAlreadyExists(receivedFilePath, 3);
+            Assert.IsFalse(File.Exists(receivedFilePath));
+
+            var getFileResult =
+                await _client.GetFileAsync(
+                    _localIp,
+                    _serverSettings.LocalServerPortNumber,
+                    _server.MyInfo.Name,
+                    FileName,
+                    sentFileSize,
+                    _remoteFolder,
+                    _localFolder).ConfigureAwait(false);
+
+            if (getFileResult.Failure)
+            {
+                var getFileError = "There was an error requesting the file from the remote server: " + getFileResult.Error;
+                Assert.Fail(getFileError);
+            }
+
+            while (!_clientReceivedNotificationFileDoesNotExist) { }
         }
 
         [TestMethod]
@@ -1511,6 +1576,10 @@ namespace AaronLuna.AsyncFileServerTest
                     }
 
                     _clientReceivedFileInfoList = true;
+                    break;
+
+                case ServerEventType.ReceivedNotificationFileDoesNotExist:
+                    _clientReceivedNotificationFileDoesNotExist = true;
                     break;
 
                 case ServerEventType.ReceiveFileBytesComplete:

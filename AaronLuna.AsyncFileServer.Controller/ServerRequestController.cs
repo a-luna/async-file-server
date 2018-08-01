@@ -18,7 +18,7 @@
     {
         internal static readonly string ErrorNoDataReceived =
             "Request from remote server has not been received.";
-
+        
         internal static readonly string ErrorRequestInitiatedByRemoteServer =
             "File Transfer was initiated by remote server, please call GetInboundFileTransfer() " +
             "to retrieve all transfer details.";
@@ -86,7 +86,8 @@
         public ServerRequestDirection Direction => _request.Direction;
         public DateTime TimeStamp => _request.TimeStamp;
         public bool RequestHasNotBeenReceived => Status == ServerRequestStatus.NoData;
-        public bool IsInboundFileTransferRequest => RequestType == ServerRequestType.InboundFileTransferRequest;
+        public bool InboundTransferIsRequested => RequestType == ServerRequestType.InboundFileTransferRequest;
+        public bool OutboundTransferIsRequested => RequestType == ServerRequestType.OutboundFileTransferRequest;
         public bool RequestTypeIsFileTransferResponse => RequestType.IsFileTransferResponse();
         public bool RequestTypeIsFileTransferError => RequestType.IsFileTransferError();
 
@@ -602,6 +603,21 @@
                 : Result.Fail<FileTransferController>($"Request received is not valid for this operation ({RequestType}).");
         }
 
+        public Result<bool> RequestedFileExists()
+        {
+            if (RequestHasNotBeenReceived)
+            {
+                return Result.Fail<bool>(ErrorNoDataReceived);
+            }
+
+            var localFilePath = Path.Combine(_localFolderPath, _fileName);
+
+            return RequestType == ServerRequestType.OutboundFileTransferRequest
+                ? Result.Ok(File.Exists(localFilePath))
+                : Result.Fail<bool>(
+                    $"Request received is not valid for this operation ({RequestType}).");
+        }
+
         public Result<FileTransferController> GetOutboundFileTransfer(
             int fileTransferId,
             ServerSettings settings,
@@ -658,7 +674,7 @@
                 return Result.Fail<int>(ErrorNoDataReceived);
             }
 
-            return RequestTypeIsFileTransferError
+            return RequestTypeIsFileTransferError || OutboundTransferIsRequested
                 ? Result.Ok(_remoteServerFileTransferId)
                 : Result.Fail<int>($"Request received is not valid for this operation ({RequestType}).");
         }

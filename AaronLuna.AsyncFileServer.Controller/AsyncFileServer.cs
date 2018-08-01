@@ -913,6 +913,16 @@ namespace AaronLuna.AsyncFileServer.Controller
 
         async Task<Result> HandleOutboundFileTransferRequestAsync(ServerRequestController inboundRequest)
         {
+            var requestedFileExists = inboundRequest.RequestedFileExists().Value;
+            if (!requestedFileExists)
+            {
+                var remoteServerTransferId = inboundRequest.GetRemoteServerFileTransferId().Value;
+
+                return await
+                    SendRequestedFileDoesNotExistAsync(inboundRequest, remoteServerTransferId)
+                        .ConfigureAwait(false);
+            }
+
             var getFileTransfer =
                 inboundRequest.GetOutboundFileTransfer(_fileTransferId, _settings, MyInfo);
 
@@ -933,17 +943,6 @@ namespace AaronLuna.AsyncFileServer.Controller
                 _fileTransferId++;
             }
 
-            if (!File.Exists(outboundFileTransfer.LocalFilePath))
-            {
-                outboundFileTransfer.TransferResponseCode = outboundFileTransfer.RemoteServerTransferId;
-
-                return await SendFileTransferResponseAsync(
-                    ServerRequestType.RequestedFileDoesNotExist,
-                    outboundFileTransfer,
-                    ServerEventType.SendNotificationFileDoesNotExistStarted,
-                    ServerEventType.SendNotificationFileDoesNotExistComplete).ConfigureAwait(false);
-            }
-
             _eventLog.Add(new ServerEvent
             {
                 EventType = ServerEventType.ReceivedOutboundFileTransferRequest,
@@ -960,6 +959,63 @@ namespace AaronLuna.AsyncFileServer.Controller
             EventOccurred?.Invoke(this, _eventLog.Last());
 
             return await SendOutboundFileTransferRequestAsync(outboundFileTransfer).ConfigureAwait(false);
+        }
+        
+        async Task<Result<ServerRequestController>> SendRequestedFileDoesNotExistAsync(
+            ServerRequestController inboundRequest,
+            int remoteServerTransferId)
+        {
+            var outboundRequest =
+                new ServerRequestController(_requestId, _settings, inboundRequest.RemoteServerInfo);
+
+            outboundRequest.EventOccurred += HandleEventOccurred;
+            outboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
+
+            lock (RequestQueueLock)
+            {
+                Requests.Add(outboundRequest);
+                _requestId++;
+            }
+
+            var requestBytes =
+                ServerRequestDataBuilder.ConstructRequestWithInt64Value(
+                    ServerRequestType.RequestedFileDoesNotExist,
+                    MyInfo.LocalIpAddress.ToString(),
+                    MyInfo.PortNumber,
+                    remoteServerTransferId);
+
+            var sendRequestStartedEvent = new ServerEvent
+            {
+                EventType = ServerEventType.SendNotificationFileDoesNotExistStarted,
+                RemoteServerIpAddress = inboundRequest.RemoteServerInfo.SessionIpAddress,
+                RemoteServerPortNumber = inboundRequest.RemoteServerInfo.PortNumber,
+                LocalIpAddress = MyInfo.LocalIpAddress,
+                LocalPortNumber = MyInfo.PortNumber,
+                FileTransferId = inboundRequest.Id,
+                RequestId = outboundRequest.Id
+            };
+
+            var sendRequestCompleteEvent = new ServerEvent
+            {
+                EventType = ServerEventType.SendNotificationFileDoesNotExistComplete,
+                RemoteServerIpAddress = inboundRequest.RemoteServerInfo.SessionIpAddress,
+                RemoteServerPortNumber = inboundRequest.RemoteServerInfo.PortNumber,
+                LocalIpAddress = MyInfo.LocalIpAddress,
+                LocalPortNumber = MyInfo.PortNumber,
+                FileTransferId = inboundRequest.Id,
+                RequestId = outboundRequest.Id
+            };
+
+            var sendRequest = await
+                outboundRequest.SendServerRequestAsync(
+                    requestBytes,
+                    sendRequestStartedEvent,
+                    sendRequestCompleteEvent);
+
+            if (sendRequest.Success) return Result.Ok(outboundRequest);
+
+            outboundRequest.Status = ServerRequestStatus.Error;
+            return Result.Fail<ServerRequestController>(sendRequest.Error);
         }
 
         async Task<Result> SendOutboundFileTransferRequestAsync(FileTransferController outboundFileTransfer)

@@ -6,7 +6,6 @@
 //TODO: Change AsyncFileServer API to use ServerInfo objects and folderId (int) instead of ipaddress, portNumber, folderPath, etc. Only public method that accepts IP,Port should be RequestServerInfo()
 //TODO: Create IsEqualTo() method for FileTransferController. Check when outbound transfer is requested to maintain the integrity of the retry limit/lockout behavior
 //TODO: If user calls GetFile() multiple times for the same file/remote server, display an error indicating that this transfer is already pending, do not send request. Also, check if it aleady exists in target folder and do not send request.
-//TODO: Another unit test: reject file transfer using public method RejectInboundFileTransferAsync()
 
 namespace AaronLuna.AsyncFileServer.Console
 {
