@@ -6,6 +6,7 @@ environment:
     secure: /u9GxWoJiR6ovfJc0RVLiV7YxRgOu1Hp6SJtethG2+K8GfOeC2+LxwIR9QcP/ujt
 
 before_test:
+  - git submodule update --init --recursive
   - dotnet --info
   - dotnet restore
 
