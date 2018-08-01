@@ -40,8 +40,8 @@ DevTracker*
 AaronLuna.AsyncFileServer.Tools/
 
 # Code coverage files
-GeneratedReports/
-/GeneratedReports/*
+*/CodeCoverageReport.xml
+*/ReportGenerator Output/*
 coverage-html
 coverage.json
 coverage.hits
