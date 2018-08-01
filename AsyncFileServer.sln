@@ -22,11 +22,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AaronLuna.AsyncFileServer.C
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AaronLuna.AsyncFileServerTest", "AaronLuna.AsyncFileServerTest\AaronLuna.AsyncFileServerTest.csproj", "{8616B582-41A4-40A8-8B56-5EA8DE618E88}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CodeCoverage", "CodeCoverage", "{D318C8AA-256D-4B55-932C-31F119E9B843}"
-	ProjectSection(SolutionItems) = preProject
-		GenerateCodeCoverageReport.bat = GenerateCodeCoverageReport.bat
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CI", "CI", "{7DA78DE7-AC82-4F3D-A449-DFD80BF26D50}"
 	ProjectSection(SolutionItems) = preProject
 		.travis.yml = .travis.yml
