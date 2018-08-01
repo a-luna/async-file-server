@@ -5,9 +5,9 @@ using AaronLuna.AsyncFileServer.Controller;
 using AaronLuna.AsyncFileServer.Model;
 using AaronLuna.Common.Result;
 
-namespace AaronLuna.AsyncFileServer.Test.TestClasses
+namespace AaronLuna.AsyncFileServerTest.TestClasses
 {
-    class AsyncFileServerTest : Controller.AsyncFileServer
+    class AsyncFileServerTest : AsyncFileServer.Controller.AsyncFileServer
     {
         readonly ServerSettings _testSettings;
         FileTransferController _originalFileTransfer;

@@ -1,7 +1,12 @@
 ﻿//TODO: Determine if it will be simple or difficult to show deconstructed request bytes and how each region maps to fileNameLen, fileName, portNumLen, portNum, etc
-//TODO: In the AaronLuna.AsyncFileServer.Test namespace, create a filetransfercontroller subclass that overrides the defaut SendFileAsync() behavior to send only 10% of a file in order to be used within a set of unit tests that verify the stalled timeout/retry counter/limit/lockout timespan settings are working correctly.
-//TODO: Need to create a test case to verify the behavior when server is busy and more requests are received but are not processed. The pending requests should be automatically processed once the server is no longer busy. Need to verify that all request types are processed correctly including text messages an inbound file transfer requests
+//TODO: Need to create a test case to verify the behavior when server is busy and more requests are received but are not processed. The pending requests should be automatically processed once the server is no longer busy. Need to verify that all request types are processed correctly including text messages and inbound file transfer requests
 //TODO: On event log menus, enable filter functionality to allow user to view only desired request types, transfer types, events/requests/transfers for desired servers, request/transfer status types, etc.
+//TODO: Create a new class Model.ServerFolder with properties ID (int) and Name (string), and private field _folderPath. Replace TransferFolder property of ServerInfo with DownloadFolders (List<ServerFolder>). When user request ServerInfo, the response includes a list of folder IDs and Names. When RequestFileList, the ID is sent. This avoids the bugs caused by the Path class behaving differently on Windows vs Unix systems. When calling GetFile(), fileName, folderId are sent to remote server. ServerRequest.FolderDoesNotExist will be changed to InvalidFolderID, etc.
+//TODO: Add property ReceivedFilesFolder (ServerFolder) to ServerSettings, use this for all inbound file transfers. Should be unique from DownloadFolders but this will not be enforced in the code.
+//TODO: Change AsyncFileServer API to use ServerInfo objects and folderId (int) instead of ipaddress, portNumber, folderPath, etc. Only public method that accepts IP,Port should be RequestServerInfo()
+//TODO: Create IsEqualTo() method for FileTransferController. Check when outbound transfer is requested to maintain the integrity of the retry limit/lockout behavior
+//TODO: If user calls GetFile() multiple times for the same file/remote server, display an error indicating that this transfer is already pending, do not send request. Also, check if it aleady exists in target folder and do not send request.
+//TODO: Another unit test: reject file transfer using public method RejectInboundFileTransferAsync()
 
 namespace AaronLuna.AsyncFileServer.Console
 {

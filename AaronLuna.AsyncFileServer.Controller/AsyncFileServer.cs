@@ -921,7 +921,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 return getFileTransfer;
             }
 
-            // TODO: Create logic to check stalled file transfers that are under lockout and if this request matches remoteserver info + localfilepath, send a new filetranserresponse = rejected_retrylimitexceeded. maybe we should penalize them for trying to subvert our lockout policy?
+            // TODO: Create logic to check file transfers that are under lockout and if this request matches remoteserver info + localfilepath, send a new filetranserresponse = rejected_retrylimitexceeded. maybe we should penalize them for trying to subvert our lockout policy?
             var outboundFileTransfer = getFileTransfer.Value;
             outboundFileTransfer.EventOccurred += HandleEventOccurred;
             outboundFileTransfer.SocketEventOccurred += HandleSocketEventOccurred;
@@ -2102,41 +2102,8 @@ namespace AaronLuna.AsyncFileServer.Controller
             return Result.Fail<ServerRequestController>(sendRequest.Error);
         }
 
-        public async Task<Result> RequestFileListAsync(
-            IPAddress remoteServerIpAddress,
-            int remoteServerPort,
-            string targetFolder)
+        public async Task<Result> RequestFileListAsync(ServerInfo remoteServerInfo)
         {
-            var requestBytes =
-                ServerRequestDataBuilder.ConstructRequestWithStringValue(
-                    ServerRequestType.FileListRequest,
-                    MyInfo.LocalIpAddress.ToString(),
-                    MyInfo.PortNumber,
-                    targetFolder);
-
-            var sendRequestStartedEvent = new ServerEvent
-            {
-                EventType = ServerEventType.RequestFileListStarted,
-                LocalIpAddress = MyInfo.LocalIpAddress,
-                LocalPortNumber = MyInfo.PortNumber,
-                RemoteServerIpAddress = remoteServerIpAddress,
-                RemoteServerPortNumber = remoteServerPort,
-                RemoteFolder = targetFolder,
-                RequestId = _requestId
-            };
-
-            var sendRequestCompleteEvent =
-                new ServerEvent
-                {
-                    EventType = ServerEventType.RequestFileListComplete,
-                    RequestId = _requestId
-                };
-
-            var remoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort)
-            {
-                TransferFolder = targetFolder
-            };
-
             var outboundRequest =
                 new ServerRequestController(_requestId, _settings, remoteServerInfo);
 
@@ -2149,6 +2116,31 @@ namespace AaronLuna.AsyncFileServer.Controller
                 _requestId++;
             }
 
+            var requestBytes =
+                ServerRequestDataBuilder.ConstructRequestWithStringValue(
+                    ServerRequestType.FileListRequest,
+                    MyInfo.LocalIpAddress.ToString(),
+                    MyInfo.PortNumber,
+                    remoteServerInfo.TransferFolder);
+
+            var sendRequestStartedEvent = new ServerEvent
+            {
+                EventType = ServerEventType.RequestFileListStarted,
+                LocalIpAddress = MyInfo.LocalIpAddress,
+                LocalPortNumber = MyInfo.PortNumber,
+                RemoteServerIpAddress = remoteServerInfo.SessionIpAddress,
+                RemoteServerPortNumber = remoteServerInfo.PortNumber,
+                RemoteFolder = remoteServerInfo.TransferFolder,
+                RequestId = _requestId
+            };
+
+            var sendRequestCompleteEvent =
+                new ServerEvent
+                {
+                    EventType = ServerEventType.RequestFileListComplete,
+                    RequestId = _requestId
+                };
+
             var sendrequest =
                 await outboundRequest.SendServerRequestAsync(
                     requestBytes,
@@ -2157,7 +2149,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             if (sendrequest.Success) return Result.Ok();
             outboundRequest.Status = ServerRequestStatus.Error;
-            
+
             _eventLog.Add(new ServerEvent
             {
                 EventType = ServerEventType.ErrorOccurred,
@@ -2168,6 +2160,19 @@ namespace AaronLuna.AsyncFileServer.Controller
             EventOccurred?.Invoke(this, _eventLog.Last());
 
             return sendrequest;
+        }
+
+        public Task<Result> RequestFileListAsync(
+            IPAddress remoteServerIpAddress,
+            int remoteServerPort,
+            string remoteFolderPath)
+        {
+            var remoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort)
+            {
+                TransferFolder = remoteFolderPath
+            };
+
+            return RequestFileListAsync(remoteServerInfo);
         }
 
         async Task<Result> HandleFileListRequestAsync(ServerRequestController inboundRequest)

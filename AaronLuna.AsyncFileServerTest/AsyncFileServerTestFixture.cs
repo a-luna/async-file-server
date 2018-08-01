@@ -1,4 +1,4 @@
-namespace AaronLuna.AsyncFileServer.Test
+namespace AaronLuna.AsyncFileServerTest
 {
     using System;
     using System.Collections.Generic;
@@ -16,8 +16,8 @@ namespace AaronLuna.AsyncFileServer.Test
     using Common.Network;
     using Common.Result;
 
-    using Model;
-    using Controller;
+    using AsyncFileServer.Model;
+    using AsyncFileServer.Controller;
     using TestClasses;
 
     [TestClass]
@@ -51,8 +51,6 @@ namespace AaronLuna.AsyncFileServer.Test
         string _localFilePath;
         string _remoteFilePath;
         string _restoreFilePath;
-        string _messageFromClient;
-        string _messageFromServer;
         string _transferFolderPath;
         string _cidrIp;
         IPAddress _localIp;
@@ -60,7 +58,10 @@ namespace AaronLuna.AsyncFileServer.Test
         IPAddress _remoteServerPublicIp;
         ServerPlatform _remoteServerPlatform;
         ServerPlatform _thisServerPlatform;
-        private FileInfoList _fileInfoList;
+        FileInfoList _fileInfoList1;
+        FileInfoList _fileInfoList2;
+        FileInfoList _fileInfoList3;
+        int _fileListInUse;
 
         bool _serverReceivedTextMessage;
         bool _serverNoFileTransferPending;
@@ -86,8 +87,6 @@ namespace AaronLuna.AsyncFileServer.Test
         [TestInitialize]
         public void Setup()
         {
-            _messageFromClient = string.Empty;
-            _messageFromServer = string.Empty;
             _transferFolderPath = string.Empty;
             _remoteServerLocalIp = null;
             _remoteServerPublicIp = null;
@@ -120,7 +119,9 @@ namespace AaronLuna.AsyncFileServer.Test
             _clientErrorOccurred = false;
             _clientReceivedRetryLimitExceededNotification = false;
 
-            _fileInfoList = new FileInfoList();
+            _fileInfoList1 = new FileInfoList();
+            _fileInfoList2 = new FileInfoList();
+            _fileInfoList3 = new FileInfoList();
 
             var currentPath = Directory.GetCurrentDirectory();
             var index = currentPath.IndexOf("bin", StringComparison.Ordinal);
@@ -277,8 +278,8 @@ namespace AaronLuna.AsyncFileServer.Test
             _clientSettings.LocalServerPortNumber = 8001;
             _serverSettings.LocalServerPortNumber = 8002;
 
-            const string messageForServer = "Hello, fellow TPL $ocket Server! This is a text message with a few special ch@r@cters. `~/|\\~'";
-            const string messageForClient = "I don't know who or what you are referring to. I am a normal human, sir, and most definitely NOT some type of server. Good day.";
+            const string sentToServer = "Hello, fellow TPL $ocket Server! This is a text message with a few special ch@r@cters. `~/|\\~'";
+            const string sentToClient = "I don't know who or what you are referring to. I am a normal human, sir, and most definitely NOT some type of server. Good day.";
 
             await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
             _server.EventOccurred += HandleServerEvent;
@@ -303,12 +304,9 @@ namespace AaronLuna.AsyncFileServer.Test
             while (!_server.IsListening) { }
             while (!_client.IsListening) { }
 
-            Assert.AreEqual(string.Empty, _messageFromClient);
-            Assert.AreEqual(string.Empty, _messageFromServer);
-
             var sendMessageResult1 =
                 await _client.SendTextMessageAsync(
-                        messageForServer,
+                        sentToServer,
                         _localIp,
                         _serverSettings.LocalServerPortNumber)
                     .ConfigureAwait(false);
@@ -320,12 +318,20 @@ namespace AaronLuna.AsyncFileServer.Test
 
             while (!_serverReceivedTextMessage) { }
 
-            Assert.AreEqual(messageForServer, _messageFromClient);
-            Assert.AreEqual(string.Empty, _messageFromServer);
+            var receivedByServer = string.Empty;
+            if (_server.TextSessions.Count > 0)
+            {
+                if (_server.TextSessions[0].MessageCount > 0)
+                {
+                    receivedByServer = _server.TextSessions[0].Messages[0].Message;
+                }
+            }
+
+            Assert.AreEqual(sentToServer, receivedByServer);
 
             var sendMessageResult2 =
                 await _server.SendTextMessageAsync(
-                        messageForClient,
+                        sentToClient,
                         _localIp,
                         _clientSettings.LocalServerPortNumber)
                     .ConfigureAwait(false);
@@ -337,8 +343,16 @@ namespace AaronLuna.AsyncFileServer.Test
 
             while (!_clientReceivedTextMessage) { }
 
-            Assert.AreEqual(messageForServer, _messageFromClient);
-            Assert.AreEqual(messageForClient, _messageFromServer);
+            var receivedByClient = string.Empty;
+            if (_client.TextSessions.Count > 0)
+            {
+                if (_client.TextSessions[0].MessageCount > 1)
+                {
+                    receivedByClient = _client.TextSessions[0].Messages[1].Message;
+                }
+            }
+
+            Assert.AreEqual(sentToClient, receivedByClient);
         }
 
         [TestMethod]
@@ -683,6 +697,7 @@ namespace AaronLuna.AsyncFileServer.Test
             Assert.AreEqual(sentFileSize, receivedFileSize);
         }
 
+        [TestCategory("minicover")]
         [TestMethod]
         public async Task VerifyGetFileAfterRetryLimitExceeded()
         {
@@ -891,7 +906,7 @@ namespace AaronLuna.AsyncFileServer.Test
                 Assert.Fail("There was an error attempting to retry the stalled file transfer: " + retryFileTransfer3.Error);
             }
             
-            await Task.Delay(_serverSettings.RetryLimitLockout);
+            await Task.Delay(_serverSettings.RetryLimitLockout + TimeSpan.FromSeconds(1));
             Assert.IsTrue(stalledFileTransfer2.RetryLockoutExpired);
 
             /////////////////////////////////////////////////////////////////////////////////////////////
@@ -1010,6 +1025,7 @@ namespace AaronLuna.AsyncFileServer.Test
 
             _clientSettings.LocalServerPortNumber = 8013;
             _serverSettings.LocalServerPortNumber = 8014;
+            _fileListInUse = 1;
 
             await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
             _server.EventOccurred += HandleServerEvent;
@@ -1047,11 +1063,202 @@ namespace AaronLuna.AsyncFileServer.Test
             }
 
             while (!_clientReceivedFileInfoList) { }
-            
-            Assert.AreEqual(4, _fileInfoList.Count);
+
+            Assert.AreEqual(4, _fileInfoList1.Count);
 
             var fiDictionaryActual = new Dictionary<string, long>();
-            foreach (var (fileName, folderPath, fileSizeBytes) in _fileInfoList)
+            foreach (var (fileName, folderPath, fileSizeBytes) in _fileInfoList1)
+            {
+                var filePath = Path.Combine(folderPath, fileName);
+                fiDictionaryActual.Add(filePath, fileSizeBytes);
+            }
+
+            var expectedFileNames = new List<string>
+            {
+                Path.Combine(_testFilesFolder, "fake.exe"),
+                Path.Combine(_testFilesFolder, "loremipsum1.txt"),
+                Path.Combine(_testFilesFolder, "loremipsum2.txt"),
+                Path.Combine(_testFilesFolder, "smallFile.jpg")
+            };
+
+            foreach (var fileName in expectedFileNames)
+            {
+                if (fiDictionaryActual.ContainsKey(fileName))
+                {
+                    var fileSizeExpected = fiDictionaryActual[fileName];
+                    var fileSizeActual = new FileInfo(fileName).Length;
+                    Assert.AreEqual(fileSizeExpected, fileSizeActual);
+                }
+                else
+                {
+                    Assert.Fail($"{fileName} was not found in the list of files.");
+                }
+            }
+        }
+
+        [TestMethod]
+        public async Task VerifyNoFilesAvailableToDownload()
+        {
+            _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyNoFilesAvailableToDownload_client.log";
+            _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyNoFilesAvailableToDownload_server.log";
+
+            _clientSettings.LocalServerPortNumber = 8019;
+            _serverSettings.LocalServerPortNumber = 8020;
+            _fileListInUse = 2;
+
+            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
+            _server.EventOccurred += HandleServerEvent;
+            _server.SocketEventOccurred += HandleServerEvent;
+
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
+            _client.EventOccurred += HandleClientEvent;
+            _client.SocketEventOccurred += HandleClientEvent;
+
+            var token = _cts.Token;
+
+            _runServerTask =
+                Task.Run(() =>
+                        _server.RunAsync(token),
+                    token);
+
+            _runClientTask =
+                Task.Run(() =>
+                        _client.RunAsync(token),
+                    token);
+
+            while (!_server.IsListening) { }
+            while (!_client.IsListening) { }
+
+            var fileListRequest1 =
+                await _client.RequestFileListAsync(
+                    _localIp,
+                    _serverSettings.LocalServerPortNumber,
+                    _emptyFolder).ConfigureAwait(false);
+
+            if (fileListRequest1.Failure)
+            {
+                Assert.Fail("Error sending request for transfer folder path.");
+            }
+
+            while (!_serverHasNoFilesAvailableToDownload) { }
+            
+            Assert.AreEqual(0, _fileInfoList2.Count);
+
+            var fileListRequest2 =
+                await _client.RequestFileListAsync(
+                        _localIp,
+                        _serverSettings.LocalServerPortNumber,
+                        _testFilesFolder)
+                    .ConfigureAwait(false);
+
+            if (fileListRequest2.Failure)
+            {
+                Assert.Fail("Error sending request for transfer folder path.");
+            }
+
+            while (!_clientReceivedFileInfoList) { }
+
+            Assert.AreEqual(4, _fileInfoList2.Count);
+
+            var fiDictionaryActual = new Dictionary<string, long>();
+            foreach (var (fileName, folderPath, fileSizeBytes) in _fileInfoList2)
+            {
+                var filePath = Path.Combine(folderPath, fileName);
+                fiDictionaryActual.Add(filePath, fileSizeBytes);
+            }
+
+            var expectedFileNames = new List<string>
+            {
+                Path.Combine(_testFilesFolder, "fake.exe"),
+                Path.Combine(_testFilesFolder, "loremipsum1.txt"),
+                Path.Combine(_testFilesFolder, "loremipsum2.txt"),
+                Path.Combine(_testFilesFolder, "smallFile.jpg")
+            };
+
+            foreach (var fileName in expectedFileNames)
+            {
+                if (fiDictionaryActual.ContainsKey(fileName))
+                {
+                    var fileSizeExpected = fiDictionaryActual[fileName];
+                    var fileSizeActual = new FileInfo(fileName).Length;
+                    Assert.AreEqual(fileSizeExpected, fileSizeActual);
+                }
+                else
+                {
+                    Assert.Fail($"{fileName} was not found in the list of files.");
+                }
+            }
+        }
+
+        [TestMethod]
+        public async Task VerifyRequestedFolderDoesNotExist()
+        {
+            _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestedFolderDoesNotExist_client.log";
+            _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestedFolderDoesNotExist_server.log";
+
+            _clientSettings.LocalServerPortNumber = 8021;
+            _serverSettings.LocalServerPortNumber = 8022;
+            _fileListInUse = 3;
+
+            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
+            _server.EventOccurred += HandleServerEvent;
+            _server.SocketEventOccurred += HandleServerEvent;
+
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
+            _client.EventOccurred += HandleClientEvent;
+            _client.SocketEventOccurred += HandleClientEvent;
+
+            var token = _cts.Token;
+
+            _runServerTask =
+                Task.Run(() =>
+                        _server.RunAsync(token),
+                    token);
+
+            _runClientTask =
+                Task.Run(() =>
+                        _client.RunAsync(token),
+                    token);
+
+            while (!_server.IsListening) { }
+            while (!_client.IsListening) { }
+
+            Assert.IsFalse(Directory.Exists(_tempFolder));
+
+            var fileListRequest1 =
+                await _client.RequestFileListAsync(
+                        _localIp,
+                        _serverSettings.LocalServerPortNumber,
+                        _tempFolder)
+                    .ConfigureAwait(false);
+
+            if (fileListRequest1.Failure)
+            {
+                Assert.Fail("Error sending request for transfer folder path.");
+            }
+
+            while (!_serverTransferFolderDoesNotExist) { }
+            
+            Assert.AreEqual(0, _fileInfoList3.Count);
+
+            var fileListRequest2 =
+                await _client.RequestFileListAsync(
+                        _localIp,
+                        _serverSettings.LocalServerPortNumber,
+                        _testFilesFolder)
+                    .ConfigureAwait(false);
+
+            if (fileListRequest2.Failure)
+            {
+                Assert.Fail("Error sending request for transfer folder path.");
+            }
+
+            while (!_clientReceivedFileInfoList) { }
+
+            Assert.AreEqual(4, _fileInfoList3.Count);
+
+            var fiDictionaryActual = new Dictionary<string, long>();
+            foreach (var (fileName, folderPath, fileSizeBytes) in _fileInfoList3)
             {
                 var filePath = Path.Combine(folderPath, fileName);
                 fiDictionaryActual.Add(filePath, fileSizeBytes);
@@ -1190,195 +1397,6 @@ namespace AaronLuna.AsyncFileServer.Test
             while (!_clientRejectedFileTransfer) { }
         }
 
-        [TestMethod]
-        public async Task VerifyNoFilesAvailableToDownload()
-        {
-            _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyNoFilesAvailableToDownload_client.log";
-            _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyNoFilesAvailableToDownload_server.log";
-
-            _clientSettings.LocalServerPortNumber = 8019;
-            _serverSettings.LocalServerPortNumber = 8020;
-
-            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
-            _server.EventOccurred += HandleServerEvent;
-            _server.SocketEventOccurred += HandleServerEvent;
-
-            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
-            _client.EventOccurred += HandleClientEvent;
-            _client.SocketEventOccurred += HandleClientEvent;
-
-            var token = _cts.Token;
-
-            _runServerTask =
-                Task.Run(() =>
-                        _server.RunAsync(token),
-                    token);
-
-            _runClientTask =
-                Task.Run(() =>
-                        _client.RunAsync(token),
-                    token);
-
-            while (!_server.IsListening) { }
-            while (!_client.IsListening) { }
-
-            var fileListRequest1 =
-                await _client.RequestFileListAsync(
-                    _localIp,
-                    _serverSettings.LocalServerPortNumber,
-                    _emptyFolder).ConfigureAwait(false);
-
-            if (fileListRequest1.Failure)
-            {
-                Assert.Fail("Error sending request for transfer folder path.");
-            }
-
-            while (!_serverHasNoFilesAvailableToDownload) { }
-            
-            Assert.AreEqual(0, _fileInfoList.Count);
-
-            var fileListRequest2 =
-                await _client.RequestFileListAsync(
-                    _localIp,
-                    _serverSettings.LocalServerPortNumber,
-                    _testFilesFolder)
-                    .ConfigureAwait(false);
-
-            if (fileListRequest2.Failure)
-            {
-                Assert.Fail("Error sending request for transfer folder path.");
-            }
-
-            while (!_clientReceivedFileInfoList) { }
-            
-            Assert.AreEqual(4, _fileInfoList.Count);
-
-            var fiDictionaryActual = new Dictionary<string, long>();
-            foreach (var (fileName, folderPath, fileSizeBytes) in _fileInfoList)
-            {
-                var filePath = Path.Combine(folderPath, fileName);
-                fiDictionaryActual.Add(filePath, fileSizeBytes);
-            }
-
-            var expectedFileNames = new List<string>
-            {
-                Path.Combine(_testFilesFolder, "fake.exe"),
-                Path.Combine(_testFilesFolder, "loremipsum1.txt"),
-                Path.Combine(_testFilesFolder, "loremipsum2.txt"),
-                Path.Combine(_testFilesFolder, "smallFile.jpg")
-            };
-
-            foreach (var fileName in expectedFileNames)
-            {
-                if (fiDictionaryActual.ContainsKey(fileName))
-                {
-                    var fileSizeExpected = fiDictionaryActual[fileName];
-                    var fileSizeActual = new FileInfo(fileName).Length;
-                    Assert.AreEqual(fileSizeExpected, fileSizeActual);
-                }
-                else
-                {
-                    Assert.Fail($"{fileName} was not found in the list of files.");
-                }
-            }
-        }
-
-        [TestMethod]
-        public async Task VerifyRequestedFolderDoesNotExist()
-        {
-            _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestedFolderDoesNotExist_client.log";
-            _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyRequestedFolderDoesNotExist_server.log";
-
-            _clientSettings.LocalServerPortNumber = 8021;
-            _serverSettings.LocalServerPortNumber = 8022;
-
-            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
-            _server.EventOccurred += HandleServerEvent;
-            _server.SocketEventOccurred += HandleServerEvent;
-
-            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
-            _client.EventOccurred += HandleClientEvent;
-            _client.SocketEventOccurred += HandleClientEvent;
-
-            var token = _cts.Token;
-
-            _runServerTask =
-                Task.Run(() =>
-                        _server.RunAsync(token),
-                    token);
-
-            _runClientTask =
-                Task.Run(() =>
-                        _client.RunAsync(token),
-                    token);
-
-            while (!_server.IsListening) { }
-            while (!_client.IsListening) { }
-
-            Assert.IsFalse(Directory.Exists(_tempFolder));
-
-            var fileListRequest1 =
-                await _client.RequestFileListAsync(
-                    _localIp,
-                    _serverSettings.LocalServerPortNumber,
-                    _tempFolder)
-                    .ConfigureAwait(false);
-
-            if (fileListRequest1.Failure)
-            {
-                Assert.Fail("Error sending request for transfer folder path.");
-            }
-
-            while (!_serverTransferFolderDoesNotExist) { }
-            
-            Assert.AreEqual(0, _fileInfoList.Count);
-
-            var fileListRequest2 =
-                await _client.RequestFileListAsync(
-                    _localIp,
-                    _serverSettings.LocalServerPortNumber,
-                    _testFilesFolder)
-                    .ConfigureAwait(false);
-
-            if (fileListRequest2.Failure)
-            {
-                Assert.Fail("Error sending request for transfer folder path.");
-            }
-
-            while (!_clientReceivedFileInfoList) { }
-            
-            Assert.AreEqual(4, _fileInfoList.Count);
-
-            var fiDictionaryActual = new Dictionary<string, long>();
-            foreach (var (fileName, folderPath, fileSizeBytes) in _fileInfoList)
-            {
-                var filePath = Path.Combine(folderPath, fileName);
-                fiDictionaryActual.Add(filePath, fileSizeBytes);
-            }
-
-            var expectedFileNames = new List<string>
-            {
-                Path.Combine(_testFilesFolder, "fake.exe"),
-                Path.Combine(_testFilesFolder, "loremipsum1.txt"),
-                Path.Combine(_testFilesFolder, "loremipsum2.txt"),
-                Path.Combine(_testFilesFolder, "smallFile.jpg")
-            };
-
-            foreach (var fileName in expectedFileNames)
-            {
-                if (fiDictionaryActual.ContainsKey(fileName))
-                {
-                    var fileSizeExpected = fiDictionaryActual[fileName];
-                    var fileSizeActual = new FileInfo(fileName).Length;
-                    Assert.AreEqual(fileSizeExpected, fileSizeActual);
-                }
-                else
-                {
-                    Assert.Fail($"{fileName} was not found in the list of files.");
-                }
-            }
-        }
-
         void HandleClientEvent(object sender, ServerEvent serverEvent)
         {
             var logMessageForConsole =
@@ -1398,7 +1416,6 @@ namespace AaronLuna.AsyncFileServer.Test
 
                 case ServerEventType.ReceivedTextMessage:
                     _clientReceivedTextMessage = true;
-                    _messageFromServer = serverEvent.TextMessage;
                     break;
 
                 case ServerEventType.ReceivedServerInfo:
@@ -1410,8 +1427,23 @@ namespace AaronLuna.AsyncFileServer.Test
                     break;
 
                 case ServerEventType.ReceivedFileList:
+
+                    switch (_fileListInUse)
+                    {
+                        case 1:
+                            _fileInfoList1 = serverEvent.RemoteServerFileList;
+                            break;
+
+                        case 2:
+                            _fileInfoList2 = serverEvent.RemoteServerFileList;
+                            break;
+
+                        case 3:
+                            _fileInfoList3 = serverEvent.RemoteServerFileList;
+                            break;
+                    }
+
                     _clientReceivedFileInfoList = true;
-                    _fileInfoList = serverEvent.RemoteServerFileList;
                     break;
 
                 case ServerEventType.ReceiveFileBytesComplete:
@@ -1463,7 +1495,6 @@ namespace AaronLuna.AsyncFileServer.Test
 
                 case ServerEventType.ReceivedTextMessage:
                     _serverReceivedTextMessage = true;
-                    _messageFromClient = serverEvent.TextMessage;
                     break;
 
                 case ServerEventType.StoppedSendingFileBytes:

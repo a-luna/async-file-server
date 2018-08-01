@@ -9,7 +9,7 @@ using AaronLuna.AsyncFileServer.Model;
 using AaronLuna.AsyncFileServer.Utilities;
 using AaronLuna.Common.Result;
 
-namespace AaronLuna.AsyncFileServer.Test.TestClasses
+namespace AaronLuna.AsyncFileServerTest.TestClasses
 {
     class FileTransferStalledController : FileTransferController
     {

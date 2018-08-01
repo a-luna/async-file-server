@@ -132,14 +132,22 @@
     {
         public static bool IsEqualTo(this ServerInfo my, ServerInfo other)
         {
-            var portsDiffer = my.PortNumber != other.PortNumber;
-            if (portsDiffer) return false;
+            // If port #s do not match, this is not the same server
+            if (my.PortNumber != other.PortNumber) return false;
+            
+            // If the port #s and any IP are the same, the servers are considered equal
+            if (my.SessionIpAddress.IsEqualTo(other.SessionIpAddress)) return true;
+            if (my.SessionIpAddress.IsEqualTo(other.LocalIpAddress)) return true;
+            if (my.SessionIpAddress.IsEqualTo(other.PublicIpAddress)) return true;
 
-            var sessionIpsMatch = my.SessionIpAddress.IsEqualTo(other.SessionIpAddress);
-            var localIpsMatch = my.LocalIpAddress.IsEqualTo(other.LocalIpAddress);
-            var publicIpsMatch = my.PublicIpAddress.IsEqualTo(other.PublicIpAddress);
+            if (my.LocalIpAddress.IsEqualTo(other.SessionIpAddress)) return true;
+            if (my.LocalIpAddress.IsEqualTo(other.PublicIpAddress)) return true;
 
-            return sessionIpsMatch || localIpsMatch || publicIpsMatch;
+            if (my.PublicIpAddress.IsEqualTo(other.SessionIpAddress)) return true;
+            if (my.PublicIpAddress.IsEqualTo(other.PublicIpAddress)) return true;
+
+            // If the port #s are the same but all IPs are unique, this is not the same server
+            return false;
         }
     }
 }

@@ -1,0 +1,17 @@
+os: Visual Studio 2017
+build: off
+
+environment:
+  COVERALLS_REPO_TOKEN:
+    secure: /u9GxWoJiR6ovfJc0RVLiV7YxRgOu1Hp6SJtethG2+K8GfOeC2+LxwIR9QcP/ujt
+
+before_test:
+  - dotnet --info
+  - dotnet restore
+
+test_script:
+  - dotnet test -v n .\AaronLuna.AsyncFileServerTest\AaronLuna.AsyncFileServerTest.csproj
+  
+after_test:
+  - ps: iex ((Get-ChildItem ($env:USERPROFILE + '\.nuget\packages\opencover'))[0].FullName + '\tools\OpenCover.Console.exe' + ' -register:user -target:"dotnet.exe" -targetargs:" test -v n .\AaronLuna.AsyncFileServerTest\AaronLuna.AsyncFileServerTest.csproj" -filter:"+[AaronLuna.AsyncFileServer.*]* -[AaronLuna.AsyncFileServerTest]*" -output:".\GeneratedReports\CodeCoverageReport.xml" -mergebyhash -skipautoprops -oldstyle')
+  - ps: iex ((Get-ChildItem ($env:USERPROFILE + '\.nuget\packages\coveralls.io'))[0].FullName + '\tools\coveralls.net.exe' + ' --opencover .\GeneratedReports\CodeCoverageReport.xml')

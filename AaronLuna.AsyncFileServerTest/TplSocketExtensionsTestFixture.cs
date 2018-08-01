@@ -1,17 +1,17 @@
-using AaronLuna.AsyncFileServer.Utilities;
-
-namespace AaronLuna.AsyncFileServer.Test
+namespace AaronLuna.AsyncFileServerTest
 {
-    using Common.Network;
-    using Common.Result;
-
-    using Microsoft.VisualStudio.TestTools.UnitTesting;
-
     using System.Net;
     using System.Net.Sockets;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
+
+    using Common.Network;
+    using Common.Result;
+
+    using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+    using AsyncFileServer.Utilities;
 
     [TestClass]
     public class TplSocketExtensionsTestFixture

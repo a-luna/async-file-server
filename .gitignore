@@ -33,7 +33,6 @@ Temporary Items
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
-.vs/
 .vscode/
 CodeGraphData/
 DevTracker*
@@ -41,8 +40,11 @@ DevTracker*
 AaronLuna.AsyncFileServer.Tools/
 
 # Code coverage files
+GeneratedReports/
+/GeneratedReports/*
 coverage-html
 coverage.json
+coverage.hits
 coverage-hits.txt
 
 # User-specific files
@@ -67,7 +69,9 @@ bld/
 [Ll]og/
 
 # Visual Studio 2015/2017 cache/options directory
-.vs/
+*/.vs/*
+/.vs/*
+
 # Uncomment if you have tasks that create the project's static files in wwwroot
 #wwwroot/
 
