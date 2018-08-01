@@ -464,6 +464,127 @@ namespace AaronLuna.AsyncFileServerTest
         }
 
         [TestMethod]
+        public async Task VerifySendFileAndRejectInboundTransfer1()
+        {
+            _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifySendFileAndRejectInboundTransfer_client.log";
+            _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifySendFileAndRejectInboundTransfer_server.log";
+
+            _serverSettings.LocalServerPortNumber = 8019;
+            _clientSettings.LocalServerPortNumber = 8020;
+
+            var sendFilePath = _localFilePath;
+            var receiveFilePath = _remoteFilePath;
+            var receiveFolderPath = _remoteFolder;
+
+            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
+            _server.EventOccurred += HandleServerEvent;
+            _server.SocketEventOccurred += HandleServerEvent;
+
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
+            _client.EventOccurred += HandleClientEvent;
+            _client.SocketEventOccurred += HandleClientEvent;
+
+            var token = _cts.Token;
+
+            _runServerTask =
+                 Task.Run(() =>
+                         _server.RunAsync(token), token);
+
+            _runClientTask =
+                 Task.Run(() =>
+                         _client.RunAsync(token), token);
+
+            while (!_server.IsListening) { }
+            while (!_client.IsListening) { }
+
+            var sizeOfFileToSend = new FileInfo(sendFilePath).Length;
+            FileHelper.DeleteFileIfAlreadyExists(receiveFilePath, 3);
+            Assert.IsFalse(File.Exists(receiveFilePath));
+
+            var sendFileResult =
+                await _client.SendFileAsync(
+                    _localIp,
+                    _serverSettings.LocalServerPortNumber,
+                    _server.MyInfo.Name,
+                    FileName,
+                    sizeOfFileToSend,
+                    _localFolder,
+                    receiveFolderPath).ConfigureAwait(false);
+
+            if (sendFileResult.Failure)
+            {
+                Assert.Fail("There was an error sending the file to the remote server: " + sendFileResult.Error);
+            }
+
+            while (_serverNoFileTransferPending) { }
+
+            var pendingFileTransferId = _serverState.PendingFileTransferIds[0];
+            var pendingFileTransfer = _server.GetFileTransferById(pendingFileTransferId).Value;
+
+            var transferResult = await _server.RejectInboundFileTransferAsync(pendingFileTransfer);
+            if (transferResult.Failure)
+            {
+                Assert.Fail("There was an error receiving the file from the remote server: " + transferResult.Error);
+            }
+
+            while (!_serverRejectedFileTransfer) { }
+        }
+
+        [TestMethod]
+        public async Task VerifySendFileAndRejectInboundTransfer2()
+        {
+            _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyOutboundFileTransferRejected_client.log";
+            _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyOutboundFileTransferRejected_server.log";
+
+            _serverSettings.LocalServerPortNumber = 8015;
+            _clientSettings.LocalServerPortNumber = 8016;
+
+            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
+            _server.EventOccurred += HandleServerEvent;
+            _server.SocketEventOccurred += HandleServerEvent;
+
+            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
+            _client.EventOccurred += HandleClientEvent;
+            _client.SocketEventOccurred += HandleClientEvent;
+
+            var token = _cts.Token;
+            var sendFilePath = _localFilePath;
+            var receiveFilePath = _remoteFilePath;
+
+            _runServerTask =
+                Task.Run(() =>
+                    _server.RunAsync(token), token);
+
+            _runClientTask =
+                Task.Run(() =>
+                    _client.RunAsync(token), token);
+
+            while (!_server.IsListening) { }
+            while (!_client.IsListening) { }
+
+            var sizeOfFileToSend = new FileInfo(sendFilePath).Length;
+            Assert.IsTrue(File.Exists(receiveFilePath));
+
+            var sendFileResult =
+                await _client.SendFileAsync(
+                        _localIp,
+                        _serverSettings.LocalServerPortNumber,
+                        _server.MyInfo.Name,
+                        FileName,
+                        sizeOfFileToSend,
+                        _localFolder,
+                        _remoteFolder)
+                    .ConfigureAwait(false);
+
+            if (sendFileResult.Failure)
+            {
+                Assert.Fail("Error occurred sending outbound file request to server");
+            }
+            
+            while (!_serverRejectedFileTransfer) { }
+        }
+
+        [TestMethod]
         public async Task VerifyGetFile()
         {
             _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyGetFile_client.log";
@@ -1285,60 +1406,6 @@ namespace AaronLuna.AsyncFileServerTest
                     Assert.Fail($"{fileName} was not found in the list of files.");
                 }
             }
-        }
-
-        [TestMethod]
-        public async Task VerifyOutboundFileTransferRejected()
-        {
-            _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyOutboundFileTransferRejected_client.log";
-            _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifyOutboundFileTransferRejected_server.log";
-
-            _serverSettings.LocalServerPortNumber = 8015;
-            _clientSettings.LocalServerPortNumber = 8016;
-
-            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
-            _server.EventOccurred += HandleServerEvent;
-            _server.SocketEventOccurred += HandleServerEvent;
-
-            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
-            _client.EventOccurred += HandleClientEvent;
-            _client.SocketEventOccurred += HandleClientEvent;
-
-            var token = _cts.Token;
-            var sendFilePath = _localFilePath;
-            var receiveFilePath = _remoteFilePath;
-
-            _runServerTask =
-                Task.Run(() =>
-                    _server.RunAsync(token), token);
-
-            _runClientTask =
-                Task.Run(() =>
-                    _client.RunAsync(token), token);
-
-            while (!_server.IsListening) { }
-            while (!_client.IsListening) { }
-
-            var sizeOfFileToSend = new FileInfo(sendFilePath).Length;
-            Assert.IsTrue(File.Exists(receiveFilePath));
-
-            var sendFileResult =
-                await _client.SendFileAsync(
-                    _localIp,
-                    _serverSettings.LocalServerPortNumber,
-                    _server.MyInfo.Name,
-                    FileName,
-                    sizeOfFileToSend,
-                    _localFolder,
-                    _remoteFolder)
-                    .ConfigureAwait(false);
-
-            if (sendFileResult.Failure)
-            {
-                Assert.Fail("Error occurred sending outbound file request to server");
-            }
-            
-            while (!_serverRejectedFileTransfer) { }
         }
 
         [TestMethod]

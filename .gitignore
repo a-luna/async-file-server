@@ -38,6 +38,8 @@ CodeGraphData/
 DevTracker*
 *.dt
 AaronLuna.AsyncFileServer.Tools/
+AaronLuna.AsyncFileServerTest/TestFiles/Client/*
+AaronLuna.AsyncFileServerTest/TestFiles/Server/*
 
 # Code coverage files
 */CodeCoverageReport.xml

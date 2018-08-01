@@ -235,10 +235,7 @@
             return wrappedRequest.ToArray();
         }
 
-        public static byte[] ConstructFileListResponse(
-            FileInfoList fileInfoList,
-            string fileInfoSeparator,
-            string fileSeparator,
+        public static byte[] ConstructFileListResponse(FileInfoList fileInfoList,
             string localIpAddress,
             int localPort,
             string remoteFolderPath)
@@ -260,22 +257,20 @@
                 var fileName = fileInfoList[i].fileName;
                 var folderPath = fileInfoList[i].folderPath;
                 var fileSize = fileInfoList[i].fileSizeBytes;
-                var fileInfoString = $"{fileName}{fileInfoSeparator}{folderPath}{fileInfoSeparator}{fileSize}";
+                var fileInfoString = fileName + FileInfoList.UnitSeparator +
+                                     folderPath + FileInfoList.UnitSeparator +
+                                     fileSize;
 
                 allFileInfo += fileInfoString;
 
                 if (!i.IsLastIteration(fileInfoList.Count))
                 {
-                    allFileInfo += fileSeparator;
+                    allFileInfo += FileInfoList.RecordSeparator;
                 }
             }
 
             var fileInfoListData = Encoding.UTF8.GetBytes(allFileInfo);
-            var fileInfoListLen = BitConverter.GetBytes(fileInfoListData.Length);
-            var fileInfoSeparatorData = Encoding.UTF8.GetBytes(fileInfoSeparator);
-            var fileInfoSeparatorLen = BitConverter.GetBytes(fileInfoSeparatorData.Length);
-            var fileSeparatorData = Encoding.UTF8.GetBytes(fileSeparator);
-            var fileSeparatorLen = BitConverter.GetBytes(fileSeparatorData.Length);
+            var fileInfoListLen = BitConverter.GetBytes(fileInfoListData.Length);;
 
             var wrappedRequest = new List<byte>();
             wrappedRequest.AddRange(requestType);
@@ -287,10 +282,6 @@
             wrappedRequest.AddRange(requestorFolderPathData);
             wrappedRequest.AddRange(fileInfoListLen);
             wrappedRequest.AddRange(fileInfoListData);
-            wrappedRequest.AddRange(fileInfoSeparatorLen);
-            wrappedRequest.AddRange(fileInfoSeparatorData);
-            wrappedRequest.AddRange(fileSeparatorLen);
-            wrappedRequest.AddRange(fileSeparatorData);
 
             return wrappedRequest.ToArray();
         }

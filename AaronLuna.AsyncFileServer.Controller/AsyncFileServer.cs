@@ -2222,8 +2222,6 @@ namespace AaronLuna.AsyncFileServer.Controller
             var requestBytes =
                 ServerRequestDataBuilder.ConstructFileListResponse(
                     fileInfoList,
-                    "*",
-                    "|",
                     MyInfo.LocalIpAddress.ToString(),
                     MyInfo.PortNumber,
                     MyInfo.TransferFolder);
