@@ -477,7 +477,7 @@ namespace AaronLuna.AsyncFileServerTest
             var logMessageForFile =
                 $"(server)\t{DateTime.Now:MM/dd/yyyy HH:mm:ss.fff}\t{serverEvent.GetLogFileEntry()}";
 
-            //Console.Write(logMessageForConsole);
+            Console.Write(logMessageForConsole);
             _serverLogMessages.Add(logMessageForFile);
 
             switch (serverEvent.EventType)

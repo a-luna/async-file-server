@@ -332,65 +332,20 @@
             //while (!_serverProcessingRequestBacklogComplete) { }
             while (!_clientProcessingRequestBacklogComplete) { }
 
-            _serverSendFileBytesStarted = false;
-            _serverSendFileBytesComplete = false;
-            _clientReceiveFileBytesStarted = false;
-            _clientReceiveFileBytesComplete = false;
-            _clientConfirmedFileTransferComplete = false;
-
             Assert.AreEqual(1, testClientState.PendingFileTransferIds.Count);
-
-            var pendingId2 = testClientState.PendingFileTransferIds[0];
-            var pendingFiletransfer2 = testClient.GetFileTransferById(pendingId2).Value;
-
-            var acceptFile2 = await testClient.AcceptInboundFileTransferAsync(pendingFiletransfer2);
-            if (acceptFile2.Failure)
-            {
-                Assert.Fail("There was an error receiving the file from the remote server: " + acceptFile2.Error);
-            }
-
-            while (!_clientReceiveFileBytesComplete)
-            {
-                if (_clientErrorOccurred)
-                {
-                    Assert.Fail("File transfer failed");
-                }
-            }
-            
-            while (!_client2ReceivedFileTransferComplete) { }
-
             Assert.AreEqual(1, testServerState.PendingFileTransferIds.Count);
-
-            var pendingId3 = testServerState.PendingFileTransferIds[0];
-            var pendingFiletransfer3 = testServer.GetFileTransferById(pendingId3).Value;
-
-            var acceptFile3 = await testServer.AcceptInboundFileTransferAsync(pendingFiletransfer3);
-            if (acceptFile3.Failure)
-            {
-                Assert.Fail("There was an error receiving the file from the remote server: " + acceptFile3.Error);
-            }
-
-            while (!_serverReceivedAllFileBytes)
-            {
-                if (_clientErrorOccurred)
-                {
-                    Assert.Fail("File transfer failed");
-                }
-            }
-            
-            while (!_client3ReceivedFileTransferComplete) { }
 
             // Check the status of all requests on all server/client instances
 
             var testServerString = testServer.ToString();
             Assert.IsTrue(testServerString.Contains("test server [172.20.10.10:8028]"));
-            Assert.IsTrue(testServerString.Contains("[Requests In: 8 Out: 5]"));
+            Assert.IsTrue(testServerString.Contains("[Requests In: 8 Out: 3]"));
             Assert.IsTrue(testServerString.Contains("[Transfers In: 1 Out: 1]"));
             Assert.IsTrue(testServerString.Contains("[Total Messages: 2/1 Sessions]"));
 
             Assert.IsFalse(testServerState.PendingRequestInQueue);
-            Assert.AreEqual(13, testServerState.RequestIds.Count);
-            Assert.IsFalse(testServerState.FileTransferPending);
+            Assert.AreEqual(11, testServerState.RequestIds.Count);
+            Assert.IsTrue(testServerState.FileTransferPending);
             Assert.AreEqual(2, testServerState.FileTransferIds.Count);
             Assert.IsFalse(testServerState.NoTextSessions);
             Assert.AreEqual(1, testServerState.TextSessionIds.Count);
@@ -403,13 +358,13 @@
 
             var testClientString = testClient.ToString();
             Assert.IsTrue(testClientString.Contains("test client [172.20.10.10:8027]"));
-            Assert.IsTrue(testClientString.Contains("[Requests In: 5 Out: 7]"));
+            Assert.IsTrue(testClientString.Contains("[Requests In: 5 Out: 5]"));
             Assert.IsTrue(testClientString.Contains("[Transfers In: 2 Out: 0]"));
             Assert.IsTrue(testClientString.Contains("[Total Messages: 1/1 Sessions]"));
 
             Assert.IsFalse(testClientState.PendingRequestInQueue);
-            Assert.AreEqual(12, testClientState.RequestIds.Count);
-            Assert.IsFalse(testClientState.FileTransferPending);
+            Assert.AreEqual(10, testClientState.RequestIds.Count);
+            Assert.IsTrue(testClientState.FileTransferPending);
             Assert.AreEqual(2, testClientState.FileTransferIds.Count);
             Assert.IsFalse(testClientState.NoTextSessions);
             Assert.AreEqual(1, testClientState.TextSessionIds.Count);
@@ -422,12 +377,12 @@
 
             var client2String = client2.ToString();
             Assert.IsTrue(client2String.Contains("client2 [172.20.10.10:8029]"));
-            Assert.IsTrue(client2String.Contains("[Requests In: 4 Out: 3]"));
+            Assert.IsTrue(client2String.Contains("[Requests In: 2 Out: 3]"));
             Assert.IsTrue(client2String.Contains("[Transfers In: 1 Out: 1]"));
             Assert.IsTrue(client2String.Contains("[Total Messages: 0/0 Sessions]"));
 
             Assert.IsFalse(client2State.PendingRequestInQueue);
-            Assert.AreEqual(7, client2State.RequestIds.Count);
+            Assert.AreEqual(5, client2State.RequestIds.Count);
             Assert.IsFalse(client2State.FileTransferPending);
             Assert.AreEqual(2, client2State.FileTransferIds.Count);
             Assert.IsTrue(client2State.NoTextSessions);
@@ -435,12 +390,12 @@
 
             var client3String = client3.ToString();
             Assert.IsTrue(client3String.Contains("client3 [172.20.10.10:8030]"));
-            Assert.IsTrue(client3String.Contains("[Requests In: 3 Out: 3]"));
+            Assert.IsTrue(client3String.Contains("[Requests In: 1 Out: 3]"));
             Assert.IsTrue(client3String.Contains("[Transfers In: 0 Out: 1]"));
             Assert.IsTrue(client3String.Contains("[Total Messages: 1/1 Sessions]"));
 
             Assert.IsFalse(client3State.PendingRequestInQueue);
-            Assert.AreEqual(6, client3State.RequestIds.Count);
+            Assert.AreEqual(4, client3State.RequestIds.Count);
             Assert.IsFalse(client3State.FileTransferPending);
             Assert.AreEqual(1, client3State.FileTransferIds.Count);
             Assert.IsFalse(client3State.NoTextSessions);
@@ -468,8 +423,12 @@
             var textSessionId4 = client4State.TextSessionIds[0];
             var textSession4 = client4.GetTextSessionById(textSessionId4).Value;
             var messageCount4 = textSession4.MessageCount;
-
+            
             Assert.AreEqual(2, messageCount4);
+
+            // Cleanup all server instances
+            // Cleanup all server instances
+            // Cleanup all server instances
 
             await ShutdownServerAsync(client2, runClient2Task);
             await ShutdownServerAsync(client3, runClient3Task);
@@ -477,7 +436,7 @@
             await ShutdownServerAsync(testServer, runTestServerTask);
             await ShutdownServerAsync(testClient, runTestClientTask);
 
-            if (true)
+            if (_generateLogFiles)
             {
                 File.AppendAllLines(testClientLogFilePath, _clientLogMessages);
                 File.AppendAllLines(testServerLogFilePath, _serverLogMessages);
@@ -522,7 +481,7 @@
             var logMessageForFile =
                 $"(client3)\t{DateTime.Now:MM/dd/yyyy HH:mm:ss.fff}\t{serverEvent.GetLogFileEntry()}";
 
-            //Console.WriteLine(logMessageForConsole);
+            Console.WriteLine(logMessageForConsole);
             _client3LogMessages.Add(logMessageForFile);
 
             switch (serverEvent.EventType)
@@ -545,7 +504,7 @@
             var logMessageForFile =
                 $"(client4)\t{DateTime.Now:MM/dd/yyyy HH:mm:ss.fff}\t{serverEvent.GetLogFileEntry()}";
 
-            //Console.WriteLine(logMessageForConsole);
+            Console.WriteLine(logMessageForConsole);
             _client4LogMessages.Add(logMessageForFile);
 
             switch (serverEvent.EventType)
