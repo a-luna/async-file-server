@@ -37,68 +37,91 @@ namespace AaronLuna.AsyncFileServerTest.TestClasses
             TestFileTransferProgress?.Invoke(sender, e);
         }
 
-        public Result ChangeRegularControllerToStalledController(int maxAttempts)
+        public Result UseMockFileTransferSendController(long responseCode, int maxAttempts, TimeSpan duration)
         {
-            var getControllser = GetController(maxAttempts);
+            var getControllser = GetController(responseCode, maxAttempts);
             if (getControllser.Failure)
             {
                 return getControllser;
             }
 
-            _originalFileTransfer = getControllser.Value;            
+            _originalFileTransfer = getControllser.Value;
 
-            var stalledFileTransfer = new FileTransferStalledController(_originalFileTransfer.Id, _testSettings)
-            {
-                RemoteServerTransferId = _originalFileTransfer.RemoteServerTransferId
-            };
+            var mockFileTransfer =
+                new MockFileTransferSendController(_originalFileTransfer.Id, _testSettings, duration);
 
-            stalledFileTransfer.TestEventOccurred += HandleTestEventOccurred;
-            stalledFileTransfer.TestSocketEventOccurred += HandleTestSocketEventOccurred;
-            stalledFileTransfer.TestFileTransferProgress += HandleTestFileTransferProgress;
-            
-            stalledFileTransfer.Initialize(
-                FileTransferDirection.Outbound,
-                FileTransferInitiator.RemoteServer,
-                _originalFileTransfer.LocalServerInfo,
-                _originalFileTransfer.RemoteServerInfo,
-                _originalFileTransfer.FileName,
-                _originalFileTransfer.FileSizeInBytes,
-                _originalFileTransfer.LocalFolderPath,
-                _originalFileTransfer.RemoteFolderPath);
-
-            stalledFileTransfer.TransferResponseCode = _originalFileTransfer.TransferResponseCode;
-            stalledFileTransfer.RetryCounter = _originalFileTransfer.RetryCounter;
-
-            FileTransfers.Remove(_originalFileTransfer);
-            FileTransfers.Add(stalledFileTransfer);
+            InitializeMockFileTransferController(mockFileTransfer);
+            mockFileTransfer.TestEventOccurred += HandleTestEventOccurred;
 
             return Result.Ok();
         }
 
-        public Result ChangeStalledControllerBackToRegularController(int maxAttempts)
+        public Result UseMockFileTransferReceiveController(long responseCode, int maxAttempts, TimeSpan duration)
         {
-            var getControllser = GetController(maxAttempts);
+            var getControllser = GetController(responseCode, maxAttempts);
             if (getControllser.Failure)
             {
                 return getControllser;
             }
 
-            var cancelledFileTransfer = getControllser.Value;
-            _originalFileTransfer.Status = cancelledFileTransfer.Status;
-            _originalFileTransfer.RequestId = cancelledFileTransfer.RequestId;
-            _originalFileTransfer.BytesRemaining = cancelledFileTransfer.BytesRemaining;
-            _originalFileTransfer.FileChunkSentCount = cancelledFileTransfer.FileChunkSentCount;
-            _originalFileTransfer.OutboundFileTransferStalled = cancelledFileTransfer.OutboundFileTransferStalled;
-            _originalFileTransfer.CurrentBytesSent = cancelledFileTransfer.CurrentBytesSent;
-            _originalFileTransfer.PercentComplete = cancelledFileTransfer.PercentComplete;
+            _originalFileTransfer = getControllser.Value;
 
-            FileTransfers.Remove(cancelledFileTransfer);
+            var mockFileTransfer =
+                new MockFileTransferReceiveController(_originalFileTransfer.Id, _testSettings, duration);
+
+            InitializeMockFileTransferController(mockFileTransfer);
+            mockFileTransfer.TestEventOccurred += HandleTestEventOccurred;
+
+            return Result.Ok();
+        }
+
+        public Result UseMockFileTransferStalledController(long responseCode, int maxAttempts)
+        {
+            var getControllser = GetController(responseCode, maxAttempts);
+            if (getControllser.Failure)
+            {
+                return getControllser;
+            }
+
+            _originalFileTransfer = getControllser.Value;
+
+            var mockFileTransfer = new MockFileTransferStalledController(_originalFileTransfer.Id, _testSettings)
+            {
+                RemoteServerTransferId = _originalFileTransfer.RemoteServerTransferId
+            };
+
+            InitializeMockFileTransferController(mockFileTransfer);
+            mockFileTransfer.TestEventOccurred += HandleTestEventOccurred;
+            mockFileTransfer.TestSocketEventOccurred += HandleTestSocketEventOccurred;
+            mockFileTransfer.TestFileTransferProgress += HandleTestFileTransferProgress;
+
+            return Result.Ok();
+        }
+
+        public Result UseOriginalFileTransferController(long responseCode, int maxAttempts)
+        {
+            var getControllser = GetController(responseCode, maxAttempts);
+            if (getControllser.Failure)
+            {
+                return getControllser;
+            }
+
+            var mockFileTransfer = getControllser.Value;
+            _originalFileTransfer.Status = mockFileTransfer.Status;
+            _originalFileTransfer.RequestId = mockFileTransfer.RequestId;
+            _originalFileTransfer.BytesRemaining = mockFileTransfer.BytesRemaining;
+            _originalFileTransfer.FileChunkSentCount = mockFileTransfer.FileChunkSentCount;
+            _originalFileTransfer.OutboundFileTransferStalled = mockFileTransfer.OutboundFileTransferStalled;
+            _originalFileTransfer.CurrentBytesSent = mockFileTransfer.CurrentBytesSent;
+            _originalFileTransfer.PercentComplete = mockFileTransfer.PercentComplete;
+
+            FileTransfers.Remove(mockFileTransfer);
             FileTransfers.Add(_originalFileTransfer);
 
             return Result.Ok();
         }
 
-        Result<FileTransferController> GetController(int maxAttempts)
+        Result<FileTransferController> GetController(long responseCode, int maxAttempts)
         {
             var foundMatch = false;
             var attemptNumber = 1;
@@ -112,17 +135,10 @@ namespace AaronLuna.AsyncFileServerTest.TestClasses
                         $"There was an error retrieving the file transfer controller");
 
                 }
-
-                var responseCodes = FileTransfers.Select(ft => ft.TransferResponseCode).ToList();
-                if (responseCodes.Count == 0)
-                {
-                    attemptNumber++;
-                    continue;
-                }
-
+                
                 matches =
                     FileTransfers.Select(ft => ft)
-                        .Where(ft => ft.TransferResponseCode == responseCodes[0])
+                        .Where(ft => ft.TransferResponseCode == responseCode)
                         .ToList();
 
                 if (matches.Count == 0)
@@ -135,6 +151,25 @@ namespace AaronLuna.AsyncFileServerTest.TestClasses
             }
 
             return Result.Ok(matches[0]);
+        }
+
+        void InitializeMockFileTransferController(FileTransferController mockFileTransfer)
+        {
+            mockFileTransfer.Initialize(
+                _originalFileTransfer.TransferDirection,
+                _originalFileTransfer.Initiator,
+                _originalFileTransfer.LocalServerInfo,
+                _originalFileTransfer.RemoteServerInfo,
+                _originalFileTransfer.FileName,
+                _originalFileTransfer.FileSizeInBytes,
+                _originalFileTransfer.LocalFolderPath,
+                _originalFileTransfer.RemoteFolderPath);
+
+            mockFileTransfer.TransferResponseCode = _originalFileTransfer.TransferResponseCode;
+            mockFileTransfer.RetryCounter = _originalFileTransfer.RetryCounter;
+
+            FileTransfers.Remove(_originalFileTransfer);
+            FileTransfers.Add(mockFileTransfer);
         }
     }
 }

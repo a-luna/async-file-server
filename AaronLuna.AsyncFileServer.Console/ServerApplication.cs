@@ -261,7 +261,7 @@ namespace AaronLuna.AsyncFileServer.Console
                     _state.WaitingForFileListResponse = false;
                     return;
 
-                case ServerEventType.ReceivedNotificationNoFilesToDownload:
+                case ServerEventType.ReceivedNotificationFolderIsEmpty:
                     _state.NoFilesAvailableForDownload = true;
                     _state.WaitingForFileListResponse = false;
                     break;

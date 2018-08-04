@@ -108,7 +108,7 @@
                     break;
 
                 case ServerEventType.ConnectionAccepted:
-                    report += $"Connection accepted from {RemoteServerIpAddress}{Environment.NewLine}";
+                    report += $"Accepted socket connection from {RemoteServerIpAddress}{Environment.NewLine}";
                     break;
 
                 case ServerEventType.ConnectToRemoteServerStarted:
@@ -197,6 +197,34 @@
 
                 case ServerEventType.ProcessRequestComplete:
                     report += $"PROCESS COMPLETE: {RequestType.Name()}{Environment.NewLine}";
+                    break;
+
+                case ServerEventType.PendingRequestInQueue:
+
+                    var pendingRequestPlural = ItemsInQueueCount > 1
+                        ? "requests are"
+                        : "request is";
+
+                    report += $"{ItemsInQueueCount} pending {pendingRequestPlural} waiting to be " +
+                              $"processed{Environment.NewLine}";
+                    break;
+
+                case ServerEventType.ProcessRequestBacklogStarted:
+
+                    var requestStartPlural = ItemsInQueueCount > 1
+                        ? "requests"
+                        : "request";
+
+                    report += $"Now processing {ItemsInQueueCount} {requestStartPlural} waiting in queue";
+                    break;
+
+                case ServerEventType.ProcessRequestBacklogComplete:
+
+                    var requesCompletetPlural = ItemsInQueueCount == 0 || ItemsInQueueCount > 1
+                        ? "requests"
+                        : "request";
+
+                    report += $"Finished processing backlog of requests, queue now contains {ItemsInQueueCount} pending {requesCompletetPlural}";
                     break;
 
                 case ServerEventType.PendingFileTransfer:
@@ -369,7 +397,7 @@
                 case ServerEventType.SendFileTransferStalledComplete:
                 case ServerEventType.SendFileTransferCompletedCompleted:
                 case ServerEventType.SendRetryLimitExceededCompleted:
-                case ServerEventType.SendNotificationNoFilesToDownloadComplete:
+                case ServerEventType.SendNotificationFolderIsEmptyComplete:
                 case ServerEventType.SendNotificationFolderDoesNotExistComplete:
                 case ServerEventType.SendNotificationFileDoesNotExistComplete:
                     report += $"Notification was successfully sent{Environment.NewLine}";
@@ -457,12 +485,12 @@
                     report += $"Sending request to retry unsuccessful file transfer to {RemoteServerIpAddress}:{RemoteServerPortNumber}";
                     break;
 
-                case ServerEventType.SendNotificationNoFilesToDownloadStarted:
-                    report += $"Notifying {RemoteServerIpAddress}:{RemoteServerPortNumber} that no files are available to download from the requested folder";
+                case ServerEventType.SendNotificationFolderIsEmptyStarted:
+                    report += $"Notifying {RemoteServerIpAddress}:{RemoteServerPortNumber} that the requested folder is empty";
                     break;
 
-                case ServerEventType.ReceivedNotificationNoFilesToDownload:
-                    report += $"Received notification from {RemoteServerIpAddress}:{RemoteServerPortNumber} that no files are available to download from the requested folder";
+                case ServerEventType.ReceivedNotificationFolderIsEmpty:
+                    report += $"Received notification from {RemoteServerIpAddress}:{RemoteServerPortNumber} that the requested folder is empty";
                     break;
 
                 case ServerEventType.SendNotificationFolderDoesNotExistStarted:

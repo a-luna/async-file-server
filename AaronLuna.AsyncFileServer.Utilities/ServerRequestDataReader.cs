@@ -12,8 +12,7 @@
     {
         public static ServerRequestType ReadRequestType(byte[] requestBytes)
         {
-            var requestTypeData = BitConverter.ToInt32(requestBytes, 0).ToString();
-            return (ServerRequestType)Enum.Parse(typeof(ServerRequestType), requestTypeData);
+            return (ServerRequestType)Enum.Parse(typeof(ServerRequestType), requestBytes[0].ToString());
         }
 
         public static ServerInfo ReadRemoteServerInfo(byte[] requestBytes)
@@ -63,18 +62,18 @@
             IPAddress remoteServerLocalIpAddress,       // 2
             IPAddress remoteServerPublicIpAddress,      // 3
             int remoteServerPortNumber,                 // 4
-            ServerPlatform remoteServerPlatform,                    // 5
+            ServerPlatform remoteServerPlatform,        // 5
             string textMessage,                         // 6
             FileInfoList fileInfoList,                  // 7
             string fileName,                            // 8
-            long fileSizeInBytes,                         // 9
+            long fileSizeInBytes,                       // 9
             string localFolderPath,                     // 10
             string remoteFolderPath,                    // 11
             long fileTransferResponseCode,              // 12
             int remoteServerTransferId,                 // 13
             int fileTransferRetryCounter,               // 14
             int fileTransferRetryLimit,                 // 15
-            long lockoutExpireTimeInTicks)                // 16
+            long lockoutExpireTimeInTicks)              // 16
             ReadRequestBytes(byte[] requestBytes)
         {
             var remoteServerIpString = string.Empty;
@@ -253,36 +252,49 @@
             string remoteIpAddress,
             int remotePort) ReadInboundFileTransferRequest(byte[] requestData)
         {
-            var responseCodeLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes);
-            var responseCode = BitConverter.ToInt64(requestData, Constants.SizeOfInt32InBytes * 2);
+            var nextReadIndex = 1 + Constants.SizeOfInt32InBytes;
 
-            var transferIdLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 2 + responseCodeLen);
-            var transferId = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 3 + responseCodeLen);
+            var responseCode = BitConverter.ToInt64(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt64InBytes + Constants.SizeOfInt32InBytes;
 
-            var retryCounterLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 3 + responseCodeLen + transferIdLen);
-            var retryCounter = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 4 + responseCodeLen + transferIdLen);
+            var transferId = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes + Constants.SizeOfInt32InBytes;
 
-            var retryLimitLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 4 + responseCodeLen + transferIdLen + retryCounterLen);
-            var retryLimit = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 5 + responseCodeLen + transferIdLen + retryCounterLen);
+            var retryCounter = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes + Constants.SizeOfInt32InBytes;
 
-            var fileNameLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 5 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen);
-            var fileName = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 6 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen, fileNameLen);
+            var retryLimit = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
 
-            var remoteFolderLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 6 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen);
-            var remoteFolder = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 7 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen, remoteFolderLen);
+            var fileNameLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
 
-            var fileSizeLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 7 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + remoteFolderLen);
-            var fileSize = BitConverter.ToInt64(requestData, Constants.SizeOfInt32InBytes * 8 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + remoteFolderLen);
+            var fileName = Encoding.UTF8.GetString(requestData, nextReadIndex, fileNameLen);
+            nextReadIndex += fileNameLen;
 
-            var remoteIpLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 8 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen + remoteFolderLen);
-            var remoteIpAddress = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 9 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen + remoteFolderLen, remoteIpLen);
+            var remoteFolderLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
 
-            var remotePortLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 9 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen + remoteFolderLen + remoteIpLen);
-            var remotePort = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 10 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen + remoteFolderLen + remoteIpLen);
+            var remoteFolder = Encoding.UTF8.GetString(requestData, nextReadIndex, remoteFolderLen);
+            nextReadIndex += remoteFolderLen + Constants.SizeOfInt32InBytes;
 
-            var localFolderLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 10 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen + remoteFolderLen + remoteIpLen + remotePortLen);
-            var localFolder = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 11 + responseCodeLen + transferIdLen + retryCounterLen + retryLimitLen + fileNameLen + fileSizeLen + remoteFolderLen + remoteIpLen + remotePortLen, localFolderLen);
-            
+            var fileSize = BitConverter.ToInt64(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt64InBytes;
+
+            var remoteIpLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
+
+            var remoteIpAddress = Encoding.UTF8.GetString(requestData, nextReadIndex, remoteIpLen);
+            nextReadIndex += remoteIpLen + Constants.SizeOfInt32InBytes;
+
+            var remotePort = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
+
+            var localFolderLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
+
+            var localFolder = Encoding.UTF8.GetString(requestData, nextReadIndex, localFolderLen);
+
             return (
                 responseCode,
                 transferId,
@@ -304,23 +316,36 @@
             int remoteServerPortNumber,
             string remoteFolderPath) ReadOutboundFileTransferRequest(byte[] requestData)
         {
-            var remoteServerTransferIdLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes);
-            var remoteServerTransferId = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 2);
+            var nextReadIndex = 1 + Constants.SizeOfInt32InBytes;
 
-            var fileNameLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 2 + remoteServerTransferIdLen);
-            var fileName = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 3 + remoteServerTransferIdLen, fileNameLen);
+            var remoteServerTransferId = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
 
-            var localFolderLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 3 + remoteServerTransferIdLen + fileNameLen);
-            var localFolder = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 4 + remoteServerTransferIdLen + fileNameLen, localFolderLen);
+            var fileNameLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
 
-            var remoteServerIpLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 4 + remoteServerTransferIdLen + fileNameLen + localFolderLen);
-            var remoteServerIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 5 + remoteServerTransferIdLen + fileNameLen + localFolderLen, remoteServerIpLen);
+            var fileName = Encoding.UTF8.GetString(requestData, nextReadIndex, fileNameLen);
+            nextReadIndex += fileNameLen;
 
-            var remoteServerPortLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 5 + remoteServerTransferIdLen + fileNameLen + localFolderLen + remoteServerIpLen);
-            var remoteServerPort = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 6 + remoteServerTransferIdLen + fileNameLen + localFolderLen + remoteServerIpLen);
+            var localFolderLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
 
-            var remoteFolderLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 6 + remoteServerTransferIdLen + fileNameLen + localFolderLen + remoteServerIpLen + remoteServerPortLen);
-            var remoteFolder = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 7 + remoteServerTransferIdLen + fileNameLen + localFolderLen + remoteServerIpLen + remoteServerPortLen, remoteFolderLen);
+            var localFolder = Encoding.UTF8.GetString(requestData, nextReadIndex, localFolderLen);
+            nextReadIndex += localFolderLen;
+
+            var remoteServerIpLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
+
+            var remoteServerIp = Encoding.UTF8.GetString(requestData, nextReadIndex, remoteServerIpLen);
+            nextReadIndex += remoteServerIpLen + Constants.SizeOfInt32InBytes;
+
+            var remoteServerPort = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
+
+            var remoteFolderLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
+
+            var remoteFolder = Encoding.UTF8.GetString(requestData, nextReadIndex, remoteFolderLen);
 
             return (
                 remoteServerTransferId,
@@ -337,16 +362,27 @@
             string targetFolder,
             FileInfoList fileInfo) ReadFileListResponse(byte[] requestData)
         {
-            var remoteServerIpLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes);
-            var remoteIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 2, remoteServerIpLen);
+            var nextReadIndex = 1;
 
-            var remotePort = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 3 + remoteServerIpLen);
+            var remoteServerIpLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
 
-            var targetFolderLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 4 + remoteServerIpLen);
-            var targetFolder = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 5 + remoteServerIpLen, targetFolderLen);
+            var remoteIp = Encoding.UTF8.GetString(requestData, nextReadIndex, remoteServerIpLen);
+            nextReadIndex += remoteServerIpLen + Constants.SizeOfInt32InBytes;
 
-            var fileInfoLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 5 + remoteServerIpLen + targetFolderLen);
-            var fileInfo = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 6 + remoteServerIpLen + targetFolderLen, fileInfoLen);
+            var remotePort = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
+
+            var targetFolderLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
+
+            var targetFolder = Encoding.UTF8.GetString(requestData, nextReadIndex, targetFolderLen);
+            nextReadIndex += targetFolderLen;
+
+            var fileInfoLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
+
+            var fileInfo = Encoding.UTF8.GetString(requestData, nextReadIndex, fileInfoLen);
 
             var fileInfoList = new FileInfoList();
             foreach (var infoString in fileInfo.Split(FileInfoList.FileSeparator))
@@ -373,10 +409,15 @@
             string remoteIpAddress,
             int remotePortNumber) ReadServerInfo(byte[] requestData)
         {
-            var remoteIpAddressLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes);
-            var remoteIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 2, remoteIpAddressLen);
+            var nextReadIndex = 1;
 
-            var remotePort = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 3 + remoteIpAddressLen);
+            var remoteServerIpLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
+
+            var remoteIp = Encoding.UTF8.GetString(requestData, nextReadIndex, remoteServerIpLen);
+            nextReadIndex += remoteServerIpLen + Constants.SizeOfInt32InBytes;
+
+            var remotePort = BitConverter.ToInt32(requestData, nextReadIndex);
 
             return (
                 remoteIp,
@@ -390,12 +431,24 @@
             int retryLimit,
             long lockoutExpireTimeTicks) ReadRetryLimitExceededRequest(byte[] requestData)
         {
-            var remoteIpAddressLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes);
-            var remoteIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 2, remoteIpAddressLen);
-            var remotePort = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 3 + remoteIpAddressLen);
-            var remoteServerTransferId = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 5 + remoteIpAddressLen);
-            var retryLimit = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 7 + remoteIpAddressLen);
-            var lockoutExpireTimeTicks = BitConverter.ToInt64(requestData, Constants.SizeOfInt32InBytes * 9 + remoteIpAddressLen);
+            var nextReadIndex = 1;
+
+            var remoteServerIpLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
+
+            var remoteIp = Encoding.UTF8.GetString(requestData, nextReadIndex, remoteServerIpLen);
+            nextReadIndex += remoteServerIpLen + Constants.SizeOfInt32InBytes;
+
+            var remotePort = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes + Constants.SizeOfInt32InBytes;
+
+            var remoteServerTransferId = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes + Constants.SizeOfInt32InBytes;
+
+            var retryLimit = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes + Constants.SizeOfInt32InBytes;
+
+            var lockoutExpireTimeTicks = BitConverter.ToInt64(requestData, nextReadIndex);
 
             return (
                 remoteIp,
@@ -410,12 +463,18 @@
             int remotePortNumber,
             long responseCode) ReadRequestWithInt64Value(byte[] requestData)
         {
-            var remoteIpAddressLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes);
-            var remoteIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 2, remoteIpAddressLen);
+            var nextReadIndex = 1;
 
-            var remotePort = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 3 + remoteIpAddressLen);
+            var remoteServerIpLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
 
-            var responseCode = BitConverter.ToInt64(requestData, Constants.SizeOfInt32InBytes * 5 + remoteIpAddressLen);
+            var remoteIp = Encoding.UTF8.GetString(requestData, nextReadIndex, remoteServerIpLen);
+            nextReadIndex += remoteServerIpLen + Constants.SizeOfInt32InBytes;
+
+            var remotePort = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes + Constants.SizeOfInt32InBytes;
+
+            var responseCode = BitConverter.ToInt64(requestData, nextReadIndex);
 
             return (
                 remoteIp,
@@ -428,13 +487,21 @@
             int remotePortNumber,
             string message) ReadRequestWithStringValue(byte[] requestData)
         {
-            var remoteIpAddressLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes);
-            var remoteIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 2, remoteIpAddressLen);
+            var nextReadIndex = 1;
 
-            var remotePort = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 3 + remoteIpAddressLen);
+            var remoteServerIpLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
 
-            var messageLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 4 + remoteIpAddressLen);
-            var message = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 5 + remoteIpAddressLen, messageLen);
+            var remoteIp = Encoding.UTF8.GetString(requestData, nextReadIndex, remoteServerIpLen);
+            nextReadIndex += remoteServerIpLen + Constants.SizeOfInt32InBytes;
+
+            var remotePort = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
+
+            var messageLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
+
+            var message = Encoding.UTF8.GetString(requestData, nextReadIndex, messageLen);
 
             return (
                 remoteIp,
@@ -449,19 +516,31 @@
             string publicIpAddress,
             string remoteFolderPath) ReadServerInfoResponse(byte[] requestData)
         {
-            var localIpLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes);
-            var localIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 2, localIpLen);
+            var nextReadIndex = 1;
 
-            var portNumber = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 3 + localIpLen);
+            var localIpLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
 
-            var platformData = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 5 + localIpLen).ToString();
+            var localIp = Encoding.UTF8.GetString(requestData, nextReadIndex, localIpLen);
+            nextReadIndex += localIpLen + Constants.SizeOfInt32InBytes;
+
+            var portNumber = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes + Constants.SizeOfInt32InBytes;
+
+            var platformData = BitConverter.ToInt32(requestData, nextReadIndex).ToString();
             var platform = (ServerPlatform)Enum.Parse(typeof(ServerPlatform), platformData);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
 
-            var publicIpLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 6 + localIpLen);
-            var publicIp = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 7 + localIpLen, publicIpLen);
+            var publicIpLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
 
-            var transferFolderPathLen = BitConverter.ToInt32(requestData, Constants.SizeOfInt32InBytes * 7 + localIpLen + publicIpLen);
-            var transferFolderPath = Encoding.UTF8.GetString(requestData, Constants.SizeOfInt32InBytes * 8 + localIpLen + publicIpLen, transferFolderPathLen);
+            var publicIp = Encoding.UTF8.GetString(requestData, nextReadIndex, publicIpLen);
+            nextReadIndex += publicIpLen;
+
+            var transferFolderPathLen = BitConverter.ToInt32(requestData, nextReadIndex);
+            nextReadIndex += Constants.SizeOfInt32InBytes;
+
+            var transferFolderPath = Encoding.UTF8.GetString(requestData, nextReadIndex, transferFolderPathLen);
 
             return (
                 localIp,

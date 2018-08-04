@@ -37,6 +37,7 @@ namespace AaronLuna.AsyncFileServer.Controller
         readonly Socket _listenSocket;
         ServerSettings _settings;
 
+        readonly CancellationTokenSource _cts;
         CancellationToken _token;
         static readonly object RequestQueueLock = new object();
         static readonly object TransferQueueLock = new object();
@@ -98,7 +99,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             };
 
             ErrorLog = new List<ServerError>();
-            Requests = new List<ServerRequestController>();
+            Requests = new List<RequestController>();
             FileTransfers = new List<FileTransferController>();
             TextSessions = new List<TextSession>();
 
@@ -106,8 +107,9 @@ namespace AaronLuna.AsyncFileServer.Controller
             _requestId = 1;
             _fileTransferId = 1;
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            _eventLog = new List<ServerEvent>();            
+            _eventLog = new List<ServerEvent>();
             _settings = new ServerSettings();
+            _cts = new CancellationTokenSource();
 
             string GetDefaultTransferFolder()
             {
@@ -138,7 +140,7 @@ namespace AaronLuna.AsyncFileServer.Controller
         public ServerInfo MyInfo { get; set; }
         public List<TextSession> TextSessions { get; }
         public List<FileTransferController> FileTransfers { get; }
-        public List<ServerRequestController> Requests { get; }
+        public List<RequestController> Requests { get; }
         public List<ServerError> ErrorLog { get; }
 
         public event EventHandler<ServerEvent> EventOccurred;
@@ -209,7 +211,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             return Result.Ok(matches[0]);
         }
 
-        public Result<ServerRequestController> GetRequestById(int id)
+        public Result<RequestController> GetRequestById(int id)
         {
             var matches =
                 Requests.Select(r => r)
@@ -218,13 +220,13 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             if (matches.Count == 0)
             {
-                return Result.Fail<ServerRequestController>(
+                return Result.Fail<RequestController>(
                     $"No request was found with an ID value of {id}");
             }
 
             return matches.Count == 1
                 ? Result.Ok(matches[0])
-                : Result.Fail<ServerRequestController>(
+                : Result.Fail<RequestController>(
                     $"Found {matches.Count} requests with the same ID value of {id}");
         }
 
@@ -336,7 +338,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             ServerIsListening = true;
             var runServer = await HandleIncomingRequestsAsync().ConfigureAwait(false);
-
+            
             ServerIsListening = false;
             ShutdownListenSocket();
 
@@ -373,84 +375,120 @@ namespace AaronLuna.AsyncFileServer.Controller
         {
             // Main loop. Server handles incoming connections until shutdown command is received
             // or an error is encountered
-            while (true)
+            while (RunServer())
             {
-                if (FileTransferPending())
+                var processBacklog = await ProcessPendingRequestsInQueueAsync();
+                if (processBacklog.Failure)
                 {
-                    _eventLog.Add(new ServerEvent
-                    {
-                        EventType = ServerEventType.PendingFileTransfer,
-                        ItemsInQueueCount = PendingTransferCount()
-                    });
-
-                    EventOccurred?.Invoke(this, _eventLog.Last());
+                    ReportError(processBacklog.Error);
                 }
 
-                var acceptConnection = await AcceptConnectionFromRemoteServerAsync().ConfigureAwait(false);
+                var acceptConnection = await AcceptConnectionFromRemoteServerAsync().ConfigureAwait(false);                
                 if (acceptConnection.Failure) continue;
 
+                if (!RunServer()) break;
                 var inboundRequest = acceptConnection.Value;
-                var receiveRequest = await inboundRequest.ReceiveServerRequestAsync().ConfigureAwait(false);
 
+                var receiveRequest = await inboundRequest.ReceiveServerRequestAsync().ConfigureAwait(false);
                 if (receiveRequest.Failure)
                 {
-                    ErrorLog.Add(new ServerError(receiveRequest.Error));
-
-                    _eventLog.Add(new ServerEvent
-                    {
-                        EventType = ServerEventType.ErrorOccurred,
-                        ErrorMessage = receiveRequest.Error
-                    });
-
-                    EventOccurred?.Invoke(this, _eventLog.Last());
+                    ReportError(receiveRequest.Error);
                 }
 
-                lock (RequestQueueLock)
+                if (CurrentlyProcessing() || ServerIsBusy)
                 {
-                    Requests.Add(inboundRequest);
-                    _requestId++;
+                    if (inboundRequest.RequestType != ServerRequestType.FileTransferStalled) continue;
                 }
-
-                if (_token.IsCancellationRequested || ShutdownInitiated) return Result.Ok();
-                if (ServerIsBusy) continue;
-
-                await ProcessRequestAsync(inboundRequest).ConfigureAwait(false);
-                await ProcessRequestBacklogAsync().ConfigureAwait(false);
+                
+                var processRequest = await ProcessRequestAsync(inboundRequest);
+                if (processRequest.Failure)
+                {
+                    ReportError(processRequest.Error);
+                }
             }
 
-            bool FileTransferPending()
-            {
-                return PendingTransferCount() > 0;
-            }
-
-            int PendingTransferCount()
-            {
-                var pendingTransfers =
-                    FileTransfers.Select(ft => ft)
-                        .Where(ft => ft.TransferDirection == FileTransferDirection.Inbound
-                                     && ft.Status == FileTransferStatus.Pending)
-                        .ToList();
-
-                return pendingTransfers.Count;
-            }
+            return Result.Ok();
         }
 
-        async Task<Result<ServerRequestController>> AcceptConnectionFromRemoteServerAsync()
+        async Task<Result> ProcessPendingRequestsInQueueAsync()
         {
-            var acceptConnection = await _listenSocket.AcceptTaskAsync(_token).ConfigureAwait(false);
-            if (acceptConnection.Failure)
+            if (PendingFileTransferInQueue())
             {
-                ErrorLog.Add(new ServerError(acceptConnection.Error));
-
                 _eventLog.Add(new ServerEvent
                 {
-                    EventType = ServerEventType.ErrorOccurred,
-                    ErrorMessage = acceptConnection.Error
+                    EventType = ServerEventType.PendingFileTransfer,
+                    ItemsInQueueCount = PendingTransferCount()
                 });
 
                 EventOccurred?.Invoke(this, _eventLog.Last());
+            }
 
-                return Result.Fail<ServerRequestController>(acceptConnection.Error);
+            if (PendingRequestInQueue())
+            {
+                _eventLog.Add(new ServerEvent
+                {
+                    EventType = ServerEventType.PendingRequestInQueue,
+                    ItemsInQueueCount = PendingRequestCount()
+                });
+
+                EventOccurred?.Invoke(this, _eventLog.Last());
+            }
+
+            if (QueueIsEmpty()) return Result.Ok();
+            if (CurrentlyProcessing() || ServerIsBusy) return Result.Ok();
+
+            _eventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.ProcessRequestBacklogStarted,
+                ItemsInQueueCount = PendingRequestCount()
+            });
+
+            EventOccurred?.Invoke(this, _eventLog.Last());
+
+            var backlog =
+                Requests.Select(r => r)
+                    .Where(r => r.Status == ServerRequestStatus.Pending)
+                    .ToList();
+
+            foreach (var request in backlog)
+            {
+                var processRequest = await ProcessRequestAsync(request).ConfigureAwait(false);
+                if (processRequest.Success) continue;
+
+                request.Status = ServerRequestStatus.Error;
+                ReportError(processRequest.Error);
+
+                return processRequest;
+            }
+
+            _eventLog.Add(new ServerEvent
+            {
+                EventType = ServerEventType.ProcessRequestBacklogComplete,
+                ItemsInQueueCount = PendingRequestCount()
+            });
+
+            EventOccurred?.Invoke(this, _eventLog.Last());
+
+            return Result.Ok();
+        }
+
+        async Task<Result<RequestController>> AcceptConnectionFromRemoteServerAsync()
+        {
+            Result<Socket> acceptConnection;
+            try
+            {
+                acceptConnection = await _listenSocket.AcceptTaskAsync(_token).ConfigureAwait(false);
+            }
+            catch (TaskCanceledException ex)
+            {
+                ReportError(ex.GetReport());
+                return Result.Fail<RequestController>(ex.GetReport());
+            }
+            
+            if (acceptConnection.Failure)
+            {
+                ReportError(acceptConnection.Error);
+                return Result.Fail<RequestController>(acceptConnection.Error);
             }
 
             var socket = acceptConnection.Value;
@@ -458,10 +496,16 @@ namespace AaronLuna.AsyncFileServer.Controller
             var remoteServerIpAddress = NetworkUtilities.ParseSingleIPv4Address(remoteServerIpString).Value;
 
             var inboundRequest =
-                new ServerRequestController(_requestId, _settings, socket);
+                new RequestController(_requestId, _settings, socket);
 
             inboundRequest.EventOccurred += HandleEventOccurred;
             inboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
+
+            lock (RequestQueueLock)
+            {
+                Requests.Add(inboundRequest);
+                _requestId++;
+            }
 
             _eventLog.Add(new ServerEvent
             {
@@ -475,7 +519,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             return Result.Ok(inboundRequest);
         }
 
-        async Task<Result> ProcessRequestAsync(ServerRequestController inboundRequest)
+        async Task<Result> ProcessRequestAsync(RequestController inboundRequest)
         {
             ServerIsBusy = true;
             inboundRequest.Status = ServerRequestStatus.InProgress;
@@ -497,16 +541,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             if (result.Failure)
             {
                 inboundRequest.Status = ServerRequestStatus.Error;
-                ErrorLog.Add(new ServerError(result.Error));
-
-                _eventLog.Add(new ServerEvent
-                {
-                    EventType = ServerEventType.ErrorOccurred,
-                    ErrorMessage = result.Error,
-                    RequestId = inboundRequest.Id
-                });
-
-                EventOccurred?.Invoke(this, _eventLog.Last());
+                ReportError(result.Error);
 
                 return result;
             }
@@ -527,7 +562,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             return Result.Ok();
 
-            async Task<Result> ProcessRequestTypeAsync(ServerRequestController request)
+            async Task<Result> ProcessRequestTypeAsync(RequestController request)
             {
                 result = Result.Ok();
 
@@ -628,82 +663,79 @@ namespace AaronLuna.AsyncFileServer.Controller
             FileTransferProgress?.Invoke(sender, e);
         }
 
-        async Task<Result> ProcessRequestBacklogAsync()
+        private void ReportError(string error)
         {
-            if (QueueIsEmpty()) return Result.Ok();
+            ErrorLog.Add(new ServerError(error));
 
             _eventLog.Add(new ServerEvent
             {
-                EventType = ServerEventType.ProcessRequestBacklogStarted,
-                ItemsInQueueCount = PendingRequestCount()
+                EventType = ServerEventType.ErrorOccurred,
+                ErrorMessage = error
             });
 
             EventOccurred?.Invoke(this, _eventLog.Last());
+        }
 
-            var backlog =
+        bool RunServer()
+        {
+            return !_token.IsCancellationRequested && !ShutdownInitiated;
+        }
+
+        bool PendingFileTransferInQueue()
+        {
+            return PendingTransferCount() > 0;
+        }
+
+        int PendingTransferCount()
+
+        {
+            var pendingTransfers =
+                FileTransfers.Select(ft => ft)
+                    .Where(ft => ft.TransferDirection == FileTransferDirection.Inbound
+                                 && ft.Status == FileTransferStatus.Pending)
+                    .ToList();
+
+            return pendingTransfers.Count;
+        }
+
+        bool PendingRequestInQueue()
+        {
+            return PendingRequestCount() > 0;
+        }
+
+        bool QueueIsEmpty()
+        {
+            return PendingRequestCount() == 0;
+        }
+
+        int PendingRequestCount()
+        {
+            List<RequestController> pendingRequests;
+
+            lock (RequestQueueLock)
+            {
+                pendingRequests =
                     Requests.Select(r => r)
                         .Where(r => r.Status == ServerRequestStatus.Pending)
                         .ToList();
-
-            foreach (var request in backlog)
-            {
-                var processRequest = await ProcessRequestAsync(request).ConfigureAwait(false);
-                if (processRequest.Success) continue;
-
-                request.Status = ServerRequestStatus.Error;
-                ErrorLog.Add(new ServerError(processRequest.Error));
-
-                _eventLog.Add(new ServerEvent
-                {
-                    EventType = ServerEventType.ErrorOccurred,
-                    ErrorMessage = processRequest.Error,
-                    RequestId = request.Id
-                });
-
-                EventOccurred?.Invoke(this, _eventLog.Last());
-
-                return processRequest;
             }
 
-            _eventLog.Add(new ServerEvent
-            {
-                EventType = ServerEventType.ProcessRequestBacklogComplete,
-                ItemsInQueueCount = PendingRequestCount()
-            });
+            return pendingRequests.Count;
+        }
+        
+        bool CurrentlyProcessing()
+        {
+            var inProgressRequests =
+                Requests.Select(r => r)
+                    .Where(r => r.Status == ServerRequestStatus.InProgress)
+                    .ToList();
 
-            EventOccurred?.Invoke(this, _eventLog.Last());
+            var inProgressTransfers =
+                FileTransfers.Select(ft => ft)
+                    .Where(ft => ft.Status == FileTransferStatus.InProgress)
+                    .ToList();
 
-            return Result.Ok();
-
-            bool QueueIsEmpty()
-            {
-                List<ServerRequestController> pendingRequests;
-
-                lock (RequestQueueLock)
-                {
-                    pendingRequests =
-                        Requests.Select(r => r)
-                            .Where(r => r.Status == ServerRequestStatus.Pending)
-                            .ToList();
-                }
-
-                return pendingRequests.Count == 0;
-            }
-
-            int PendingRequestCount()
-            {
-                List<ServerRequestController> pendingRequests;
-
-                lock (RequestQueueLock)
-                {
-                    pendingRequests =
-                        Requests.Select(r => r)
-                            .Where(r => r.Status == ServerRequestStatus.Pending)
-                            .ToList();
-                }
-
-                return pendingRequests.Count;
-            }
+            return inProgressRequests.Count > 0 || inProgressTransfers.Count > 0;
         }
 
         public async Task<Result> SendTextMessageAsync(
@@ -719,7 +751,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             var remoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
             var textSessionId = GetTextSessionIdForRemoteServer(remoteServerInfo);
 
-            var outboundRequest = new ServerRequestController(_requestId, _settings, remoteServerInfo);
+            var outboundRequest = new RequestController(_requestId, _settings, remoteServerInfo);
             outboundRequest.EventOccurred += HandleEventOccurred;
             outboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
 
@@ -761,16 +793,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             if (sendRequest.Failure)
             {
                 outboundRequest.Status = ServerRequestStatus.Error;
-                ErrorLog.Add(new ServerError(sendRequest.Error));
-
-                _eventLog.Add(new ServerEvent
-                {
-                    EventType = ServerEventType.ErrorOccurred,
-                    ErrorMessage = sendRequest.Error,
-                    RequestId = outboundRequest.Id
-                });
-
-                EventOccurred?.Invoke(this, _eventLog.Last());
+                ReportError(sendRequest.Error);
 
                 return sendRequest;
             }
@@ -790,7 +813,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             return Result.Ok();
         }
 
-        Result ReceiveTextMessage(ServerRequestController inboundRequest)
+        Result ReceiveTextMessage(RequestController inboundRequest)
         {
             var getTextMessage = inboundRequest.GetTextMessage();
             if (getTextMessage.Failure)
@@ -895,23 +918,12 @@ namespace AaronLuna.AsyncFileServer.Controller
                 SendOutboundFileTransferRequestAsync(outboundFileTransfer).ConfigureAwait(false);
 
             if (sendRequest.Success) return Result.Ok();
-
-            ErrorLog.Add(new ServerError(sendRequest.Error));
-
-            _eventLog.Add(new ServerEvent
-            {
-                EventType = ServerEventType.ErrorOccurred,
-                ErrorMessage = sendRequest.Error,
-                FileTransferId = outboundFileTransfer.Id,
-                RequestId = outboundFileTransfer.RequestId
-            });
-
-            EventOccurred?.Invoke(this, _eventLog.Last());
+            ReportError(sendRequest.Error);
 
             return sendRequest;
         }
 
-        async Task<Result> HandleOutboundFileTransferRequestAsync(ServerRequestController inboundRequest)
+        async Task<Result> HandleOutboundFileTransferRequestAsync(RequestController inboundRequest)
         {
             var requestedFileExists = inboundRequest.RequestedFileExists().Value;
             if (!requestedFileExists)
@@ -961,12 +973,12 @@ namespace AaronLuna.AsyncFileServer.Controller
             return await SendOutboundFileTransferRequestAsync(outboundFileTransfer).ConfigureAwait(false);
         }
         
-        async Task<Result<ServerRequestController>> SendRequestedFileDoesNotExistAsync(
-            ServerRequestController inboundRequest,
+        async Task<Result<RequestController>> SendRequestedFileDoesNotExistAsync(
+            RequestController inboundRequest,
             int remoteServerTransferId)
         {
             var outboundRequest =
-                new ServerRequestController(_requestId, _settings, inboundRequest.RemoteServerInfo);
+                new RequestController(_requestId, _settings, inboundRequest.RemoteServerInfo);
 
             outboundRequest.EventOccurred += HandleEventOccurred;
             outboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
@@ -1015,13 +1027,13 @@ namespace AaronLuna.AsyncFileServer.Controller
             if (sendRequest.Success) return Result.Ok(outboundRequest);
 
             outboundRequest.Status = ServerRequestStatus.Error;
-            return Result.Fail<ServerRequestController>(sendRequest.Error);
+            return Result.Fail<RequestController>(sendRequest.Error);
         }
 
         async Task<Result> SendOutboundFileTransferRequestAsync(FileTransferController outboundFileTransfer)
         {
             var outboundRequest =
-                new ServerRequestController(_requestId, _settings, outboundFileTransfer.RemoteServerInfo);
+                new RequestController(_requestId, _settings, outboundFileTransfer.RemoteServerInfo);
 
             outboundRequest.EventOccurred += HandleEventOccurred;
             outboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
@@ -1090,7 +1102,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             return sendRequest;
         }
 
-        Result HandleFileTransferRejected(ServerRequestController inboundRequest)
+        Result HandleFileTransferRejected(RequestController inboundRequest)
         {
             var getFileTransfer = GetFileTransferByResponseCode(inboundRequest);
             if (getFileTransfer.Failure)
@@ -1125,7 +1137,7 @@ namespace AaronLuna.AsyncFileServer.Controller
         }
 
         async Task<Result> HandleFileTransferAcceptedAsync(
-            ServerRequestController inboundRequest,
+            RequestController inboundRequest,
             CancellationToken token)
         {
             var getFileTransfer = GetFileTransferByResponseCode(inboundRequest);
@@ -1161,13 +1173,19 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             var socket = getSendSocket.Value;
 
-            var sendFileBytes = await
-                outboundFileTransfer.SendFileAsync(
-                        socket,
-                        token)
-                    .ConfigureAwait(false);
-            
-            if (sendFileBytes.Success) return Result.Ok();
+            var sendFileBytes = await outboundFileTransfer.SendFileAsync(socket, _token);
+            if (sendFileBytes.Success)
+            {
+                inboundRequest.Status = ServerRequestStatus.Processed;
+
+                var processBacklog = await ProcessPendingRequestsInQueueAsync();
+                if (processBacklog.Failure)
+                {
+                    ReportError(processBacklog.Error);
+                }
+
+                return Result.Ok();
+            }
 
             outboundFileTransfer.Status = FileTransferStatus.Error;
             outboundFileTransfer.ErrorMessage = sendFileBytes.Error;
@@ -1175,7 +1193,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             return sendFileBytes;
         }
 
-        Result HandleFileTransferComplete(ServerRequestController inboundRequest)
+        Result HandleFileTransferComplete(RequestController inboundRequest)
         {
             var getFileTransfer = GetFileTransferByResponseCode(inboundRequest);
             if (getFileTransfer.Failure)
@@ -1202,7 +1220,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             return Result.Ok();
         }
 
-        Result<FileTransferController> GetFileTransferByResponseCode(ServerRequestController inboundRequest)
+        Result<FileTransferController> GetFileTransferByResponseCode(RequestController inboundRequest)
         {
             var getResponseCode = inboundRequest.GetFileTransferResponseCode();
             if (getResponseCode.Failure)
@@ -1272,7 +1290,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 _fileTransferId++;
             }
 
-            var outboundRequest = new ServerRequestController(_requestId, _settings, remoteServerInfo);
+            var outboundRequest = new RequestController(_requestId, _settings, remoteServerInfo);
             outboundRequest.EventOccurred += HandleEventOccurred;
             outboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
             outboundRequest.FileTransferId = inboundFileTransfer.Id;
@@ -1328,22 +1346,12 @@ namespace AaronLuna.AsyncFileServer.Controller
             inboundFileTransfer.Status = FileTransferStatus.Error;
             inboundFileTransfer.ErrorMessage = sendRequest.Error;
 
-            ErrorLog.Add(new ServerError(sendRequest.Error));
-
-            _eventLog.Add(new ServerEvent
-            {
-                EventType = ServerEventType.ErrorOccurred,
-                ErrorMessage = sendRequest.Error,
-                FileTransferId = inboundFileTransfer.Id,
-                RequestId = outboundRequest.Id
-            });
-
-            EventOccurred?.Invoke(this, _eventLog.Last());
+            ReportError(sendRequest.Error);
 
             return sendRequest;
         }
 
-        Result HandleRequestedFileDoesNotExist(ServerRequestController inboundRequest)
+        Result HandleRequestedFileDoesNotExist(RequestController inboundRequest)
         {
             var getFileTransferId = inboundRequest.GetRemoteServerFileTransferId();
             if (getFileTransferId.Failure)
@@ -1387,7 +1395,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             return Result.Ok();
         }
 
-        async Task<Result> HandleInboundFileTransferRequestAsync(ServerRequestController inboundRequest)
+        async Task<Result> HandleInboundFileTransferRequestAsync(RequestController inboundRequest)
         {
             var getFileTransfer = GetInboundFileTransfer();
             if (getFileTransfer.Failure)
@@ -1424,17 +1432,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             inboundFileTransfer.Status = FileTransferStatus.Rejected;
             inboundFileTransfer.ErrorMessage = error;
-
-            ErrorLog.Add(new ServerError(error));
-
-            _eventLog.Add(new ServerEvent
-            {
-                EventType = ServerEventType.ErrorOccurred,
-                ErrorMessage = error,
-                FileTransferId = inboundFileTransfer.Id
-            });
-
-            EventOccurred?.Invoke(this, _eventLog.Last());
+            ReportError(error);
 
             return await SendFileTransferResponseAsync(
                 ServerRequestType.FileTransferRejected,
@@ -1488,7 +1486,6 @@ namespace AaronLuna.AsyncFileServer.Controller
 
                 return Result.Ok(inboundFileTransfer);
             }
-
         }
 
         public async Task<Result> AcceptInboundFileTransferAsync(FileTransferController inboundFileTransfer)
@@ -1504,17 +1501,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             {
                 inboundFileTransfer.Status = FileTransferStatus.Error;
                 inboundFileTransfer.ErrorMessage = acceptFileTransfer.Error;
-
-                ErrorLog.Add(new ServerError(acceptFileTransfer.Error));
-
-                _eventLog.Add(new ServerEvent
-                {
-                    EventType = ServerEventType.ErrorOccurred,
-                    ErrorMessage = acceptFileTransfer.Error,
-                    FileTransferId = inboundFileTransfer.Id
-                });
-
-                EventOccurred?.Invoke(this, _eventLog.Last());
+                ReportError(acceptFileTransfer.Error);
 
                 return acceptFileTransfer;
             }
@@ -1526,17 +1513,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             {
                 inboundFileTransfer.Status = FileTransferStatus.Error;
                 inboundFileTransfer.ErrorMessage = getReceiveSocket.Error;
-
-                ErrorLog.Add(new ServerError(getReceiveSocket.Error));
-
-                _eventLog.Add(new ServerEvent
-                {
-                    EventType = ServerEventType.ErrorOccurred,
-                    ErrorMessage = getReceiveSocket.Error,
-                    FileTransferId = inboundFileTransfer.Id
-                });
-
-                EventOccurred?.Invoke(this, _eventLog.Last());
+                ReportError(getReceiveSocket.Error);
 
                 return getReceiveSocket;
             }
@@ -1558,17 +1535,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             {
                 inboundFileTransfer.Status = FileTransferStatus.Error;
                 inboundFileTransfer.ErrorMessage = receiveFile.Error;
-
-                ErrorLog.Add(new ServerError(receiveFile.Error));
-
-                _eventLog.Add(new ServerEvent
-                {
-                    EventType = ServerEventType.ErrorOccurred,
-                    ErrorMessage = receiveFile.Error,
-                    FileTransferId = inboundFileTransfer.Id
-                });
-
-                EventOccurred?.Invoke(this, _eventLog.Last());
+                ReportError(receiveFile.Error);
 
                 return receiveFile;
             }
@@ -1582,21 +1549,20 @@ namespace AaronLuna.AsyncFileServer.Controller
                     ServerEventType.SendFileTransferCompletedStarted,
                     ServerEventType.SendFileTransferCompletedCompleted).ConfigureAwait(false);
 
-            if (confirmFileTransfer.Success) return Result.Ok();
+            if (confirmFileTransfer.Success)
+            {
+                var processBacklog = await ProcessPendingRequestsInQueueAsync();
+                if (processBacklog.Failure)
+                {
+                    ReportError(processBacklog.Error);
+                }
+
+                return Result.Ok();
+            }
             
             inboundFileTransfer.Status = FileTransferStatus.Error;
             inboundFileTransfer.ErrorMessage = confirmFileTransfer.Error;
-
-            ErrorLog.Add(new ServerError(confirmFileTransfer.Error));
-
-            _eventLog.Add(new ServerEvent
-            {
-                EventType = ServerEventType.ErrorOccurred,
-                ErrorMessage = confirmFileTransfer.Error,
-                FileTransferId = inboundFileTransfer.Id
-            });
-
-            EventOccurred?.Invoke(this, _eventLog.Last());
+            ReportError(confirmFileTransfer.Error);
 
             return confirmFileTransfer;
         }
@@ -1620,18 +1586,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             inboundFileTransfer.Status = FileTransferStatus.Error;
             inboundFileTransfer.ErrorMessage = rejectTransfer.Error;
-
-            ErrorLog.Add(new ServerError(rejectTransfer.Error));
-
-            _eventLog.Add(new ServerEvent
-            {
-                EventType = ServerEventType.ErrorOccurred,
-                ErrorMessage = rejectTransfer.Error,
-                FileTransferId = inboundFileTransfer.Id,
-                RequestId = inboundRequest.Id
-            });
-
-            EventOccurred?.Invoke(this, _eventLog.Last());
+            ReportError(rejectTransfer.Error);
 
             return rejectTransfer;
         }
@@ -1644,16 +1599,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             var getFileTransfer = GetFileTransferById(fileTransferId);
             if (getFileTransfer.Failure)
             {
-                ErrorLog.Add(new ServerError(getFileTransfer.Error));
-
-                _eventLog.Add(new ServerEvent
-                {
-                    EventType = ServerEventType.ErrorOccurred,
-                    ErrorMessage = getFileTransfer.Error
-                });
-
-                EventOccurred?.Invoke(this, _eventLog.Last());
-
+                ReportError(getFileTransfer.Error);
                 return getFileTransfer;
             }
 
@@ -1676,23 +1622,12 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             inboundFileTransfer.Status = FileTransferStatus.Error;
             inboundFileTransfer.ErrorMessage = notifyTransferStalled.Error;
-
-            ErrorLog.Add(new ServerError(notifyTransferStalled.Error));
-
-            _eventLog.Add(new ServerEvent
-            {
-                EventType = ServerEventType.ErrorOccurred,
-                ErrorMessage = notifyTransferStalled.Error,
-                FileTransferId = inboundFileTransfer.Id,
-                RequestId = inboundRequest.Id
-            });
-
-            EventOccurred?.Invoke(this, _eventLog.Last());
+            ReportError(notifyTransferStalled.Error);
 
             return notifyTransferStalled;
         }
 
-        Result HandleFileTransferStalled(ServerRequestController inboundRequest)
+        Result HandleFileTransferStalled(RequestController inboundRequest)
         {
             const string fileTransferStalledErrorMessage =
                 "Aborting file transfer, client says that data is no longer being received (HandleStalledFileTransfer)";
@@ -1731,16 +1666,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             var getFileTransfer = GetFileTransferById(fileTransferId);
             if (getFileTransfer.Failure)
             {
-                ErrorLog.Add(new ServerError(getFileTransfer.Error));
-
-                _eventLog.Add(new ServerEvent
-                {
-                    EventType = ServerEventType.ErrorOccurred,
-                    ErrorMessage = getFileTransfer.Error
-                });
-
-                EventOccurred?.Invoke(this, _eventLog.Last());
-
+                ReportError(getFileTransfer.Error);
                 return getFileTransfer;
             }
 
@@ -1784,16 +1710,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                         $"Download Lockout Expires..: {stalledFileTransfer.RetryLockoutExpireTime:MM/dd/yyyy hh:mm:ss.fff tt}{Environment.NewLine}" +
                         $"Remaining Lockout Time....: {lockoutTimeRemaining}{Environment.NewLine}";
 
-                    ErrorLog.Add(new ServerError(retryLimitExceeded));
-
-                    _eventLog.Add(new ServerEvent
-                    {
-                        EventType = ServerEventType.ErrorOccurred,
-                        ErrorMessage = retryLimitExceeded
-                    });
-
-                    EventOccurred?.Invoke(this, _eventLog.Last());
-
+                    ReportError(retryLimitExceeded);
                     return Result.Ok();
                 }
             }
@@ -1812,23 +1729,12 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             stalledFileTransfer.Status = FileTransferStatus.Error;
             stalledFileTransfer.ErrorMessage = retryTransfer.Error;
-
-            ErrorLog.Add(new ServerError(retryTransfer.Error));
-
-            _eventLog.Add(new ServerEvent
-            {
-                EventType = ServerEventType.ErrorOccurred,
-                ErrorMessage = retryTransfer.Error,
-                FileTransferId = stalledFileTransfer.Id,
-                RequestId = inboundRequest.Id
-            });
-
-            EventOccurred?.Invoke(this, _eventLog.Last());
+            ReportError(retryTransfer.Error);
 
             return retryTransfer;
         }
 
-        async Task<Result> HandleRetryFileTransferAsync(ServerRequestController inboundRequest)
+        async Task<Result> HandleRetryFileTransferAsync(RequestController inboundRequest)
         {
             var getFileTransfer = GetFileTransferByResponseCode(inboundRequest);
             if (getFileTransfer.Failure)
@@ -1896,17 +1802,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 canceledFileTransfer.Status = FileTransferStatus.RetryLimitExceeded;
                 canceledFileTransfer.RetryLockoutExpireTime = DateTime.Now + RetryLimitLockout;
                 canceledFileTransfer.ErrorMessage = "Maximum # of attempts to complete stalled file transfer reached";
-
-                ErrorLog.Add(new ServerError(retryLimitExceeded));
-
-                _eventLog.Add(new ServerEvent
-                {
-                    EventType = ServerEventType.ErrorOccurred,
-                    ErrorMessage = retryLimitExceeded,
-                    FileTransferId = canceledFileTransfer.Id
-                });
-
-                EventOccurred?.Invoke(this, _eventLog.Last());
+                ReportError(retryLimitExceeded);
 
                 return await SendRetryLimitExceededAsync(canceledFileTransfer).ConfigureAwait(false);
             }
@@ -1919,7 +1815,7 @@ namespace AaronLuna.AsyncFileServer.Controller
         async Task<Result> SendRetryLimitExceededAsync(FileTransferController outboundFileTransfer)
         {
             var outboundRequest =
-                new ServerRequestController(_requestId, _settings, outboundFileTransfer.RemoteServerInfo);
+                new RequestController(_requestId, _settings, outboundFileTransfer.RemoteServerInfo);
 
             outboundRequest.EventOccurred += HandleEventOccurred;
             outboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
@@ -1977,7 +1873,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             return Result.Fail(sendRequest.Error);
         }
 
-        Result HandleRetryLimitExceeded(ServerRequestController inboundRequest)
+        Result HandleRetryLimitExceeded(RequestController inboundRequest)
         {
             var getFileTransferId = inboundRequest.GetRemoteServerFileTransferId();
             if (getFileTransferId.Failure)
@@ -2039,14 +1935,14 @@ namespace AaronLuna.AsyncFileServer.Controller
             return Result.Ok();
         }
 
-        async Task<Result<ServerRequestController>> SendFileTransferResponseAsync(
+        async Task<Result<RequestController>> SendFileTransferResponseAsync(
             ServerRequestType requestType,
             FileTransferController fileTransfer,
             ServerEventType sendRequestStartedEventType,
             ServerEventType sendRequestCompleteEventType)
         {
             var outboundRequest =
-                new ServerRequestController(_requestId, _settings, fileTransfer.RemoteServerInfo);
+                new RequestController(_requestId, _settings, fileTransfer.RemoteServerInfo);
 
             outboundRequest.EventOccurred += HandleEventOccurred;
             outboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
@@ -2096,10 +1992,10 @@ namespace AaronLuna.AsyncFileServer.Controller
             if (sendRequest.Success) return Result.Ok(outboundRequest);
 
             outboundRequest.Status = ServerRequestStatus.Error;
-            return Result.Fail<ServerRequestController>(sendRequest.Error);
+            return Result.Fail<RequestController>(sendRequest.Error);
         }
 
-        async Task<Result<ServerRequestController>> SendBasicServerRequestAsync(
+        async Task<Result<RequestController>> SendBasicServerRequestAsync(
             IPAddress remoteServerIpAddress,
             int remoteServerPort,
             ServerRequestType requestType,
@@ -2109,7 +2005,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             var remoteServerInfo = new ServerInfo(remoteServerIpAddress, remoteServerPort);
 
             var outboundRequest =
-                new ServerRequestController(_requestId, _settings, remoteServerInfo);
+                new RequestController(_requestId, _settings, remoteServerInfo);
 
             outboundRequest.EventOccurred += HandleEventOccurred;
             outboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
@@ -2155,13 +2051,13 @@ namespace AaronLuna.AsyncFileServer.Controller
             if (sendRequest.Success) return Result.Ok(outboundRequest);
 
             outboundRequest.Status = ServerRequestStatus.Error;
-            return Result.Fail<ServerRequestController>(sendRequest.Error);
+            return Result.Fail<RequestController>(sendRequest.Error);
         }
 
         public async Task<Result> RequestFileListAsync(ServerInfo remoteServerInfo)
         {
             var outboundRequest =
-                new ServerRequestController(_requestId, _settings, remoteServerInfo);
+                new RequestController(_requestId, _settings, remoteServerInfo);
 
             outboundRequest.EventOccurred += HandleEventOccurred;
             outboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
@@ -2204,16 +2100,8 @@ namespace AaronLuna.AsyncFileServer.Controller
                     sendRequestCompleteEvent);
 
             if (sendrequest.Success) return Result.Ok();
-            outboundRequest.Status = ServerRequestStatus.Error;
-
-            _eventLog.Add(new ServerEvent
-            {
-                EventType = ServerEventType.ErrorOccurred,
-                ErrorMessage = sendrequest.Error,
-                RequestId = outboundRequest.Id
-            });
-
-            EventOccurred?.Invoke(this, _eventLog.Last());
+            outboundRequest.Status = ServerRequestStatus.Error;            
+            ReportError(sendrequest.Error);
 
             return sendrequest;
         }
@@ -2231,7 +2119,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             return RequestFileListAsync(remoteServerInfo);
         }
 
-        async Task<Result> HandleFileListRequestAsync(ServerRequestController inboundRequest)
+        async Task<Result> HandleFileListRequestAsync(RequestController inboundRequest)
         {
             var getLocalFolderPath = inboundRequest.GetLocalFolderPath();
             if (getLocalFolderPath.Failure)
@@ -2271,8 +2159,8 @@ namespace AaronLuna.AsyncFileServer.Controller
                         inboundRequest.RemoteServerInfo.SessionIpAddress,
                         inboundRequest.RemoteServerInfo.PortNumber,
                         ServerRequestType.NoFilesAvailableForDownload,
-                        ServerEventType.SendNotificationNoFilesToDownloadStarted,
-                        ServerEventType.SendNotificationNoFilesToDownloadComplete).ConfigureAwait(false);
+                        ServerEventType.SendNotificationFolderIsEmptyStarted,
+                        ServerEventType.SendNotificationFolderIsEmptyComplete).ConfigureAwait(false);
             }
 
             var requestBytes =
@@ -2301,7 +2189,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             };
 
             var outboundRequest =
-                new ServerRequestController(_requestId, _settings, inboundRequest.RemoteServerInfo);
+                new RequestController(_requestId, _settings, inboundRequest.RemoteServerInfo);
 
             outboundRequest.EventOccurred += HandleEventOccurred;
             outboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
@@ -2319,7 +2207,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                     sendRequestCompleteEvent).ConfigureAwait(false);
         }
 
-        void HandleRequestedFolderDoesNotExist(ServerRequestController inboundRequest)
+        void HandleRequestedFolderDoesNotExist(RequestController inboundRequest)
         {
             _eventLog.Add(new ServerEvent
             {
@@ -2332,11 +2220,11 @@ namespace AaronLuna.AsyncFileServer.Controller
             EventOccurred?.Invoke(this, _eventLog.Last());
         }
 
-        void HandleNoFilesAvailableForDownload(ServerRequestController inboundRequest)
+        void HandleNoFilesAvailableForDownload(RequestController inboundRequest)
         {
             _eventLog.Add(new ServerEvent
             {
-                EventType = ServerEventType.ReceivedNotificationNoFilesToDownload,
+                EventType = ServerEventType.ReceivedNotificationFolderIsEmpty,
                 RemoteServerIpAddress = inboundRequest.RemoteServerInfo.SessionIpAddress,
                 RemoteServerPortNumber = inboundRequest.RemoteServerInfo.PortNumber,
                 RequestId = inboundRequest.Id
@@ -2345,7 +2233,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             EventOccurred?.Invoke(this, _eventLog.Last());
         }
 
-        void HandleFileListResponse(ServerRequestController inboundRequest)
+        void HandleFileListResponse(RequestController inboundRequest)
         {
             var getFileInfoList = inboundRequest.GetFileInfoList();
             var remoteServerFileList = getFileInfoList.Value;
@@ -2381,23 +2269,15 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             var inboundRequest = sendrequest.Value;
             inboundRequest.Status = ServerRequestStatus.Error;
-
-            _eventLog.Add(new ServerEvent
-            {
-                EventType = ServerEventType.ErrorOccurred,
-                ErrorMessage = sendrequest.Error,
-                RequestId = inboundRequest.Id
-            });
-
-            EventOccurred?.Invoke(this, _eventLog.Last());
+            ReportError(sendrequest.Error);
 
             return sendrequest;
         }
 
-        Task<Result> HandleServerInfoRequest(ServerRequestController inboundRequest)
+        Task<Result> HandleServerInfoRequest(RequestController inboundRequest)
         {
             var outboundRequest =
-                new ServerRequestController(_requestId, _settings, inboundRequest.RemoteServerInfo);
+                new RequestController(_requestId, _settings, inboundRequest.RemoteServerInfo);
 
             outboundRequest.EventOccurred += HandleEventOccurred;
             outboundRequest.SocketEventOccurred += HandleSocketEventOccurred;
@@ -2453,7 +2333,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                     sendRequestCompleteEvent);
         }
 
-        void HandleServerInfoResponse(ServerRequestController inboundRequest)
+        void HandleServerInfoResponse(RequestController inboundRequest)
         {
             inboundRequest.RemoteServerInfo.DetermineSessionIpAddress(_settings.LocalNetworkCidrIp);
 
@@ -2492,7 +2372,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 : Result.Fail($"Error occurred shutting down the server + {sendShutdownCommand.Error}");
         }
 
-        void HandleShutdownServerCommand(ServerRequestController pendingRequest)
+        void HandleShutdownServerCommand(RequestController pendingRequest)
         {
             if (MyInfo.IsEqualTo(pendingRequest.RemoteServerInfo))
             {

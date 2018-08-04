@@ -1,4 +1,6 @@
-﻿namespace AaronLuna.AsyncFileServer.Controller
+﻿using AaronLuna.Common.Extensions;
+
+namespace AaronLuna.AsyncFileServer.Controller
 {
     using System;
     using System.Collections.Generic;
@@ -14,7 +16,7 @@
     using Model;
     using Utilities;
 
-    public class ServerRequestController
+    public class RequestController
     {
         internal static readonly string ErrorNoDataReceived =
             "Request from remote server has not been received.";
@@ -34,10 +36,10 @@
         int _remoteServerPortNumber;
 
         int _remoteServerFileTransferId;
+        long _fileTransferResponseCode;
         int _fileTransferRetryCounter;
         int _fileTransferRetryLimit;
         long _fileSizeBytes;
-        long _fileTransferResponseCode;
         long _lockoutExpireTimeTicks;
         string _fileName;
         string _localFolderPath;
@@ -45,7 +47,7 @@
         string _textMessage;
         FileInfoList _fileInfoList;
 
-        public ServerRequestController(int id, ServerSettings settings)
+        public RequestController(int id, ServerSettings settings)
         {
             Id = id;
             Status = ServerRequestStatus.NoData;
@@ -59,7 +61,7 @@
             _buffer = new byte[_bufferSize];
         }
 
-        public ServerRequestController(
+        public RequestController(
             int id,
             ServerSettings settings,
             ServerInfo remoteServerInfo) :this(id, settings)
@@ -67,7 +69,7 @@
             RemoteServerInfo = remoteServerInfo;
         }
 
-        public ServerRequestController(
+        public RequestController(
             int id,
             ServerSettings settings,
             Socket socket) : this(id, settings)
@@ -86,6 +88,8 @@
         public ServerRequestDirection Direction => _request.Direction;
         public DateTime TimeStamp => _request.TimeStamp;
         public bool RequestHasNotBeenReceived => Status == ServerRequestStatus.NoData;
+        public bool RequestHasBeenProcessed => Status.RequestHasBeenProcesed();
+        public bool IsLongRunningProcess => RequestType.IsLongRunningProcess();
         public bool InboundTransferIsRequested => RequestType == ServerRequestType.InboundFileTransferRequest;
         public bool OutboundTransferIsRequested => RequestType == ServerRequestType.OutboundFileTransferRequest;
         public bool RequestTypeIsFileTransferResponse => RequestType.IsFileTransferResponse();
@@ -798,10 +802,13 @@
                 _socket.Shutdown(SocketShutdown.Send);
                 _socket.Close();
             }
+            catch (ObjectDisposedException ex)
+            {
+                return Result.Fail(ex.GetReport());
+            }
             catch (SocketException ex)
             {
-                var errorMessage = $"{ex.Message} ({ex.GetType()} raised in method ServerRequestController.ShutdownSocket)";
-                return Result.Fail(errorMessage);
+                return Result.Fail(ex.GetReport());
             }
 
             return Result.Ok();

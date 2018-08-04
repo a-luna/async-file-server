@@ -1,4 +1,6 @@
-﻿namespace AaronLuna.AsyncFileServer.Model
+﻿using System;
+
+namespace AaronLuna.AsyncFileServer.Model
 {
     public enum ServerRequestDirection
     {
@@ -17,27 +19,56 @@
         Error
     }
 
-    public enum ServerRequestType
+    public enum ServerRequestType : byte
     {
-        None                                  = 0,
-        ServerInfoRequest                     = 1,
-        ServerInfoResponse                    = 2,
-        TextMessage                           = 3,
-        InboundFileTransferRequest            = 4,
-        OutboundFileTransferRequest           = 5,
-        FileListRequest                       = 6,
-        FileListResponse                      = 7,
-        NoFilesAvailableForDownload           = 8,
-        RequestedFolderDoesNotExist           = 9,
-        RequestedFileDoesNotExist             = 10,
-        FileTransferAccepted                  = 11,
-        FileTransferRejected                  = 12,
-        FileTransferStalled                   = 13,
-        FileTransferComplete                  = 14,
-        RetryOutboundFileTransfer             = 15,
-        RetryLimitExceeded                    = 16,
-        RetryLockoutExpired                   = 17,
-        ShutdownServerCommand                 = 18
+        None                              = 0,
+
+        ServerInfoRequest                 = 10,
+        ServerInfoResponse                = 11,
+
+        TextMessage                       = 20,
+
+        FileListRequest                   = 30,
+        FileListResponse                  = 31,
+        NoFilesAvailableForDownload       = 32,
+        RequestedFolderDoesNotExist       = 33,
+
+        InboundFileTransferRequest        = 40,
+        RequestedFileDoesNotExist         = 41,
+
+        OutboundFileTransferRequest       = 50,
+        FileTransferAccepted              = 51,
+        FileTransferRejected              = 52,
+        FileTransferStalled               = 53,
+        FileTransferComplete              = 54,
+
+        RetryOutboundFileTransfer         = 60,
+        RetryLimitExceeded                = 62,
+        RetryLockoutExpired               = 63,
+
+        ShutdownServerCommand             = 255
+    }
+
+    public static class RequestStatusExtensions
+    {
+        public static bool RequestHasBeenProcesed(this ServerRequestStatus status)
+        {
+            switch (status)
+            {
+                case ServerRequestStatus.NoData:
+                case ServerRequestStatus.Pending:
+                case ServerRequestStatus.InProgress:
+                    return false;
+
+                case ServerRequestStatus.Processed:
+                case ServerRequestStatus.Sent:
+                case ServerRequestStatus.Error:
+                    return true;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(status), status, null);
+            }
+        }
     }
 
     public static class RequestTypeExtensions
@@ -102,6 +133,18 @@
 
                 default:
                     return string.Empty;
+            }
+        }
+
+        public static bool IsLongRunningProcess(this ServerRequestType requestType)
+        {
+            switch (requestType)
+            {
+                case ServerRequestType.FileTransferAccepted:
+                    return true;
+
+                default:
+                    return false;
             }
         }
 

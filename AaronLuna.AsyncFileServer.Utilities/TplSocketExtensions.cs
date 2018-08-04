@@ -54,6 +54,10 @@
                         socket.EndAccept,
                         null).HandleCancellation(token).ConfigureAwait(false);
             }
+            catch (TaskCanceledException ex)
+            {
+                return Result.Fail<Socket>($"{ex.Message} ({ex.GetType()})");
+            }
             catch (SocketException ex)
             {
                 return Result.Fail<Socket>($"{ex.Message} ({ex.GetType()})");

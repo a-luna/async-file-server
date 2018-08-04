@@ -1,17 +1,18 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
-using AaronLuna.AsyncFileServer.Controller;
-using AaronLuna.AsyncFileServer.Model;
-using AaronLuna.AsyncFileServer.Utilities;
-using AaronLuna.Common.Result;
-
-namespace AaronLuna.AsyncFileServerTest.TestClasses
+﻿namespace AaronLuna.AsyncFileServerTest.TestClasses
 {
-    class FileTransferStalledController : FileTransferController
+    using System;
+    using System.IO;
+    using System.Linq;
+    using System.Net.Sockets;
+    using System.Threading;
+    using System.Threading.Tasks;
+
+    using AsyncFileServer.Controller;
+    using AsyncFileServer.Model;
+    using AsyncFileServer.Utilities;
+    using Common.Result;
+
+    class MockFileTransferStalledController : FileTransferController
     {
         readonly int _bufferSize;
         readonly int _timeoutMs;
@@ -20,7 +21,7 @@ namespace AaronLuna.AsyncFileServerTest.TestClasses
         Socket _socket;
         FileTransfer _fileTransfer;
 
-        public FileTransferStalledController(int id, ServerSettings settings) : base(id, settings)
+        public MockFileTransferStalledController(int id, ServerSettings settings) : base(id, settings)
         {
             _bufferSize = settings.SocketSettings.BufferSize;
             _timeoutMs = settings.SocketSettings.SocketTimeoutInMilliseconds;

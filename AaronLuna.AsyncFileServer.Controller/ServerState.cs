@@ -20,6 +20,7 @@
         public int PendingFileTransferCount => PendingTransferCount();
         public List<int> PendingFileTransferIds => GetPendingFileTransferIds();
 
+        public bool PendingRequestInQueue => !QueueIsEmpty();
         public bool NoRequests => RequestCount() == 0;
         public List<int> RequestIds => AllRequestIds();
         public DateTime MostRecentRequestTime => MostRecentRequestTimeStamp();
@@ -56,6 +57,16 @@
                                  && ft.Status == FileTransferStatus.Pending)
                     .Select(ft => ft.Id)
                     .ToList();
+        }
+
+        bool QueueIsEmpty()
+        {
+            var pendingRequests =
+                _localServer.Requests.Select(r => r)
+                    .Where(r => r.Status == ServerRequestStatus.Pending)
+                    .ToList();
+
+            return pendingRequests.Count == 0;
         }
 
         int RequestCount()

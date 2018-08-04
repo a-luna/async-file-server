@@ -40,6 +40,7 @@
         DetermineRequestTypeStarted,
         DetermineRequestTypeComplete,
 
+        PendingRequestInQueue,
         ProcessRequestBacklogStarted,
         ProcessRequestBacklogComplete,
         PendingFileTransfer,
@@ -105,9 +106,9 @@
         SendFileListComplete,
         ReceivedFileList,
 
-        SendNotificationNoFilesToDownloadStarted,
-        SendNotificationNoFilesToDownloadComplete,
-        ReceivedNotificationNoFilesToDownload,
+        SendNotificationFolderIsEmptyStarted,
+        SendNotificationFolderIsEmptyComplete,
+        ReceivedNotificationFolderIsEmpty,
 
         SendNotificationFolderDoesNotExistStarted,
         SendNotificationFolderDoesNotExistComplete,

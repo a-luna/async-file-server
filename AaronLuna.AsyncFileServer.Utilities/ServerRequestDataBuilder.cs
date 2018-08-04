@@ -16,14 +16,13 @@
             string localIpAddress,
             int localPort)
         {
-            var requestTypeData = BitConverter.GetBytes((int)requestType);
+            var requestTypeData = (byte) requestType;
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
             var thisServerPortData = BitConverter.GetBytes(localPort);
             var thisServerPortLen = BitConverter.GetBytes(Constants.SizeOfInt32InBytes);
 
-            var wrappedRequest = new List<byte>();
-            wrappedRequest.AddRange(requestTypeData);
+            var wrappedRequest = new List<byte> {requestTypeData};
             wrappedRequest.AddRange(thisServerIpLen);
             wrappedRequest.AddRange(thisServerIpData);
             wrappedRequest.AddRange(thisServerPortLen);
@@ -39,7 +38,7 @@
             int retryLimit,
             long lockoutExpireTimeTicks)
         {
-            var requestTypeData = BitConverter.GetBytes((int)ServerRequestType.RetryLimitExceeded);
+            var requestTypeData = (byte) ServerRequestType.RetryLimitExceeded;
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
             var thisServerPortData = BitConverter.GetBytes(localPort);
@@ -51,8 +50,7 @@
             var lockoutExpireTimeData = BitConverter.GetBytes(lockoutExpireTimeTicks);
             var lockoutExpireTimeLen = BitConverter.GetBytes(Constants.SizeOfInt64InBytes);
 
-            var wrappedRequest = new List<byte>();
-            wrappedRequest.AddRange(requestTypeData);
+            var wrappedRequest = new List<byte> {requestTypeData};
             wrappedRequest.AddRange(thisServerIpLen);
             wrappedRequest.AddRange(thisServerIpData);
             wrappedRequest.AddRange(thisServerPortLen);
@@ -73,7 +71,7 @@
             int localPort,
             long responseCode)
         {
-            var requestTypeData = BitConverter.GetBytes((int)requestType);
+            var requestTypeData = (byte) requestType;
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
             var thisServerPortData = BitConverter.GetBytes(localPort);
@@ -81,8 +79,7 @@
             var idData = BitConverter.GetBytes(responseCode);
             var idLen = BitConverter.GetBytes(Constants.SizeOfInt64InBytes);
 
-            var wrappedRequest = new List<byte>();
-            wrappedRequest.AddRange(requestTypeData);
+            var wrappedRequest = new List<byte> {requestTypeData};
             wrappedRequest.AddRange(thisServerIpLen);
             wrappedRequest.AddRange(thisServerIpData);
             wrappedRequest.AddRange(thisServerPortLen);
@@ -99,7 +96,7 @@
             int localPort,
             string message)
         {
-            var requestTypeData = BitConverter.GetBytes((int)requestType);
+            var requestTypeData = (byte) requestType;
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
             var thisServerPortData = BitConverter.GetBytes(localPort);
@@ -107,8 +104,7 @@
             var messageData = Encoding.UTF8.GetBytes(message);
             var messageLen = BitConverter.GetBytes(messageData.Length);
 
-            var wrappedRequest = new List<byte>();
-            wrappedRequest.AddRange(requestTypeData);
+            var wrappedRequest = new List<byte> {requestTypeData};
             wrappedRequest.AddRange(thisServerIpLen);
             wrappedRequest.AddRange(thisServerIpData);
             wrappedRequest.AddRange(thisServerPortLen);
@@ -119,14 +115,15 @@
             return wrappedRequest.ToArray();
         }
 
-        public static byte[] ConstructInboundFileTransferRequest(string localIpAddress,
+        public static byte[] ConstructInboundFileTransferRequest(
+            string localIpAddress,
             int localPort,
             int fileTransferId,
             string fileName,
             string remoteFolderPath,
             string localFolderPath)
         {
-            var requestType = BitConverter.GetBytes((int)ServerRequestType.OutboundFileTransferRequest);
+            var requestType = (byte) ServerRequestType.OutboundFileTransferRequest;
 
             var fileTransferIdData = BitConverter.GetBytes(fileTransferId);
             var fileTransferIdLen = BitConverter.GetBytes(Constants.SizeOfInt32InBytes);
@@ -146,8 +143,7 @@
             var targetDirData = Encoding.UTF8.GetBytes(localFolderPath);
             var targetDirLen = BitConverter.GetBytes(targetDirData.Length);
 
-            var wrappedRequest = new List<byte>();
-            wrappedRequest.AddRange(requestType);
+            var wrappedRequest = new List<byte> {requestType};
             wrappedRequest.AddRange(fileTransferIdLen);
             wrappedRequest.AddRange(fileTransferIdData);
             wrappedRequest.AddRange(fileNameLen);
@@ -164,7 +160,8 @@
             return wrappedRequest.ToArray();
         }
 
-        public static byte[] ConstructOutboundFileTransferRequest(string localIpAddress,
+        public static byte[] ConstructOutboundFileTransferRequest(
+            string localIpAddress,
             int localPort,
             string fileName,
             long fileSizeBytes,
@@ -175,7 +172,7 @@
             int retryCounter,
             int retryLimit)
         {
-            var requestType = BitConverter.GetBytes((int)ServerRequestType.InboundFileTransferRequest);
+            var requestType = (byte) ServerRequestType.InboundFileTransferRequest;
 
             var responseCodeData = BitConverter.GetBytes(responseCode);
             var responseCodeLen = BitConverter.GetBytes(Constants.SizeOfInt64InBytes);
@@ -207,8 +204,7 @@
             var targetDirData = Encoding.UTF8.GetBytes(remoteFolderPath);
             var targetDirLen = BitConverter.GetBytes(targetDirData.Length);
 
-            var wrappedRequest = new List<byte>();
-            wrappedRequest.AddRange(requestType);
+            var wrappedRequest = new List<byte> {requestType};
             wrappedRequest.AddRange(responseCodeLen);
             wrappedRequest.AddRange(responseCodeData);
             wrappedRequest.AddRange(remoteServerTransferIdLen);
@@ -233,12 +229,13 @@
             return wrappedRequest.ToArray();
         }
 
-        public static byte[] ConstructFileListResponse(FileInfoList fileInfoList,
+        public static byte[] ConstructFileListResponse(
+            FileInfoList fileInfoList,
             string localIpAddress,
             int localPort,
             string remoteFolderPath)
         {
-            var requestType = BitConverter.GetBytes((int)ServerRequestType.FileListResponse);
+            var requestType = (byte) ServerRequestType.FileListResponse;
 
             var localServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var localServerIpLen = BitConverter.GetBytes(localServerIpData.Length);
@@ -268,8 +265,7 @@
             var fileInfoListData = Encoding.UTF8.GetBytes(allFileInfo);
             var fileInfoListLen = BitConverter.GetBytes(fileInfoListData.Length);
 
-            var wrappedRequest = new List<byte>();
-            wrappedRequest.AddRange(requestType);
+            var wrappedRequest = new List<byte> {requestType};
             wrappedRequest.AddRange(localServerIpLen);
             wrappedRequest.AddRange(localServerIpData);
             wrappedRequest.AddRange(localServerPortLen);
@@ -289,7 +285,7 @@
             string publicIp,
             string transferFolder)
         {
-            var requestType = BitConverter.GetBytes((int)ServerRequestType.ServerInfoResponse);
+            var requestType = (byte) ServerRequestType.ServerInfoResponse;
 
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
@@ -306,8 +302,7 @@
             var transferFolderData = Encoding.UTF8.GetBytes(transferFolder);
             var transferFolderLen = BitConverter.GetBytes(transferFolderData.Length);
 
-            var wrappedRequest = new List<byte>();
-            wrappedRequest.AddRange(requestType);
+            var wrappedRequest = new List<byte> {requestType};
             wrappedRequest.AddRange(thisServerIpLen);
             wrappedRequest.AddRange(thisServerIpData);
             wrappedRequest.AddRange(thisServerPortLen);

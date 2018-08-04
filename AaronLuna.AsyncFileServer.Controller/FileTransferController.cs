@@ -300,7 +300,7 @@
             }
         }
 
-        public async Task<Result> ReceiveFileAsync(
+        public virtual async Task<Result> ReceiveFileAsync(
             Socket socket,
             byte[] unreadBytes,
             CancellationToken token)
