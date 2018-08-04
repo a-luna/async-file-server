@@ -112,6 +112,9 @@
 
             var testClientState = new ServerState(testClient);
             var testServerState = new ServerState(testServer);
+            var client2State = new ServerState(client2);
+            var client3State = new ServerState(client3);
+            var client4State = new ServerState(client4);
 
             await testServer.InitializeAsync(_serverSettings).ConfigureAwait(false);
             await testClient.InitializeAsync(_clientSettings).ConfigureAwait(false);
@@ -379,13 +382,102 @@
 
             // Check the status of all requests on all server/client instances
 
+            var testServerString = testServer.ToString();
+            Assert.IsTrue(testServerString.Contains("test server [172.20.10.10:8028]"));
+            Assert.IsTrue(testServerString.Contains("[Requests In: 8 Out: 5]"));
+            Assert.IsTrue(testServerString.Contains("[Transfers In: 1 Out: 1]"));
+            Assert.IsTrue(testServerString.Contains("[Total Messages: 2/1 Sessions]"));
+
+            Assert.IsFalse(testServerState.PendingRequestInQueue);
+            Assert.AreEqual(13, testServerState.RequestIds.Count);
+            Assert.IsFalse(testServerState.FileTransferPending);
+            Assert.AreEqual(2, testServerState.FileTransferIds.Count);
+            Assert.IsFalse(testServerState.NoTextSessions);
+            Assert.AreEqual(1, testServerState.TextSessionIds.Count);
+
+            var textSessionId1 = testServerState.TextSessionIds[0];
+            var textSession1 = testServer.GetTextSessionById(textSessionId1).Value;
+            var messageCount1 = textSession1.MessageCount;
+
+            Assert.AreEqual(2, messageCount1);
+
+            var testClientString = testClient.ToString();
+            Assert.IsTrue(testClientString.Contains("test client [172.20.10.10:8027]"));
+            Assert.IsTrue(testClientString.Contains("[Requests In: 5 Out: 7]"));
+            Assert.IsTrue(testClientString.Contains("[Transfers In: 2 Out: 0]"));
+            Assert.IsTrue(testClientString.Contains("[Total Messages: 1/1 Sessions]"));
+
+            Assert.IsFalse(testClientState.PendingRequestInQueue);
+            Assert.AreEqual(12, testClientState.RequestIds.Count);
+            Assert.IsFalse(testClientState.FileTransferPending);
+            Assert.AreEqual(2, testClientState.FileTransferIds.Count);
+            Assert.IsFalse(testClientState.NoTextSessions);
+            Assert.AreEqual(1, testClientState.TextSessionIds.Count);
+
+            var textSessionId2 = testClientState.TextSessionIds[0];
+            var textSession2 = testClient.GetTextSessionById(textSessionId2).Value;
+            var messageCount2 = textSession2.MessageCount;
+
+            Assert.AreEqual(1, messageCount2);
+
+            var client2String = client2.ToString();
+            Assert.IsTrue(client2String.Contains("client2 [172.20.10.10:8029]"));
+            Assert.IsTrue(client2String.Contains("[Requests In: 4 Out: 3]"));
+            Assert.IsTrue(client2String.Contains("[Transfers In: 1 Out: 1]"));
+            Assert.IsTrue(client2String.Contains("[Total Messages: 0/0 Sessions]"));
+
+            Assert.IsFalse(client2State.PendingRequestInQueue);
+            Assert.AreEqual(7, client2State.RequestIds.Count);
+            Assert.IsFalse(client2State.FileTransferPending);
+            Assert.AreEqual(2, client2State.FileTransferIds.Count);
+            Assert.IsTrue(client2State.NoTextSessions);
+            Assert.AreEqual(0, client2State.TextSessionIds.Count);
+
+            var client3String = client3.ToString();
+            Assert.IsTrue(client3String.Contains("client3 [172.20.10.10:8030]"));
+            Assert.IsTrue(client3String.Contains("[Requests In: 3 Out: 3]"));
+            Assert.IsTrue(client3String.Contains("[Transfers In: 0 Out: 1]"));
+            Assert.IsTrue(client3String.Contains("[Total Messages: 1/1 Sessions]"));
+
+            Assert.IsFalse(client3State.PendingRequestInQueue);
+            Assert.AreEqual(6, client3State.RequestIds.Count);
+            Assert.IsFalse(client3State.FileTransferPending);
+            Assert.AreEqual(1, client3State.FileTransferIds.Count);
+            Assert.IsFalse(client3State.NoTextSessions);
+            Assert.AreEqual(1, client3State.TextSessionIds.Count);
+
+            var textSessionId3 = client3State.TextSessionIds[0];
+            var textSession3 = client3.GetTextSessionById(textSessionId3).Value;
+            var messageCount3 = textSession3.MessageCount;
+
+            Assert.AreEqual(1, messageCount3);
+
+            var client4String = client4.ToString();
+            Assert.IsTrue(client4String.Contains("client4 [172.20.10.10:8031]"));
+            Assert.IsTrue(client4String.Contains("[Requests In: 1 Out: 3]"));
+            Assert.IsTrue(client4String.Contains("[Transfers In: 0 Out: 0]"));
+            Assert.IsTrue(client4String.Contains("[Total Messages: 2/1 Sessions]"));
+
+            Assert.IsFalse(client4State.PendingRequestInQueue);
+            Assert.AreEqual(4, client4State.RequestIds.Count);
+            Assert.IsFalse(client4State.FileTransferPending);
+            Assert.AreEqual(0, client4State.FileTransferIds.Count);
+            Assert.IsFalse(client4State.NoTextSessions);
+            Assert.AreEqual(1, client4State.TextSessionIds.Count);
+
+            var textSessionId4 = client4State.TextSessionIds[0];
+            var textSession4 = client4.GetTextSessionById(textSessionId4).Value;
+            var messageCount4 = textSession4.MessageCount;
+
+            Assert.AreEqual(2, messageCount4);
+
             await ShutdownServerAsync(client2, runClient2Task);
             await ShutdownServerAsync(client3, runClient3Task);
             await ShutdownServerAsync(client4, runClient4Task);
             await ShutdownServerAsync(testServer, runTestServerTask);
             await ShutdownServerAsync(testClient, runTestClientTask);
 
-            if (true)
+            if (_generateLogFiles)
             {
                 File.AppendAllLines(testClientLogFilePath, _clientLogMessages);
                 File.AppendAllLines(testServerLogFilePath, _serverLogMessages);

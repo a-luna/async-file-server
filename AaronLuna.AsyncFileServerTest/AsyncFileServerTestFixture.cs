@@ -92,7 +92,7 @@ namespace AaronLuna.AsyncFileServerTest
         [TestInitialize]
         public void Setup()
         {
-            _generateLogFiles = true;
+            _generateLogFiles = false;
             _clientLogMessages = new List<string>();
             _serverLogMessages = new List<string>();
             _clientLogFilePath = string.Empty;

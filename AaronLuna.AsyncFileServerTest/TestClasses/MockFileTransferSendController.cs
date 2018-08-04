@@ -94,6 +94,7 @@
 
             TestEventOccurred?.Invoke(this, EventLog.Last());
 
+            await Task.Delay(10);
             return Result.Ok();
         }
     }
