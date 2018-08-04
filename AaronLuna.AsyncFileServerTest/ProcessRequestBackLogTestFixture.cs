@@ -477,7 +477,7 @@
             await ShutdownServerAsync(testServer, runTestServerTask);
             await ShutdownServerAsync(testClient, runTestClientTask);
 
-            if (_generateLogFiles)
+            if (true)
             {
                 File.AppendAllLines(testClientLogFilePath, _clientLogMessages);
                 File.AppendAllLines(testServerLogFilePath, _serverLogMessages);
@@ -522,7 +522,7 @@
             var logMessageForFile =
                 $"(client3)\t{DateTime.Now:MM/dd/yyyy HH:mm:ss.fff}\t{serverEvent.GetLogFileEntry()}";
 
-            Console.WriteLine(logMessageForConsole);
+            //Console.WriteLine(logMessageForConsole);
             _client3LogMessages.Add(logMessageForFile);
 
             switch (serverEvent.EventType)
@@ -545,7 +545,7 @@
             var logMessageForFile =
                 $"(client4)\t{DateTime.Now:MM/dd/yyyy HH:mm:ss.fff}\t{serverEvent.GetLogFileEntry()}";
 
-            Console.WriteLine(logMessageForConsole);
+            //Console.WriteLine(logMessageForConsole);
             _client4LogMessages.Add(logMessageForFile);
 
             switch (serverEvent.EventType)
