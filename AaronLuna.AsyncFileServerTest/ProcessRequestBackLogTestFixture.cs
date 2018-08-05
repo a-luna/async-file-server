@@ -338,7 +338,9 @@
             // Check the status of all requests on all server/client instances
 
             var testServerString = testServer.ToString();
-            Assert.IsTrue(testServerString.Contains("test server [172.20.10.10:8028]"));
+            var testServerEndPoint = $"{testServer.MyInfo.LocalIpAddress}:{testServer.MyInfo.PortNumber}";
+
+            Assert.IsTrue(testServerString.Contains($"test server [{testServerEndPoint}]"));
             Assert.IsTrue(testServerString.Contains("[Requests In: 8 Out: 3]"));
             Assert.IsTrue(testServerString.Contains("[Transfers In: 1 Out: 1]"));
             Assert.IsTrue(testServerString.Contains("[Total Messages: 2/1 Sessions]"));
@@ -357,7 +359,9 @@
             Assert.AreEqual(2, messageCount1);
 
             var testClientString = testClient.ToString();
-            Assert.IsTrue(testClientString.Contains("test client [172.20.10.10:8027]"));
+            var testClientEndPoint = $"{testClient.MyInfo.LocalIpAddress}:{testClient.MyInfo.PortNumber}";
+
+            Assert.IsTrue(testClientString.Contains($"test client [{testClientEndPoint}]"));
             Assert.IsTrue(testClientString.Contains("[Requests In: 5 Out: 5]"));
             Assert.IsTrue(testClientString.Contains("[Transfers In: 2 Out: 0]"));
             Assert.IsTrue(testClientString.Contains("[Total Messages: 1/1 Sessions]"));
@@ -376,7 +380,9 @@
             Assert.AreEqual(1, messageCount2);
 
             var client2String = client2.ToString();
-            Assert.IsTrue(client2String.Contains("client2 [172.20.10.10:8029]"));
+            var client2EndPoint = $"{client2.MyInfo.LocalIpAddress}:{client2.MyInfo.PortNumber}";
+
+            Assert.IsTrue(client2String.Contains($"client2 [{client2EndPoint}]"));
             Assert.IsTrue(client2String.Contains("[Requests In: 2 Out: 3]"));
             Assert.IsTrue(client2String.Contains("[Transfers In: 1 Out: 1]"));
             Assert.IsTrue(client2String.Contains("[Total Messages: 0/0 Sessions]"));
@@ -389,7 +395,9 @@
             Assert.AreEqual(0, client2State.TextSessionIds.Count);
 
             var client3String = client3.ToString();
-            Assert.IsTrue(client3String.Contains("client3 [172.20.10.10:8030]"));
+            var client3EndPoint = $"{client3.MyInfo.LocalIpAddress}:{client3.MyInfo.PortNumber}";
+
+            Assert.IsTrue(client3String.Contains($"client3 [{client3EndPoint}]"));
             Assert.IsTrue(client3String.Contains("[Requests In: 1 Out: 3]"));
             Assert.IsTrue(client3String.Contains("[Transfers In: 0 Out: 1]"));
             Assert.IsTrue(client3String.Contains("[Total Messages: 1/1 Sessions]"));
@@ -408,7 +416,9 @@
             Assert.AreEqual(1, messageCount3);
 
             var client4String = client4.ToString();
-            Assert.IsTrue(client4String.Contains("client4 [172.20.10.10:8031]"));
+            var client4EndPoint = $"{client4.MyInfo.LocalIpAddress}:{client4.MyInfo.PortNumber}";
+
+            Assert.IsTrue(client4String.Contains($"client4 [{client4EndPoint}]"));
             Assert.IsTrue(client4String.Contains("[Requests In: 1 Out: 3]"));
             Assert.IsTrue(client4String.Contains("[Transfers In: 0 Out: 0]"));
             Assert.IsTrue(client4String.Contains("[Total Messages: 2/1 Sessions]"));
