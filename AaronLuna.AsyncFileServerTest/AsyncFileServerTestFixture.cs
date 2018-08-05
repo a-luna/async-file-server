@@ -17,7 +17,6 @@ namespace AaronLuna.AsyncFileServerTest
 
     using AsyncFileServer.Model;
     using AsyncFileServer.Controller;
-    using TestClasses;
 
     [TestClass]
     public partial class AsyncFileServerTestFixture
@@ -28,17 +27,8 @@ namespace AaronLuna.AsyncFileServerTest
         SocketSettings _socketSettings;
         ServerSettings _clientSettings;
         ServerSettings _serverSettings;
-        AsyncFileServer _server;
-        AsyncFileServer _client;
-        AsyncFileServerTest _testServer;
-        ServerState _serverState;
-        ServerState _clientState;
-        Task<Result> _runServerTask;
-        Task<Result> _runClientTask;
         List<string> _serverLogMessages;
         List<string> _clientLogMessages;
-        string _serverLogFilePath;
-        string _clientLogFilePath;
         bool _generateLogFiles;
 
         string _localFolder;
@@ -51,11 +41,9 @@ namespace AaronLuna.AsyncFileServerTest
         string _restoreFilePath;
         string _remoteServerFolderPath;
         string _cidrIp;
-        IPAddress _localIp;
         IPAddress _remoteServerLocalIp;
         IPAddress _remoteServerPublicIp;
         ServerPlatform _remoteServerPlatform;
-        ServerPlatform _thisServerPlatform;
         FileInfoList _fileInfoList;
 
         bool _serverReceivedTextMessage;
@@ -95,8 +83,6 @@ namespace AaronLuna.AsyncFileServerTest
             _generateLogFiles = false;
             _clientLogMessages = new List<string>();
             _serverLogMessages = new List<string>();
-            _clientLogFilePath = string.Empty;
-            _serverLogFilePath = string.Empty;
 
             _remoteServerFolderPath = string.Empty;
             _remoteServerLocalIp = null;
@@ -164,12 +150,8 @@ namespace AaronLuna.AsyncFileServerTest
                 File.Copy(_restoreFilePath, _remoteFilePath);
             }
 
-            _localIp = IPAddress.Loopback;
-            _remoteServerPlatform = ServerPlatform.None;
-            _thisServerPlatform = Environment.OSVersion.Platform.ToServerPlatform();
-
-            //_cidrIp = "192.168.1.0/24";
             _cidrIp = "172.20.10.0/28";
+            _remoteServerPlatform = ServerPlatform.None;
 
             var getCidrIp = NetworkUtilities.GetCidrIp();
             if (getCidrIp.Success)
@@ -177,10 +159,9 @@ namespace AaronLuna.AsyncFileServerTest
                 _cidrIp = getCidrIp.Value;
             }
 
-            var getLocalIpResult = NetworkUtilities.GetLocalIPv4Address(_cidrIp);
-            if (getLocalIpResult.Success)
+            var getLocalIp = NetworkUtilities.GetLocalIPv4Address(_cidrIp);
+            if (getLocalIp.Success)
             {
-                _localIp = getLocalIpResult.Value;
             }
             
             _cts = new CancellationTokenSource();
@@ -215,13 +196,6 @@ namespace AaronLuna.AsyncFileServerTest
                 RetryLimitLockout = TimeSpan.FromSeconds(3),
                 LogLevel = LogLevel.Info
             };
-
-            _server = new AsyncFileServer("server", _serverSettings);
-            _testServer = new AsyncFileServerTest("test server", _serverSettings);
-            _client = new AsyncFileServer("client", _clientSettings);
-            
-            _serverState = new ServerState(_server);
-            _clientState = new ServerState(_client);
         }
 
         [TestMethod]
@@ -252,14 +226,15 @@ namespace AaronLuna.AsyncFileServerTest
             while (!server.IsListening) { }
             while (!client.IsListening) { }
 
-            Assert.AreEqual(string.Empty, _remoteServerFolderPath);
-            Assert.IsNull(_remoteServerPublicIp);
             Assert.IsNull(_remoteServerLocalIp);
+            Assert.IsNull(_remoteServerPublicIp);           
+            Assert.AreEqual(string.Empty, _remoteServerFolderPath);
+            Assert.AreEqual(ServerPlatform.None, _remoteServerPlatform);
 
             var serverInfoRequest =
                 await client.RequestServerInfoAsync(
-                        _localIp,
-                        _serverSettings.LocalServerPortNumber)
+                        server.MyInfo.LocalIpAddress,
+                        server.MyInfo.PortNumber)
                     .ConfigureAwait(false);
 
             if (serverInfoRequest.Failure)
@@ -269,20 +244,16 @@ namespace AaronLuna.AsyncFileServerTest
 
             while (!_clientReceivedServerInfo) { }
             
-            Assert.AreEqual(_remoteFolder, _remoteServerFolderPath);
-            Assert.AreEqual(_thisServerPlatform, _remoteServerPlatform);
-
-            var localIpExpected = server.MyInfo.LocalIpAddress;
+            Assert.AreEqual(server.MyInfo.TransferFolder, _remoteServerFolderPath);
+            Assert.AreEqual(server.MyInfo.Platform, _remoteServerPlatform);
 
             Assert.IsNotNull(_remoteServerLocalIp);
-            Assert.AreEqual(localIpExpected.ToString(), _remoteServerLocalIp.ToString());
-            Assert.IsTrue(_remoteServerLocalIp.IsEqualTo(localIpExpected));
-
-            var publicIpExpected = server.MyInfo.PublicIpAddress;
-
+            Assert.AreEqual(server.MyInfo.LocalIpAddress.ToString(), _remoteServerLocalIp.ToString());
+            Assert.IsTrue(_remoteServerLocalIp.IsEqualTo(server.MyInfo.LocalIpAddress));
+            
             Assert.IsNotNull(_remoteServerPublicIp);
-            Assert.AreEqual(publicIpExpected.ToString(), _remoteServerPublicIp.ToString());
-            Assert.IsTrue(_remoteServerPublicIp.IsEqualTo(publicIpExpected));
+            Assert.AreEqual(server.MyInfo.PublicIpAddress.ToString(), _remoteServerPublicIp.ToString());
+            Assert.IsTrue(_remoteServerPublicIp.IsEqualTo(server.MyInfo.PublicIpAddress));
 
             await ShutdownServerAsync(client, runClientTask);
             await ShutdownServerAsync(server, runServerTask);
@@ -297,95 +268,79 @@ namespace AaronLuna.AsyncFileServerTest
         [TestMethod]
         public async Task VerifySendTextMessage()
         {
-            _clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifySendTextMessage_client.log";
-            _serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifySendTextMessage_server.log";
+            var clientLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifySendTextMessage_client.log";
+            var serverLogFilePath = $"{Logging.GetTimeStampForFileName()}_VerifySendTextMessage_server.log";
 
             _clientSettings.LocalServerPortNumber = 8001;
             _serverSettings.LocalServerPortNumber = 8002;
 
-            const string sentToServer = "Hello, fellow TPL $ocket Server! This is a text message with a few special ch@r@cters. `~/|\\~'";
-            const string sentToClient = "I don't know who or what you are referring to. I am a normal human, sir, and most definitely NOT some type of server. Good day.";
-
-            await _server.InitializeAsync(_serverSettings).ConfigureAwait(false);
-            _server.EventOccurred += HandleServerEvent;
-            _server.SocketEventOccurred += HandleServerEvent;
-
-            await _client.InitializeAsync(_clientSettings).ConfigureAwait(false);
-            _client.EventOccurred += HandleClientEvent;
-            _client.SocketEventOccurred += HandleClientEvent;
+            const string messageForServer = "Hello, fellow TPL $ocket Server! This is a text message with a few special ch@r@cters. `~/|\\~'";
+            const string messageForClient = "I don't know who or what you are referring to. I am a normal human, sir, and most definitely NOT some type of server. Good day.";
 
             var token = _cts.Token;
 
-           _runServerTask =
-                Task.Run(() =>
-                    _server.RunAsync(token),
-                    token);
+            var server = new AsyncFileServer("server", _serverSettings);
+            server.EventOccurred += HandleServerEvent;
+            server.SocketEventOccurred += HandleServerEvent;
 
-           _runClientTask =
-                Task.Run(() =>
-                    _client.RunAsync(token),
-                    token);
+            var client = new AsyncFileServer("client", _clientSettings);
+            client.EventOccurred += HandleClientEvent;
+            client.SocketEventOccurred += HandleClientEvent;
 
-            while (!_server.IsListening) { }
-            while (!_client.IsListening) { }
+            await server.InitializeAsync(_serverSettings).ConfigureAwait(false);
+            await client.InitializeAsync(_clientSettings).ConfigureAwait(false);
 
-            var sendMessageResult1 =
-                await _client.SendTextMessageAsync(
-                        sentToServer,
-                        _localIp,
-                        _serverSettings.LocalServerPortNumber)
+            var runServerTask = Task.Run(() => server.RunAsync(token), token);
+            var runClientTask = Task.Run(() => client.RunAsync(token), token);
+
+            while (!server.IsListening) { }
+            while (!client.IsListening) { }
+
+            Assert.IsTrue(server.TextSessions.Count == 0);
+
+            var sendMessageToServer =
+                await client.SendTextMessageAsync(
+                        messageForServer,
+                        server.MyInfo.LocalIpAddress,
+                        server.MyInfo.PortNumber)
                     .ConfigureAwait(false);
 
-            if (sendMessageResult1.Failure)
+            if (sendMessageToServer.Failure)
             {
-                Assert.Fail($"There was an error sending a text message to the server: {sendMessageResult1.Error}");
+                Assert.Fail($"There was an error sending a text message to the server: {sendMessageToServer.Error}");
             }
 
             while (!_serverReceivedTextMessage) { }
+            
+            Assert.IsTrue(server.TextSessions.Count > 0);
+            Assert.IsTrue(server.TextSessions[0].MessageCount > 0);
+            Assert.AreEqual(messageForServer, server.TextSessions[0].Messages[0].Message);
 
-            var receivedByServer = string.Empty;
-            if (_server.TextSessions.Count > 0)
-            {
-                if (_server.TextSessions[0].MessageCount > 0)
-                {
-                    receivedByServer = _server.TextSessions[0].Messages[0].Message;
-                }
-            }
-
-            Assert.AreEqual(sentToServer, receivedByServer);
-
-            var sendMessageResult2 =
-                await _server.SendTextMessageAsync(
-                        sentToClient,
-                        _localIp,
-                        _clientSettings.LocalServerPortNumber)
+            var sendMessageToClient =
+                await server.SendTextMessageAsync(
+                        messageForClient,
+                        client.MyInfo.LocalIpAddress,
+                        client.MyInfo.PortNumber)
                     .ConfigureAwait(false);
 
-            if (sendMessageResult2.Failure)
+            if (sendMessageToClient.Failure)
             {
-                Assert.Fail($"There was an error sending a text message to the client: {sendMessageResult2.Error}");
+                Assert.Fail($"There was an error sending a text message to the client: {sendMessageToClient.Error}");
             }
 
             while (!_clientReceivedTextMessage) { }
 
-            var receivedByClient = string.Empty;
-            if (_client.TextSessions.Count > 0)
-            {
-                if (_client.TextSessions[0].MessageCount > 1)
-                {
-                    receivedByClient = _client.TextSessions[0].Messages[1].Message;
-                }
-            }
+            Assert.IsTrue(client.TextSessions.Count > 0);
+            Assert.IsTrue(client.TextSessions[0].MessageCount > 1);
+            Assert.AreEqual(messageForClient, client.TextSessions[0].Messages[1].Message);
 
-            Assert.AreEqual(sentToClient, receivedByClient);
-
-            await ShutdownServerAsync(_client, _runClientTask);
-            await ShutdownServerAsync(_server, _runServerTask);
+            await ShutdownServerAsync(client, runClientTask);
+            await ShutdownServerAsync(server, runServerTask);
 
             if (_generateLogFiles)
             {
-                File.AppendAllLines(_clientLogFilePath, _clientLogMessages);
-                File.AppendAllLines(_serverLogFilePath, _serverLogMessages);
+                File.AppendAllLines(clientLogFilePath, _clientLogMessages);
+                File.AppendAllLines(serverLogFilePath, _serverLogMessages);
             }
         }
 

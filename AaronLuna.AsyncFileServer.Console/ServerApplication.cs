@@ -1,5 +1,4 @@
 ﻿//TODO: Determine if it will be simple or difficult to show deconstructed request bytes and how each region maps to fileNameLen, fileName, portNumLen, portNum, etc
-//TODO: Need to create a test case to verify the behavior when server is busy and more requests are received but are not processed. The pending requests should be automatically processed once the server is no longer busy. Need to verify that all request types are processed correctly including text messages and inbound file transfer requests
 //TODO: On event log menus, enable filter functionality to allow user to view only desired request types, transfer types, events/requests/transfers for desired servers, request/transfer status types, etc.
 //TODO: Create a new class Model.ServerFolder with properties ID (int) and Name (string), and private field _folderPath. Replace TransferFolder property of ServerInfo with DownloadFolders (List<ServerFolder>). When user request ServerInfo, the response includes a list of folder IDs and Names. When RequestFileList, the ID is sent. This avoids the bugs caused by the Path class behaving differently on Windows vs Unix systems. When calling GetFile(), fileName, folderId are sent to remote server. ServerRequest.FolderDoesNotExist will be changed to InvalidFolderID, etc.
 //TODO: Add property ReceivedFilesFolder (ServerFolder) to ServerSettings, use this for all inbound file transfers. Should be unique from DownloadFolders but this will not be enforced in the code.
@@ -356,18 +355,18 @@ namespace AaronLuna.AsyncFileServer.Console
             _mainMenu.DisplayMenu();
         }
 
-        bool DoNotRefreshMainMenu(ServerRequestType messageType)
+        bool DoNotRefreshMainMenu(RequestType messageType)
         {
             switch (messageType)
             {
-                case ServerRequestType.TextMessage:
-                case ServerRequestType.RequestedFolderDoesNotExist:
-                case ServerRequestType.NoFilesAvailableForDownload:
-                case ServerRequestType.FileListRequest:
-                case ServerRequestType.FileListResponse:
-                case ServerRequestType.FileTransferAccepted:
-                case ServerRequestType.InboundFileTransferRequest:
-                case ServerRequestType.ShutdownServerCommand:
+                case RequestType.TextMessage:
+                case RequestType.RequestedFolderDoesNotExist:
+                case RequestType.NoFilesAvailableForDownload:
+                case RequestType.FileListRequest:
+                case RequestType.FileListResponse:
+                case RequestType.FileTransferAccepted:
+                case RequestType.InboundFileTransferRequest:
+                case RequestType.ShutdownServerCommand:
                     return true;
 
                 default:

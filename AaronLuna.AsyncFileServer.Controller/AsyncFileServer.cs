@@ -1,6 +1,4 @@
-﻿using AaronLuna.Common.IO;
-
-namespace AaronLuna.AsyncFileServer.Controller
+﻿namespace AaronLuna.AsyncFileServer.Controller
 {
     using System;
     using System.Collections.Generic;
@@ -12,6 +10,7 @@ namespace AaronLuna.AsyncFileServer.Controller
     using System.Threading.Tasks;
 
     using Common.Extensions;
+    using Common.IO;
     using Common.Logging;
     using Common.Network;
     using Common.Result;
@@ -24,10 +23,8 @@ namespace AaronLuna.AsyncFileServer.Controller
         const string NotInitializedMessage =
             "Server is unitialized and cannot handle incoming connections";
         
-        int _initialized;
-        int _busy;
-        int _shutdownInitiated;
-        int _listening;
+        bool _initialized;
+        bool _shutdownInitiated;
         int _textSessionId;
         int _requestId;
         int _fileTransferId;
@@ -36,62 +33,16 @@ namespace AaronLuna.AsyncFileServer.Controller
         readonly List<ServerEvent> _eventLog;
         readonly Socket _listenSocket;
         ServerSettings _settings;
-
-        readonly CancellationTokenSource _cts;
+        
         CancellationToken _token;
         static readonly object RequestQueueLock = new object();
         static readonly object TransferQueueLock = new object();
         int TransferRetryLimit => _settings.TransferRetryLimit;
         TimeSpan RetryLimitLockout => _settings.RetryLimitLockout;
         int ListenBacklogSize => _settings.SocketSettings.ListenBacklogSize;
-
-        bool ServerIsInitialized
-        {
-            get => Interlocked.CompareExchange(ref _initialized, 1, 1) == 1;
-            set
-            {
-                if (value) Interlocked.CompareExchange(ref _initialized, 1, 0);
-                else Interlocked.CompareExchange(ref _initialized, 0, 1);
-            }
-        }
-
-        bool ServerIsListening
-        {
-            get => Interlocked.CompareExchange(ref _listening, 1, 1) == 1;
-            set
-            {
-                if (value) Interlocked.CompareExchange(ref _listening, 1, 0);
-                else Interlocked.CompareExchange(ref _listening, 0, 1);
-            }
-        }
-
-        bool ServerIsBusy
-        {
-            get => Interlocked.CompareExchange(ref _busy, 1, 1) == 1;
-            set
-            {
-                if (value) Interlocked.CompareExchange(ref _busy, 1, 0);
-                else Interlocked.CompareExchange(ref _busy, 0, 1);
-            }
-        }
-
-        bool ShutdownInitiated
-        {
-            get => Interlocked.CompareExchange(ref _shutdownInitiated, 1, 1) == 1;
-            set
-            {
-                if (value) Interlocked.CompareExchange(ref _shutdownInitiated, 1, 0);
-                else Interlocked.CompareExchange(ref _shutdownInitiated, 0, 1);
-            }
-        }
-
+        
         public AsyncFileServer()
         {
-            ServerIsInitialized = false;
-            ServerIsListening = false;
-            ServerIsBusy = false;
-            ShutdownInitiated = false;
-
             MyInfo = new ServerInfo()
             {
                 TransferFolder = GetDefaultTransferFolder(),
@@ -102,14 +53,16 @@ namespace AaronLuna.AsyncFileServer.Controller
             Requests = new List<RequestController>();
             FileTransfers = new List<FileTransferController>();
             TextSessions = new List<TextSession>();
+            IsListening = false;
 
+            _initialized = false;
+            _shutdownInitiated = false;
             _textSessionId = 1;
             _requestId = 1;
             _fileTransferId = 1;
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _eventLog = new List<ServerEvent>();
             _settings = new ServerSettings();
-            _cts = new CancellationTokenSource();
 
             string GetDefaultTransferFolder()
             {
@@ -134,9 +87,8 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             UpdateSettings(settings);
         }
-        
-        public bool IsListening => ServerIsListening;
 
+        public bool IsListening { get; private set; }
         public ServerInfo MyInfo { get; set; }
         public List<TextSession> TextSessions { get; }
         public List<FileTransferController> FileTransfers { get; }
@@ -157,12 +109,12 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             var inRequestCount =
                     Requests.Select(r => r)
-                        .Where(r => r.Direction == ServerRequestDirection.Received)
+                        .Where(r => r.Direction == RequestDirection.Received)
                         .ToList().Count;
 
             var outRequestCount =
                 Requests.Select(r => r)
-                    .Where(r => r.Direction == ServerRequestDirection.Sent)
+                    .Where(r => r.Direction == RequestDirection.Sent)
                     .ToList().Count;
 
             var inTransferCount =
@@ -284,7 +236,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
         public async Task InitializeAsync(ServerSettings settings)
         {
-            if (ServerIsInitialized) return;
+            if (_initialized) return;
 
             UpdateSettings(settings);
             var cidrIp = _settings.LocalNetworkCidrIp;
@@ -317,12 +269,12 @@ namespace AaronLuna.AsyncFileServer.Controller
                 MyInfo.SessionIpAddress = publicIp;
             }
             
-            ServerIsInitialized = true;
+            _initialized = true;
         }
 
         public async Task<Result> RunAsync(CancellationToken token)
         {
-            if (!ServerIsInitialized)
+            if (!_initialized)
             {
                 return Result.Fail(NotInitializedMessage);
             }
@@ -336,10 +288,10 @@ namespace AaronLuna.AsyncFileServer.Controller
                 return startListening;
             }
 
-            ServerIsListening = true;
+            IsListening = true;
             var runServer = await HandleIncomingRequestsAsync().ConfigureAwait(false);
-            
-            ServerIsListening = false;
+
+            IsListening = false;
             ShutdownListenSocket();
 
             return runServer;
@@ -395,9 +347,9 @@ namespace AaronLuna.AsyncFileServer.Controller
                     ReportError(receiveRequest.Error);
                 }
 
-                if (CurrentlyProcessing() || ServerIsBusy)
+                if (CurrentlyProcessing())
                 {
-                    if (inboundRequest.RequestType != ServerRequestType.FileTransferStalled) continue;
+                    if (inboundRequest.RequestType != RequestType.FileTransferStalled) continue;
                 }
                 
                 var processRequest = await ProcessRequestAsync(inboundRequest);
@@ -435,7 +387,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             }
 
             if (QueueIsEmpty()) return Result.Ok();
-            if (CurrentlyProcessing() || ServerIsBusy) return Result.Ok();
+            if (CurrentlyProcessing()) return Result.Ok();
 
             _eventLog.Add(new ServerEvent
             {
@@ -447,7 +399,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             var backlog =
                 Requests.Select(r => r)
-                    .Where(r => r.Status == ServerRequestStatus.Pending)
+                    .Where(r => r.Status == RequestStatus.Pending)
                     .ToList();
 
             foreach (var request in backlog)
@@ -455,7 +407,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 var processRequest = await ProcessRequestAsync(request).ConfigureAwait(false);
                 if (processRequest.Success) continue;
 
-                request.Status = ServerRequestStatus.Error;
+                request.Status = RequestStatus.Error;
                 ReportError(processRequest.Error);
 
                 return processRequest;
@@ -521,8 +473,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
         async Task<Result> ProcessRequestAsync(RequestController inboundRequest)
         {
-            ServerIsBusy = true;
-            inboundRequest.Status = ServerRequestStatus.InProgress;
+            inboundRequest.Status = RequestStatus.InProgress;
 
             _eventLog.Add(new ServerEvent
             {
@@ -540,13 +491,13 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             if (result.Failure)
             {
-                inboundRequest.Status = ServerRequestStatus.Error;
+                inboundRequest.Status = RequestStatus.Error;
                 ReportError(result.Error);
 
                 return result;
             }
 
-            inboundRequest.Status = ServerRequestStatus.Processed;
+            inboundRequest.Status = RequestStatus.Processed;
 
             _eventLog.Add(new ServerEvent
             {
@@ -558,8 +509,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             });
 
             EventOccurred?.Invoke(this, _eventLog.Last());
-            ServerIsBusy = false;
-
+            
             return Result.Ok();
 
             async Task<Result> ProcessRequestTypeAsync(RequestController request)
@@ -568,71 +518,71 @@ namespace AaronLuna.AsyncFileServer.Controller
 
                 switch (request.RequestType)
                 {
-                    case ServerRequestType.TextMessage:
+                    case RequestType.TextMessage:
                         result = ReceiveTextMessage(request);
                         break;
 
-                    case ServerRequestType.InboundFileTransferRequest:
+                    case RequestType.InboundFileTransferRequest:
                         result = await HandleInboundFileTransferRequestAsync(request).ConfigureAwait(false);
                         break;
 
-                    case ServerRequestType.OutboundFileTransferRequest:
+                    case RequestType.OutboundFileTransferRequest:
                         result = await HandleOutboundFileTransferRequestAsync(request).ConfigureAwait(false);
                         break;
 
-                    case ServerRequestType.RequestedFileDoesNotExist:
+                    case RequestType.RequestedFileDoesNotExist:
                         result = HandleRequestedFileDoesNotExist(request);
                         break;
 
-                    case ServerRequestType.FileTransferRejected:
+                    case RequestType.FileTransferRejected:
                         result = HandleFileTransferRejected(request);
                         break;
 
-                    case ServerRequestType.FileTransferAccepted:
+                    case RequestType.FileTransferAccepted:
                         result = await HandleFileTransferAcceptedAsync(request, _token).ConfigureAwait(false);
                         break;
 
-                    case ServerRequestType.FileTransferStalled:
+                    case RequestType.FileTransferStalled:
                         result = HandleFileTransferStalled(request);
                         break;
 
-                    case ServerRequestType.FileTransferComplete:
+                    case RequestType.FileTransferComplete:
                         result = HandleFileTransferComplete(request);
                         break;
 
-                    case ServerRequestType.RetryOutboundFileTransfer:
+                    case RequestType.RetryOutboundFileTransfer:
                         result = await HandleRetryFileTransferAsync(request).ConfigureAwait(false);
                         break;
 
-                    case ServerRequestType.RetryLimitExceeded:
+                    case RequestType.RetryLimitExceeded:
                         result = HandleRetryLimitExceeded(request);
                         break;
 
-                    case ServerRequestType.FileListRequest:
+                    case RequestType.FileListRequest:
                         result = await HandleFileListRequestAsync(request).ConfigureAwait(false);
                         break;
 
-                    case ServerRequestType.FileListResponse:
+                    case RequestType.FileListResponse:
                         HandleFileListResponse(request);
                         break;
 
-                    case ServerRequestType.NoFilesAvailableForDownload:
+                    case RequestType.NoFilesAvailableForDownload:
                         HandleNoFilesAvailableForDownload(request);
                         break;
 
-                    case ServerRequestType.RequestedFolderDoesNotExist:
+                    case RequestType.RequestedFolderDoesNotExist:
                         HandleRequestedFolderDoesNotExist(request);
                         break;
 
-                    case ServerRequestType.ServerInfoRequest:
+                    case RequestType.ServerInfoRequest:
                         result = await HandleServerInfoRequest(request).ConfigureAwait(false);
                         break;
 
-                    case ServerRequestType.ServerInfoResponse:
+                    case RequestType.ServerInfoResponse:
                         HandleServerInfoResponse(request);
                         break;
 
-                    case ServerRequestType.ShutdownServerCommand:
+                    case RequestType.ShutdownServerCommand:
                         HandleShutdownServerCommand(request);
                         break;
 
@@ -678,7 +628,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
         bool RunServer()
         {
-            return !_token.IsCancellationRequested && !ShutdownInitiated;
+            return !_token.IsCancellationRequested && !_shutdownInitiated;
         }
 
         bool PendingFileTransferInQueue()
@@ -716,7 +666,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             {
                 pendingRequests =
                     Requests.Select(r => r)
-                        .Where(r => r.Status == ServerRequestStatus.Pending)
+                        .Where(r => r.Status == RequestStatus.Pending)
                         .ToList();
             }
 
@@ -727,7 +677,7 @@ namespace AaronLuna.AsyncFileServer.Controller
         {
             var inProgressRequests =
                 Requests.Select(r => r)
-                    .Where(r => r.Status == ServerRequestStatus.InProgress)
+                    .Where(r => r.Status == RequestStatus.InProgress)
                     .ToList();
 
             var inProgressTransfers =
@@ -762,8 +712,8 @@ namespace AaronLuna.AsyncFileServer.Controller
             }
             
             var requestBytes =
-                ServerRequestDataBuilder.ConstructRequestWithStringValue(
-                    ServerRequestType.TextMessage,
+                RequestDataBuilder.ConstructRequestWithStringValue(
+                    RequestType.TextMessage,
                     MyInfo.LocalIpAddress.ToString(),
                     MyInfo.PortNumber,
                     message);
@@ -792,7 +742,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             if (sendRequest.Failure)
             {
-                outboundRequest.Status = ServerRequestStatus.Error;
+                outboundRequest.Status = RequestStatus.Error;
                 ReportError(sendRequest.Error);
 
                 return sendRequest;
@@ -990,8 +940,8 @@ namespace AaronLuna.AsyncFileServer.Controller
             }
 
             var requestBytes =
-                ServerRequestDataBuilder.ConstructRequestWithInt64Value(
-                    ServerRequestType.RequestedFileDoesNotExist,
+                RequestDataBuilder.ConstructRequestWithInt64Value(
+                    RequestType.RequestedFileDoesNotExist,
                     MyInfo.LocalIpAddress.ToString(),
                     MyInfo.PortNumber,
                     remoteServerTransferId);
@@ -1026,7 +976,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             if (sendRequest.Success) return Result.Ok(outboundRequest);
 
-            outboundRequest.Status = ServerRequestStatus.Error;
+            outboundRequest.Status = RequestStatus.Error;
             return Result.Fail<RequestController>(sendRequest.Error);
         }
 
@@ -1048,7 +998,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             outboundFileTransfer.RequestId = outboundRequest.Id;
 
             var requestBytes =
-                ServerRequestDataBuilder.ConstructOutboundFileTransferRequest(
+                RequestDataBuilder.ConstructOutboundFileTransferRequest(
                     MyInfo.LocalIpAddress.ToString(),
                     MyInfo.PortNumber,
                     outboundFileTransfer.FileName,
@@ -1173,10 +1123,10 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             var socket = getSendSocket.Value;
 
-            var sendFileBytes = await outboundFileTransfer.SendFileAsync(socket, _token);
+            var sendFileBytes = await outboundFileTransfer.SendFileAsync(socket, token);
             if (sendFileBytes.Success)
             {
-                inboundRequest.Status = ServerRequestStatus.Processed;
+                inboundRequest.Status = RequestStatus.Processed;
 
                 var processBacklog = await ProcessPendingRequestsInQueueAsync();
                 if (processBacklog.Failure)
@@ -1304,7 +1254,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             }
 
             var requestBytes =
-                ServerRequestDataBuilder.ConstructInboundFileTransferRequest(
+                RequestDataBuilder.ConstructInboundFileTransferRequest(
                     MyInfo.LocalIpAddress.ToString(),
                     MyInfo.PortNumber,
                     inboundFileTransfer.Id,
@@ -1342,7 +1292,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             if (sendRequest.Success) return Result.Ok();
 
-            outboundRequest.Status = ServerRequestStatus.Error;
+            outboundRequest.Status = RequestStatus.Error;
             inboundFileTransfer.Status = FileTransferStatus.Error;
             inboundFileTransfer.ErrorMessage = sendRequest.Error;
 
@@ -1435,7 +1385,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             ReportError(error);
 
             return await SendFileTransferResponseAsync(
-                ServerRequestType.FileTransferRejected,
+                RequestType.FileTransferRejected,
                 inboundFileTransfer,
                 ServerEventType.SendFileTransferRejectedStarted,
                 ServerEventType.SendFileTransferRejectedComplete).ConfigureAwait(false);
@@ -1492,7 +1442,7 @@ namespace AaronLuna.AsyncFileServer.Controller
         {
             var acceptFileTransfer =
                 await SendFileTransferResponseAsync(
-                    ServerRequestType.FileTransferAccepted,
+                    RequestType.FileTransferAccepted,
                     inboundFileTransfer,
                     ServerEventType.SendFileTransferAcceptedStarted,
                     ServerEventType.SendFileTransferAcceptedComplete).ConfigureAwait(false);
@@ -1544,7 +1494,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             var confirmFileTransfer =
                 await SendFileTransferResponseAsync(
-                    ServerRequestType.FileTransferComplete,
+                    RequestType.FileTransferComplete,
                     inboundFileTransfer,
                     ServerEventType.SendFileTransferCompletedStarted,
                     ServerEventType.SendFileTransferCompletedCompleted).ConfigureAwait(false);
@@ -1574,7 +1524,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             var rejectTransfer =
                 await SendFileTransferResponseAsync(
-                    ServerRequestType.FileTransferRejected,
+                    RequestType.FileTransferRejected,
                     inboundFileTransfer,
                     ServerEventType.SendFileTransferRejectedStarted,
                     ServerEventType.SendFileTransferRejectedComplete);
@@ -1582,7 +1532,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             if (rejectTransfer.Success) return Result.Ok();
 
             var inboundRequest = rejectTransfer.Value;
-            inboundRequest.Status = ServerRequestStatus.Error;
+            inboundRequest.Status = RequestStatus.Error;
 
             inboundFileTransfer.Status = FileTransferStatus.Error;
             inboundFileTransfer.ErrorMessage = rejectTransfer.Error;
@@ -1610,7 +1560,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             var notifyTransferStalled =
                 await SendFileTransferResponseAsync(
-                    ServerRequestType.FileTransferStalled,
+                    RequestType.FileTransferStalled,
                     inboundFileTransfer,
                     ServerEventType.SendFileTransferStalledStarted,
                     ServerEventType.SendFileTransferStalledComplete).ConfigureAwait(false);
@@ -1618,7 +1568,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             if (notifyTransferStalled.Success) return Result.Ok();
 
             var inboundRequest = notifyTransferStalled.Value;
-            inboundRequest.Status = ServerRequestStatus.Error;
+            inboundRequest.Status = RequestStatus.Error;
 
             inboundFileTransfer.Status = FileTransferStatus.Error;
             inboundFileTransfer.ErrorMessage = notifyTransferStalled.Error;
@@ -1717,7 +1667,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             var retryTransfer =
                 await SendFileTransferResponseAsync(
-                    ServerRequestType.RetryOutboundFileTransfer,
+                    RequestType.RetryOutboundFileTransfer,
                     stalledFileTransfer,
                     ServerEventType.RetryOutboundFileTransferStarted,
                     ServerEventType.RetryOutboundFileTransferComplete).ConfigureAwait(false);
@@ -1725,7 +1675,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             if (retryTransfer.Success) return Result.Ok();
 
             var inboundRequest = retryTransfer.Value;
-            inboundRequest.Status = ServerRequestStatus.Error;
+            inboundRequest.Status = RequestStatus.Error;
 
             stalledFileTransfer.Status = FileTransferStatus.Error;
             stalledFileTransfer.ErrorMessage = retryTransfer.Error;
@@ -1828,7 +1778,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             }
 
             var requestBytes =
-                ServerRequestDataBuilder.ConstructRetryLimitExceededRequest(
+                RequestDataBuilder.ConstructRetryLimitExceededRequest(
                     MyInfo.LocalIpAddress.ToString(),
                     MyInfo.PortNumber,
                     outboundFileTransfer.RemoteServerTransferId,
@@ -1869,7 +1819,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             if (sendRequest.Success) return Result.Ok();
 
-            outboundRequest.Status = ServerRequestStatus.Error;
+            outboundRequest.Status = RequestStatus.Error;
             return Result.Fail(sendRequest.Error);
         }
 
@@ -1936,7 +1886,7 @@ namespace AaronLuna.AsyncFileServer.Controller
         }
 
         async Task<Result<RequestController>> SendFileTransferResponseAsync(
-            ServerRequestType requestType,
+            RequestType requestType,
             FileTransferController fileTransfer,
             ServerEventType sendRequestStartedEventType,
             ServerEventType sendRequestCompleteEventType)
@@ -1955,7 +1905,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             }
 
             var requestBytes =
-                ServerRequestDataBuilder.ConstructRequestWithInt64Value(
+                RequestDataBuilder.ConstructRequestWithInt64Value(
                     requestType,
                     MyInfo.LocalIpAddress.ToString(),
                     MyInfo.PortNumber,
@@ -1991,14 +1941,14 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             if (sendRequest.Success) return Result.Ok(outboundRequest);
 
-            outboundRequest.Status = ServerRequestStatus.Error;
+            outboundRequest.Status = RequestStatus.Error;
             return Result.Fail<RequestController>(sendRequest.Error);
         }
 
         async Task<Result<RequestController>> SendBasicServerRequestAsync(
             IPAddress remoteServerIpAddress,
             int remoteServerPort,
-            ServerRequestType requestType,
+            RequestType requestType,
             ServerEventType sendRequestStartedEventType,
             ServerEventType sendRequestCompleteEventType)
         {
@@ -2017,7 +1967,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             }
 
             var requestBytes =
-                ServerRequestDataBuilder.ConstructBasicRequest(
+                RequestDataBuilder.ConstructBasicRequest(
                     requestType,
                     MyInfo.LocalIpAddress.ToString(),
                     MyInfo.PortNumber);
@@ -2050,7 +2000,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             if (sendRequest.Success) return Result.Ok(outboundRequest);
 
-            outboundRequest.Status = ServerRequestStatus.Error;
+            outboundRequest.Status = RequestStatus.Error;
             return Result.Fail<RequestController>(sendRequest.Error);
         }
 
@@ -2069,8 +2019,8 @@ namespace AaronLuna.AsyncFileServer.Controller
             }
 
             var requestBytes =
-                ServerRequestDataBuilder.ConstructRequestWithStringValue(
-                    ServerRequestType.FileListRequest,
+                RequestDataBuilder.ConstructRequestWithStringValue(
+                    RequestType.FileListRequest,
                     MyInfo.LocalIpAddress.ToString(),
                     MyInfo.PortNumber,
                     remoteServerInfo.TransferFolder);
@@ -2100,7 +2050,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                     sendRequestCompleteEvent);
 
             if (sendrequest.Success) return Result.Ok();
-            outboundRequest.Status = ServerRequestStatus.Error;            
+            outboundRequest.Status = RequestStatus.Error;            
             ReportError(sendrequest.Error);
 
             return sendrequest;
@@ -2146,7 +2096,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                     await SendBasicServerRequestAsync(
                         inboundRequest.RemoteServerInfo.SessionIpAddress,
                         inboundRequest.RemoteServerInfo.PortNumber,
-                        ServerRequestType.RequestedFolderDoesNotExist,
+                        RequestType.RequestedFolderDoesNotExist,
                         ServerEventType.SendNotificationFolderDoesNotExistStarted,
                         ServerEventType.SendNotificationFolderDoesNotExistComplete).ConfigureAwait(false);
             }
@@ -2158,13 +2108,13 @@ namespace AaronLuna.AsyncFileServer.Controller
                     await SendBasicServerRequestAsync(
                         inboundRequest.RemoteServerInfo.SessionIpAddress,
                         inboundRequest.RemoteServerInfo.PortNumber,
-                        ServerRequestType.NoFilesAvailableForDownload,
+                        RequestType.NoFilesAvailableForDownload,
                         ServerEventType.SendNotificationFolderIsEmptyStarted,
                         ServerEventType.SendNotificationFolderIsEmptyComplete).ConfigureAwait(false);
             }
 
             var requestBytes =
-                ServerRequestDataBuilder.ConstructFileListResponse(
+                RequestDataBuilder.ConstructFileListResponse(
                     fileInfoList,
                     MyInfo.LocalIpAddress.ToString(),
                     MyInfo.PortNumber,
@@ -2261,14 +2211,14 @@ namespace AaronLuna.AsyncFileServer.Controller
                 await SendBasicServerRequestAsync(
                     remoteServerIpAddress,
                     remoteServerPort,
-                    ServerRequestType.ServerInfoRequest,
+                    RequestType.ServerInfoRequest,
                     ServerEventType.RequestServerInfoStarted,
                     ServerEventType.RequestServerInfoComplete);
 
             if (sendrequest.Success) return Result.Ok();
 
             var inboundRequest = sendrequest.Value;
-            inboundRequest.Status = ServerRequestStatus.Error;
+            inboundRequest.Status = RequestStatus.Error;
             ReportError(sendrequest.Error);
 
             return sendrequest;
@@ -2299,7 +2249,7 @@ namespace AaronLuna.AsyncFileServer.Controller
             EventOccurred?.Invoke(this, _eventLog.Last());
 
             var requestBytes =
-                ServerRequestDataBuilder.ConstructServerInfoResponse(
+                RequestDataBuilder.ConstructServerInfoResponse(
                     MyInfo.LocalIpAddress.ToString(),
                     MyInfo.PortNumber,
                     MyInfo.Platform,
@@ -2354,7 +2304,7 @@ namespace AaronLuna.AsyncFileServer.Controller
         
         public async Task<Result> ShutdownAsync()
         {
-            if (!ServerIsListening)
+            if (!IsListening)
             {
                 return Result.Fail("Server is already shutdown");
             }
@@ -2363,7 +2313,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 await SendBasicServerRequestAsync(
                     MyInfo.LocalIpAddress,
                     MyInfo.PortNumber,
-                    ServerRequestType.ShutdownServerCommand,
+                    RequestType.ShutdownServerCommand,
                     ServerEventType.SendShutdownServerCommandStarted,
                     ServerEventType.SendShutdownServerCommandComplete).ConfigureAwait(false);
             
@@ -2376,7 +2326,7 @@ namespace AaronLuna.AsyncFileServer.Controller
         {
             if (MyInfo.IsEqualTo(pendingRequest.RemoteServerInfo))
             {
-                ShutdownInitiated = true;
+                _shutdownInitiated = true;
             }
 
             _eventLog.Add(new ServerEvent

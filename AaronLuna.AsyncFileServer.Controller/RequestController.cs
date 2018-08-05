@@ -1,6 +1,4 @@
-﻿using AaronLuna.Common.Extensions;
-
-namespace AaronLuna.AsyncFileServer.Controller
+﻿namespace AaronLuna.AsyncFileServer.Controller
 {
     using System;
     using System.Collections.Generic;
@@ -11,6 +9,7 @@ namespace AaronLuna.AsyncFileServer.Controller
     using System.Threading.Tasks;
 
     using Common;
+    using Common.Extensions;
     using Common.Result;
 
     using Model;
@@ -30,7 +29,7 @@ namespace AaronLuna.AsyncFileServer.Controller
         readonly int _bufferSize;
         readonly int _timeoutMs;
         int _lastBytesReceivedCount;
-        ServerRequest _request;
+        Request _request;
 
         IPAddress _remoteServerIpAddress;
         int _remoteServerPortNumber;
@@ -50,9 +49,8 @@ namespace AaronLuna.AsyncFileServer.Controller
         public RequestController(int id, ServerSettings settings)
         {
             Id = id;
-            Status = ServerRequestStatus.NoData;
-            RequestType = ServerRequestType.None;
-            EventLog = new List<ServerEvent>();
+            Status = RequestStatus.NoData;
+            RequestType = RequestType.None;           
             UnreadBytes = new List<byte>();
             RemoteServerInfo = new ServerInfo();
 
@@ -64,7 +62,8 @@ namespace AaronLuna.AsyncFileServer.Controller
         public RequestController(
             int id,
             ServerSettings settings,
-            ServerInfo remoteServerInfo) :this(id, settings)
+            ServerInfo remoteServerInfo)
+            :this(id, settings)
         {
             RemoteServerInfo = remoteServerInfo;
         }
@@ -72,26 +71,26 @@ namespace AaronLuna.AsyncFileServer.Controller
         public RequestController(
             int id,
             ServerSettings settings,
-            Socket socket) : this(id, settings)
+            Socket socket)
+            :this(id, settings)
         {
             _socket = socket;
         }
 
         public int Id { get; }
-        public ServerRequestStatus Status { get; set; }
-        public List<ServerEvent> EventLog { get; set; }
-        public ServerRequestType RequestType { get; private set; }
+        public RequestStatus Status { get; set; }
+        public RequestType RequestType { get; private set; }
         public List<byte> UnreadBytes { get; private set; }
         public ServerInfo RemoteServerInfo { get; set; }
         public int FileTransferId { get; set; }
 
-        public ServerRequestDirection Direction => _request.Direction;
+        public RequestDirection Direction => _request.Direction;
         public DateTime TimeStamp => _request.TimeStamp;
-        public bool RequestHasNotBeenReceived => Status == ServerRequestStatus.NoData;
+        public bool RequestHasNotBeenReceived => Status == RequestStatus.NoData;
         public bool RequestHasBeenProcessed => Status.RequestHasBeenProcesed();
         public bool IsLongRunningProcess => RequestType.IsLongRunningProcess();
-        public bool InboundTransferIsRequested => RequestType == ServerRequestType.InboundFileTransferRequest;
-        public bool OutboundTransferIsRequested => RequestType == ServerRequestType.OutboundFileTransferRequest;
+        public bool InboundTransferIsRequested => RequestType == RequestType.InboundFileTransferRequest;
+        public bool OutboundTransferIsRequested => RequestType == RequestType.OutboundFileTransferRequest;
         public bool RequestTypeIsFileTransferResponse => RequestType.IsFileTransferResponse();
         public bool RequestTypeIsFileTransferError => RequestType.IsFileTransferError();
 
@@ -114,12 +113,12 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             switch (_request.Direction)
             {
-                case ServerRequestDirection.Sent:
+                case RequestDirection.Sent:
                     direction = "Sent To........:";
                     timeStamp = "Sent At........:";
                     break;
 
-                case ServerRequestDirection.Received:
+                case RequestDirection.Received:
                     direction = "Received From..:";
                     timeStamp = "Received At....:";
                     break;
@@ -140,14 +139,13 @@ namespace AaronLuna.AsyncFileServer.Controller
             ServerEvent sendRequestStartedEvent,
             ServerEvent sendRequestCompleteEvent)
         {
-            _request = new ServerRequest
+            _request = new Request
             {
-                Direction = ServerRequestDirection.Sent,
+                Direction = RequestDirection.Sent,
                 RequestBytes = requestBytes
             };
 
             sendRequestStartedEvent.UpdateTimeStamp();
-            EventLog.Add(sendRequestStartedEvent);
             EventOccurred?.Invoke(this, sendRequestStartedEvent);
 
             ReadRequestBytes(requestBytes);
@@ -168,17 +166,16 @@ namespace AaronLuna.AsyncFileServer.Controller
                 return sendRequest;
             }
 
-            if (RequestType != ServerRequestType.FileTransferAccepted)
+            if (RequestType != RequestType.FileTransferAccepted)
             {
                 _socket.Shutdown(SocketShutdown.Send);
                 _socket.Close();
             }
 
             sendRequestCompleteEvent.UpdateTimeStamp();
-            EventLog.Add(sendRequestCompleteEvent);
             EventOccurred?.Invoke(this, sendRequestCompleteEvent);
 
-            Status = ServerRequestStatus.Sent;
+            Status = RequestStatus.Sent;
 
             return Result.Ok();
         }
@@ -187,7 +184,7 @@ namespace AaronLuna.AsyncFileServer.Controller
         {
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-            EventLog.Add(new ServerEvent
+            EventOccurred?.Invoke(this, new ServerEvent
             {
                 EventType = ServerEventType.ConnectToRemoteServerStarted,
                 RemoteServerIpAddress = RemoteServerInfo.SessionIpAddress,
@@ -195,8 +192,6 @@ namespace AaronLuna.AsyncFileServer.Controller
                 RequestId = Id,
                 FileTransferId = FileTransferId
             });
-
-            EventOccurred?.Invoke(this, EventLog.Last());
 
             var connectToRemoteServer =
                 await _socket.ConnectWithTimeoutAsync(
@@ -208,8 +203,8 @@ namespace AaronLuna.AsyncFileServer.Controller
             {
                 return Result.Fail<Socket>(connectToRemoteServer.Error);
             }
-
-            EventLog.Add(new ServerEvent
+            
+            EventOccurred?.Invoke(this, new ServerEvent
             {
                 EventType = ServerEventType.ConnectToRemoteServerComplete,
                 RemoteServerIpAddress = RemoteServerInfo.SessionIpAddress,
@@ -217,8 +212,6 @@ namespace AaronLuna.AsyncFileServer.Controller
                 RequestId = Id,
                 FileTransferId = FileTransferId
             });
-
-            EventOccurred?.Invoke(this, EventLog.Last());
 
             return Result.Ok();
         }
@@ -255,82 +248,47 @@ namespace AaronLuna.AsyncFileServer.Controller
 
         public async Task<Result> ReceiveServerRequestAsync()
         {
-            _request = new ServerRequest {Direction = ServerRequestDirection.Received};
-            Status = ServerRequestStatus.NoData;
-
-            EventLog.Add(new ServerEvent
+            _request = new Request {Direction = RequestDirection.Received};
+            Status = RequestStatus.NoData;
+            
+            var getRequestLength = await ReceiveLengthOfIncomingRequest().ConfigureAwait(false);
+            if (getRequestLength.Failure)
             {
-                EventType = ServerEventType.ReceiveRequestFromRemoteServerStarted,
-                RequestId = Id,
-                FileTransferId = FileTransferId
-            });
-
-            EventOccurred?.Invoke(this, EventLog.Last());
-
-            var receiveRequestLength = await ReceiveLengthOfIncomingRequest().ConfigureAwait(false);
-            if (receiveRequestLength.Failure)
-            {
-                return Result.Fail<ServerRequest>(receiveRequestLength.Error);
+                return Result.Fail<Request>(getRequestLength.Error);
             }
 
-            var requestLengthInBytes = receiveRequestLength.Value;
+            var totalBytes = getRequestLength.Value;
             
-            var receiveRequestBytes = await ReceiveRequestBytesAsync(requestLengthInBytes).ConfigureAwait(false);
-            if (receiveRequestBytes.Failure)
+            var getRequest = await ReceiveRequestBytesAsync(totalBytes).ConfigureAwait(false);
+            if (getRequest.Failure)
             {
-                return Result.Fail<ServerRequest>(receiveRequestBytes.Error);
+                return Result.Fail<Request>(getRequest.Error);
             }
 
-            _request.RequestBytes = receiveRequestBytes.Value;
-            
-            EventLog.Add(new ServerEvent
-            {
-                EventType = ServerEventType.DetermineRequestTypeStarted,
-                RequestId = Id,
-                FileTransferId = FileTransferId
-            });
+            _request.RequestBytes = getRequest.Value;
 
-            EventOccurred?.Invoke(this, EventLog.Last());
+            DetermineRequestType();
 
-            ReadRequestBytes(_request.RequestBytes);
-
-            EventLog.Add(new ServerEvent
-            {
-                EventType = ServerEventType.DetermineRequestTypeComplete,
-                RequestType = RequestType,
-                RequestId = Id,
-                FileTransferId = FileTransferId
-            });
-
-            EventOccurred?.Invoke(this, EventLog.Last());
-
-            EventLog.Add(new ServerEvent
-            {
-                EventType = ServerEventType.ReceiveRequestFromRemoteServerComplete,
-                RemoteServerIpAddress = _remoteServerIpAddress,
-                RemoteServerPortNumber = _remoteServerPortNumber,
-                RequestType = RequestType,
-                RequestId = Id,
-                FileTransferId = FileTransferId
-            });
-
-            EventOccurred?.Invoke(this, EventLog.Last());
-
-            Status = ServerRequestStatus.Pending;
+            Status = RequestStatus.Pending;
 
             return Result.Ok();
         }
 
         async Task<Result<int>> ReceiveLengthOfIncomingRequest()
         {
-            EventLog.Add(new ServerEvent
+            EventOccurred?.Invoke(this, new ServerEvent
+            {
+                EventType = ServerEventType.ReceiveRequestFromRemoteServerStarted,
+                RequestId = Id,
+                FileTransferId = FileTransferId
+            });
+
+            EventOccurred?.Invoke(this, new ServerEvent
             {
                 EventType = ServerEventType.ReceiveRequestLengthStarted,
                 RequestId = Id,
                 FileTransferId = FileTransferId
             });
-
-            EventOccurred?.Invoke(this, EventLog.Last());
 
             var readFromSocket =
                 await _socket.ReceiveWithTimeoutAsync(
@@ -352,8 +310,8 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             var requestLengthBytes = new byte[Constants.SizeOfInt32InBytes];
             _buffer.ToList().CopyTo(0, requestLengthBytes, 0, Constants.SizeOfInt32InBytes);
-
-            EventLog.Add(new ServerEvent
+            
+            SocketEventOccurred?.Invoke(this, new ServerEvent
             {
                 EventType = ServerEventType.ReceivedRequestLengthBytesFromSocket,
                 BytesReceivedCount = _lastBytesReceivedCount,
@@ -363,26 +321,22 @@ namespace AaronLuna.AsyncFileServer.Controller
                 FileTransferId = FileTransferId
             });
 
-            SocketEventOccurred?.Invoke(this, EventLog.Last());
-
             if (_lastBytesReceivedCount > Constants.SizeOfInt32InBytes)
             {
                 var unreadBytes = new byte[unreadBytesCount];
                 _buffer.ToList().CopyTo(Constants.SizeOfInt32InBytes, unreadBytes, 0, unreadBytesCount);
                 UnreadBytes = unreadBytes.ToList();
-
-                EventLog.Add(new ServerEvent
+                
+                EventOccurred?.Invoke(this, new ServerEvent
                 {
                     EventType = ServerEventType.SaveUnreadBytesAfterRequestLengthReceived,
                     UnreadBytesCount = unreadBytesCount,
                     RequestId = Id,
                     FileTransferId = FileTransferId
                 });
-
-                EventOccurred?.Invoke(this, EventLog.Last());
             }
-
-            EventLog.Add(new ServerEvent
+            
+            EventOccurred?.Invoke(this, new ServerEvent
             {
                 EventType = ServerEventType.ReceiveRequestLengthComplete,
                 RequestLengthInBytes = requestLength,
@@ -391,31 +345,28 @@ namespace AaronLuna.AsyncFileServer.Controller
                 FileTransferId = FileTransferId
             });
 
-            EventOccurred?.Invoke(this, EventLog.Last());
-
             return Result.Ok(requestLength);
         }
 
-        async Task<Result<byte[]>> ReceiveRequestBytesAsync(int requestLengthInBytes)
+        async Task<Result<byte[]>> ReceiveRequestBytesAsync(int totalBytes)
         {
-            EventLog.Add(new ServerEvent
+            EventOccurred?.Invoke(this, new ServerEvent
             {
                 EventType = ServerEventType.ReceiveRequestBytesStarted,
                 RequestId = Id,
                 FileTransferId = FileTransferId
             });
-            EventOccurred?.Invoke(this, EventLog.Last());
 
             int currentRequestBytesReceived;
             var socketReadCount = 0;
             var bytesReceived = 0;
-            var bytesRemaining = requestLengthInBytes;
+            var bytesRemaining = totalBytes;
             var requestBytes = new List<byte>();
             var unreadByteCount = 0;
 
             if (UnreadBytes.Count > 0)
             {
-                currentRequestBytesReceived = Math.Min(requestLengthInBytes, UnreadBytes.Count);
+                currentRequestBytesReceived = Math.Min(totalBytes, UnreadBytes.Count);
                 var unreadRequestBytes = new byte[currentRequestBytesReceived];
 
                 UnreadBytes.CopyTo(0, unreadRequestBytes, 0, currentRequestBytesReceived);
@@ -423,24 +374,22 @@ namespace AaronLuna.AsyncFileServer.Controller
 
                 bytesReceived += currentRequestBytesReceived;
                 bytesRemaining -= currentRequestBytesReceived;
-
-                EventLog.Add(new ServerEvent
+                
+                EventOccurred?.Invoke(this, new ServerEvent
                 {
                     EventType = ServerEventType.CopySavedBytesToRequestData,
                     UnreadBytesCount = UnreadBytes.Count,
-                    RequestLengthInBytes = requestLengthInBytes,
+                    RequestLengthInBytes = totalBytes,
                     RequestBytesRemaining = bytesRemaining,
                     RequestId = Id,
                     FileTransferId = FileTransferId
                 });
 
-                EventOccurred?.Invoke(this, EventLog.Last());
-
-                if (UnreadBytes.Count > requestLengthInBytes)
+                if (UnreadBytes.Count > totalBytes)
                 {
-                    var fileByteCount = UnreadBytes.Count - requestLengthInBytes;
+                    var fileByteCount = UnreadBytes.Count - totalBytes;
                     var fileBytes = new byte[fileByteCount];
-                    UnreadBytes.CopyTo(requestLengthInBytes, fileBytes, 0, fileByteCount);
+                    UnreadBytes.CopyTo(totalBytes, fileBytes, 0, fileByteCount);
                     UnreadBytes = fileBytes.ToList();
                 }
                 else
@@ -477,25 +426,23 @@ namespace AaronLuna.AsyncFileServer.Controller
                 unreadByteCount = _lastBytesReceivedCount - currentRequestBytesReceived;
                 bytesReceived += currentRequestBytesReceived;
                 bytesRemaining -= currentRequestBytesReceived;
-
-                EventLog.Add(new ServerEvent
+                
+                SocketEventOccurred?.Invoke(this, new ServerEvent
                 {
                     EventType = ServerEventType.ReceivedRequestBytesFromSocket,
                     SocketReadCount = socketReadCount,
                     BytesReceivedCount = _lastBytesReceivedCount,
                     CurrentRequestBytesReceived = currentRequestBytesReceived,
                     TotalRequestBytesReceived = bytesReceived,
-                    RequestLengthInBytes = requestLengthInBytes,
+                    RequestLengthInBytes = totalBytes,
                     RequestBytesRemaining = bytesRemaining,
                     UnreadBytesCount = unreadByteCount,
                     RequestId = Id,
                     FileTransferId = FileTransferId
                 });
-
-                SocketEventOccurred?.Invoke(this, EventLog.Last());
             }
             
-            EventLog.Add(new ServerEvent
+            EventOccurred?.Invoke(this, new ServerEvent
             {
                 EventType = ServerEventType.ReceiveRequestBytesComplete,
                 RequestBytes = requestBytes.ToArray(),
@@ -503,15 +450,15 @@ namespace AaronLuna.AsyncFileServer.Controller
                 FileTransferId = FileTransferId
             });
 
-            EventOccurred?.Invoke(this, EventLog.Last());
+            _request.RequestBytes = requestBytes.ToArray();
 
             if (unreadByteCount == 0) return Result.Ok(requestBytes.ToArray());
 
             var unreadBytes = new byte[unreadByteCount];
             _buffer.ToList().CopyTo(currentRequestBytesReceived, unreadBytes, 0, unreadByteCount);
             UnreadBytes = unreadBytes.ToList();
-
-            EventLog.Add(new ServerEvent
+            
+            EventOccurred?.Invoke(this, new ServerEvent
             {
                 EventType = ServerEventType.SaveUnreadBytesAfterAllRequestBytesReceived,
                 ExpectedByteCount = currentRequestBytesReceived,
@@ -520,19 +467,74 @@ namespace AaronLuna.AsyncFileServer.Controller
                 FileTransferId = FileTransferId
             });
 
-            EventOccurred?.Invoke(this, EventLog.Last());
+            EventOccurred?.Invoke(this, new ServerEvent
+            {
+                EventType = ServerEventType.DetermineRequestTypeStarted,
+                RequestId = Id,
+                FileTransferId = FileTransferId
+            });
+
+            ReadRequestBytes(_request.RequestBytes);
+
+            EventOccurred?.Invoke(this, new ServerEvent
+            {
+                EventType = ServerEventType.DetermineRequestTypeComplete,
+                RequestType = RequestType,
+                RequestId = Id,
+                FileTransferId = FileTransferId
+            });
+
+            EventOccurred?.Invoke(this, new ServerEvent
+            {
+                EventType = ServerEventType.ReceiveRequestFromRemoteServerComplete,
+                RemoteServerIpAddress = _remoteServerIpAddress,
+                RemoteServerPortNumber = _remoteServerPortNumber,
+                RequestType = RequestType,
+                RequestId = Id,
+                FileTransferId = FileTransferId
+            });
 
             return Result.Ok(requestBytes.ToArray());
         }
 
+        void DetermineRequestType()
+        {
+            EventOccurred?.Invoke(this, new ServerEvent
+            {
+                EventType = ServerEventType.DetermineRequestTypeStarted,
+                RequestId = Id,
+                FileTransferId = FileTransferId
+            });
+
+            ReadRequestBytes(_request.RequestBytes);
+
+            EventOccurred?.Invoke(this, new ServerEvent
+            {
+                EventType = ServerEventType.DetermineRequestTypeComplete,
+                RequestType = RequestType,
+                RequestId = Id,
+                FileTransferId = FileTransferId
+            });
+
+            EventOccurred?.Invoke(this, new ServerEvent
+            {
+                EventType = ServerEventType.ReceiveRequestFromRemoteServerComplete,
+                RemoteServerIpAddress = _remoteServerIpAddress,
+                RemoteServerPortNumber = _remoteServerPortNumber,
+                RequestType = RequestType,
+                RequestId = Id,
+                FileTransferId = FileTransferId
+            });
+        }
+
         void ReadRequestBytes(byte[] requestBytes)
         {
-            if (_request.Direction == ServerRequestDirection.Received)
+            if (_request.Direction == RequestDirection.Received)
             {
-                RemoteServerInfo = ServerRequestDataReader.ReadRemoteServerInfo(requestBytes);
+                RemoteServerInfo = RequestDataReader.ReadRemoteServerInfo(requestBytes);
             }
             
-            RequestType = ServerRequestDataReader.ReadRequestType(requestBytes);
+            RequestType = RequestDataReader.ReadRequestType(requestBytes);
 
             (_remoteServerIpAddress,
                 _,
@@ -549,7 +551,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 _remoteServerFileTransferId,
                 _fileTransferRetryCounter,
                 _fileTransferRetryLimit,
-                _lockoutExpireTimeTicks) = ServerRequestDataReader.ReadRequestBytes(requestBytes);
+                _lockoutExpireTimeTicks) = RequestDataReader.ReadRequestBytes(requestBytes);
         }
 
         public Result<TextMessage> GetTextMessage()
@@ -567,7 +569,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 Unread = true
             };
 
-            return RequestType == ServerRequestType.TextMessage
+            return RequestType == RequestType.TextMessage
                 ? Result.Ok(textMessage)
                 : Result.Fail<TextMessage>($"Request received is not valid for this operation ({RequestType}).");
         }
@@ -602,7 +604,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 _localFolderPath,
                 _remoteFolderPath);
             
-            return RequestType == ServerRequestType.InboundFileTransferRequest
+            return RequestType == RequestType.InboundFileTransferRequest
                 ? Result.Ok(inboundFileTransfer)
                 : Result.Fail<FileTransferController>($"Request received is not valid for this operation ({RequestType}).");
         }
@@ -616,7 +618,7 @@ namespace AaronLuna.AsyncFileServer.Controller
 
             var localFilePath = Path.Combine(_localFolderPath, _fileName);
 
-            return RequestType == ServerRequestType.OutboundFileTransferRequest
+            return RequestType == RequestType.OutboundFileTransferRequest
                 ? Result.Ok(File.Exists(localFilePath))
                 : Result.Fail<bool>(
                     $"Request received is not valid for this operation ({RequestType}).");
@@ -653,7 +655,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 _localFolderPath,
                 _remoteFolderPath);
 
-            return RequestType == ServerRequestType.OutboundFileTransferRequest
+            return RequestType == RequestType.OutboundFileTransferRequest
                 ? Result.Ok(fileTransferController)
                 : Result.Fail<FileTransferController>(
                     $"Request received is not valid for this operation ({RequestType}).");
@@ -690,7 +692,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 return Result.Fail<int>(ErrorNoDataReceived);
             }
 
-            if (RequestType != ServerRequestType.InboundFileTransferRequest)
+            if (RequestType != RequestType.InboundFileTransferRequest)
             {
                 return Result.Fail<int>($"Request received is not valid for this operation ({RequestType}).");
             }
@@ -707,7 +709,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 return Result.Fail<FileTransferController>(ErrorNoDataReceived);
             }
 
-            return RequestType == ServerRequestType.InboundFileTransferRequest
+            return RequestType == RequestType.InboundFileTransferRequest
                 ? Result.Ok(UpdateTransferDetails(fileTransfer))
                 : Result.Fail<FileTransferController>(
                     $"Request received is not valid for this operation ({RequestType}).");
@@ -747,7 +749,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 return Result.Fail<Socket>(ErrorNoDataReceived);
             }
 
-            return RequestType == ServerRequestType.FileTransferAccepted
+            return RequestType == RequestType.FileTransferAccepted
                 ? Result.Ok(_socket)
                 : Result.Fail<Socket>($"Request received is not valid for this operation ({RequestType}).");
         }
@@ -759,7 +761,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 return Result.Fail<FileTransferController>(ErrorNoDataReceived);
             }
 
-            return RequestType == ServerRequestType.RetryLimitExceeded
+            return RequestType == RequestType.RetryLimitExceeded
                 ? Result.Ok(ApplyRetryLockoutDetails(fileTransfer))
                 : Result.Fail<FileTransferController>($"Request received is not valid for this operation ({RequestType}).");
         }
@@ -778,7 +780,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 return Result.Fail<string>(ErrorNoDataReceived);
             }
 
-            return RequestType == ServerRequestType.FileListRequest
+            return RequestType == RequestType.FileListRequest
                 ? Result.Ok(_localFolderPath)
                 : Result.Fail<string>($"Request received is not valid for this operation ({RequestType}).");
         }
@@ -790,7 +792,7 @@ namespace AaronLuna.AsyncFileServer.Controller
                 return Result.Fail<FileInfoList>(ErrorNoDataReceived);
             }
 
-            return RequestType == ServerRequestType.FileListResponse
+            return RequestType == RequestType.FileListResponse
                 ? Result.Ok(_fileInfoList)
                 : Result.Fail<FileInfoList>($"Request received is not valid for this operation ({RequestType}).");
         }

@@ -23,9 +23,7 @@
 
         bool _client2ReceivedServerInfo;
         bool _client2WasNotifiedFileDoesNotExist;
-        bool _client2ReceivedFileTransferComplete;
         bool _client3ReceivedFileInfoList;
-        bool _client3ReceivedFileTransferComplete;
         bool _client4WasNotifiedFolderIsEmpty;
 
         [TestMethod]
@@ -476,10 +474,6 @@
                 case ServerEventType.ReceivedNotificationFileDoesNotExist:
                     _client2WasNotifiedFileDoesNotExist = true;
                     break;
-
-                case ServerEventType.RemoteServerConfirmedFileTransferCompleted:
-                    _client2ReceivedFileTransferComplete = true;
-                    break;
             }
         }
 
@@ -498,10 +492,6 @@
             {
                 case ServerEventType.ReceivedFileList:
                     _client3ReceivedFileInfoList = true;
-                    break;
-
-                case ServerEventType.RemoteServerConfirmedFileTransferCompleted:
-                    _client3ReceivedFileTransferComplete = true;
                     break;
             }
         }

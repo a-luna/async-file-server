@@ -9,10 +9,10 @@
     using Common;
     using Common.Extensions;
 
-    public static class ServerRequestDataBuilder
+    public static class RequestDataBuilder
     {
         public static byte[] ConstructBasicRequest(
-            ServerRequestType requestType,
+            RequestType requestType,
             string localIpAddress,
             int localPort)
         {
@@ -38,7 +38,7 @@
             int retryLimit,
             long lockoutExpireTimeTicks)
         {
-            var requestTypeData = (byte) ServerRequestType.RetryLimitExceeded;
+            var requestTypeData = (byte) RequestType.RetryLimitExceeded;
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);
             var thisServerPortData = BitConverter.GetBytes(localPort);
@@ -66,7 +66,7 @@
         }
 
         public static byte[] ConstructRequestWithInt64Value(
-            ServerRequestType requestType,
+            RequestType requestType,
             string localIpAddress,
             int localPort,
             long responseCode)
@@ -91,7 +91,7 @@
         }
 
         public static byte[] ConstructRequestWithStringValue(
-            ServerRequestType requestType,
+            RequestType requestType,
             string localIpAddress,
             int localPort,
             string message)
@@ -123,7 +123,7 @@
             string remoteFolderPath,
             string localFolderPath)
         {
-            var requestType = (byte) ServerRequestType.OutboundFileTransferRequest;
+            var requestType = (byte) RequestType.OutboundFileTransferRequest;
 
             var fileTransferIdData = BitConverter.GetBytes(fileTransferId);
             var fileTransferIdLen = BitConverter.GetBytes(Constants.SizeOfInt32InBytes);
@@ -172,7 +172,7 @@
             int retryCounter,
             int retryLimit)
         {
-            var requestType = (byte) ServerRequestType.InboundFileTransferRequest;
+            var requestType = (byte) RequestType.InboundFileTransferRequest;
 
             var responseCodeData = BitConverter.GetBytes(responseCode);
             var responseCodeLen = BitConverter.GetBytes(Constants.SizeOfInt64InBytes);
@@ -235,7 +235,7 @@
             int localPort,
             string remoteFolderPath)
         {
-            var requestType = (byte) ServerRequestType.FileListResponse;
+            var requestType = (byte) RequestType.FileListResponse;
 
             var localServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var localServerIpLen = BitConverter.GetBytes(localServerIpData.Length);
@@ -285,7 +285,7 @@
             string publicIp,
             string transferFolder)
         {
-            var requestType = (byte) ServerRequestType.ServerInfoResponse;
+            var requestType = (byte) RequestType.ServerInfoResponse;
 
             var thisServerIpData = Encoding.UTF8.GetBytes(localIpAddress);
             var thisServerIpLen = BitConverter.GetBytes(thisServerIpData.Length);

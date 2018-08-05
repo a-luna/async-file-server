@@ -2,15 +2,15 @@
 
 namespace AaronLuna.AsyncFileServer.Model
 {
-    public class ServerRequest
+    public class Request
     {
-        public ServerRequest()
+        public Request()
         {
             TimeStamp = DateTime.Now;
         }
 
         public DateTime TimeStamp { get; }
         public byte[] RequestBytes { get; set; }
-        public ServerRequestDirection Direction { get; set; }
+        public RequestDirection Direction { get; set; }
     }
 }

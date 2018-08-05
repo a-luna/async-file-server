@@ -63,7 +63,7 @@
         {
             var pendingRequests =
                 _localServer.Requests.Select(r => r)
-                    .Where(r => r.Status == ServerRequestStatus.Pending)
+                    .Where(r => r.Status == RequestStatus.Pending)
                     .ToList();
 
             return pendingRequests.Count == 0;

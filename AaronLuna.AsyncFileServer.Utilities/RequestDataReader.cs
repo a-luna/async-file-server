@@ -8,11 +8,11 @@
     using Common;
     using Common.Network;
 
-    public static class ServerRequestDataReader
+    public static class RequestDataReader
     {
-        public static ServerRequestType ReadRequestType(byte[] requestBytes)
+        public static RequestType ReadRequestType(byte[] requestBytes)
         {
-            return (ServerRequestType)Enum.Parse(typeof(ServerRequestType), requestBytes[0].ToString());
+            return (RequestType)Enum.Parse(typeof(RequestType), requestBytes[0].ToString());
         }
 
         public static ServerInfo ReadRemoteServerInfo(byte[] requestBytes)
@@ -34,7 +34,7 @@
                 _,
                 _) = ReadRequestBytes(requestBytes);
 
-            if (ReadRequestType(requestBytes) == ServerRequestType.ServerInfoResponse)
+            if (ReadRequestType(requestBytes) == RequestType.ServerInfoResponse)
             {
                 return new ServerInfo
                 {
@@ -95,10 +95,10 @@
 
             switch (ReadRequestType(requestBytes))
             {
-                case ServerRequestType.None:
+                case RequestType.None:
                     break;
 
-                case ServerRequestType.ServerInfoResponse:
+                case RequestType.ServerInfoResponse:
 
                     (remoteServerLocalIpString,
                         remoteServerPortNumber,
@@ -108,7 +108,7 @@
 
                     break;
 
-                case ServerRequestType.TextMessage:
+                case RequestType.TextMessage:
 
                     (remoteServerIpString,
                         remoteServerPortNumber,
@@ -116,7 +116,7 @@
 
                     break;
 
-                case ServerRequestType.InboundFileTransferRequest:
+                case RequestType.InboundFileTransferRequest:
 
                     (fileTransferResponseCode,
                         remoteServerTransferId,
@@ -131,7 +131,7 @@
 
                     break;
 
-                case ServerRequestType.OutboundFileTransferRequest:
+                case RequestType.OutboundFileTransferRequest:
 
                     (remoteServerTransferId,
                         fileName,
@@ -142,7 +142,7 @@
 
                     break;
 
-                case ServerRequestType.FileListRequest:
+                case RequestType.FileListRequest:
 
                     (remoteServerIpString,
                         remoteServerPortNumber,
@@ -150,7 +150,7 @@
 
                     break;
 
-                case ServerRequestType.FileListResponse:
+                case RequestType.FileListResponse:
 
                     (remoteServerIpString,
                         remoteServerPortNumber,
@@ -159,21 +159,21 @@
 
                     break;
 
-                case ServerRequestType.ServerInfoRequest:
-                case ServerRequestType.NoFilesAvailableForDownload:
-                case ServerRequestType.RequestedFolderDoesNotExist:
-                case ServerRequestType.ShutdownServerCommand:
+                case RequestType.ServerInfoRequest:
+                case RequestType.NoFilesAvailableForDownload:
+                case RequestType.RequestedFolderDoesNotExist:
+                case RequestType.ShutdownServerCommand:
 
                     (remoteServerIpString,
                         remoteServerPortNumber) = ReadServerInfo(requestBytes);
 
                     break;
 
-                case ServerRequestType.FileTransferAccepted:
-                case ServerRequestType.FileTransferRejected:
-                case ServerRequestType.FileTransferStalled:
-                case ServerRequestType.FileTransferComplete:
-                case ServerRequestType.RetryOutboundFileTransfer:
+                case RequestType.FileTransferAccepted:
+                case RequestType.FileTransferRejected:
+                case RequestType.FileTransferStalled:
+                case RequestType.FileTransferComplete:
+                case RequestType.RetryOutboundFileTransfer:
 
                     (remoteServerIpString,
                         remoteServerPortNumber,
@@ -181,7 +181,7 @@
 
                     break;
 
-                case ServerRequestType.RequestedFileDoesNotExist:
+                case RequestType.RequestedFileDoesNotExist:
 
                     long fileTransferIdInt64;
 
@@ -193,7 +193,7 @@
 
                     break;
 
-                case ServerRequestType.RetryLimitExceeded:
+                case RequestType.RetryLimitExceeded:
 
                     (remoteServerIpString,
                         remoteServerPortNumber,
@@ -203,7 +203,7 @@
 
                     break;
 
-                case ServerRequestType.RetryLockoutExpired:
+                case RequestType.RetryLockoutExpired:
                     break;
 
                 default:

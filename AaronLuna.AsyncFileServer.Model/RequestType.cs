@@ -2,14 +2,14 @@
 
 namespace AaronLuna.AsyncFileServer.Model
 {
-    public enum ServerRequestDirection
+    public enum RequestDirection
     {
         None,
         Sent,
         Received
     }
 
-    public enum ServerRequestStatus
+    public enum RequestStatus
     {
         NoData,
         Pending,
@@ -19,7 +19,7 @@ namespace AaronLuna.AsyncFileServer.Model
         Error
     }
 
-    public enum ServerRequestType : byte
+    public enum RequestType : byte
     {
         None                              = 0,
 
@@ -51,18 +51,18 @@ namespace AaronLuna.AsyncFileServer.Model
 
     public static class RequestStatusExtensions
     {
-        public static bool RequestHasBeenProcesed(this ServerRequestStatus status)
+        public static bool RequestHasBeenProcesed(this RequestStatus status)
         {
             switch (status)
             {
-                case ServerRequestStatus.NoData:
-                case ServerRequestStatus.Pending:
-                case ServerRequestStatus.InProgress:
+                case RequestStatus.NoData:
+                case RequestStatus.Pending:
+                case RequestStatus.InProgress:
                     return false;
 
-                case ServerRequestStatus.Processed:
-                case ServerRequestStatus.Sent:
-                case ServerRequestStatus.Error:
+                case RequestStatus.Processed:
+                case RequestStatus.Sent:
+                case RequestStatus.Error:
                     return true;
 
                 default:
@@ -73,62 +73,62 @@ namespace AaronLuna.AsyncFileServer.Model
 
     public static class RequestTypeExtensions
     {
-        public static string Name(this ServerRequestType messageType)
+        public static string Name(this RequestType messageType)
         {
             switch (messageType)
             {
-                case ServerRequestType.ServerInfoRequest:
+                case RequestType.ServerInfoRequest:
                     return "SERVER INFO REQUEST";
 
-                case ServerRequestType.ServerInfoResponse:
+                case RequestType.ServerInfoResponse:
                     return "SERVER INFO RESPONSE";
 
-                case ServerRequestType.TextMessage:
+                case RequestType.TextMessage:
                     return "TEXT MESSAGE";
 
-                case ServerRequestType.OutboundFileTransferRequest:
+                case RequestType.OutboundFileTransferRequest:
                     return "OUTBOUND FILE TRANSFER REQUEST";
 
-                case ServerRequestType.FileTransferAccepted:
+                case RequestType.FileTransferAccepted:
                     return "FILE TRANSFER ACCEPTED";
 
-                case ServerRequestType.InboundFileTransferRequest:
+                case RequestType.InboundFileTransferRequest:
                     return "INBOUND FILE TRANSFER REQUEST";
 
-                case ServerRequestType.FileTransferRejected:
+                case RequestType.FileTransferRejected:
                     return "FILE TRANSFER REJECTED";
 
-                case ServerRequestType.FileTransferStalled:
+                case RequestType.FileTransferStalled:
                     return "FILE TRANSFER STALLED";
 
-                case ServerRequestType.RetryOutboundFileTransfer:
+                case RequestType.RetryOutboundFileTransfer:
                     return "RETRY STALLED FILE TRANSFER";
 
-                case ServerRequestType.FileListRequest:
+                case RequestType.FileListRequest:
                     return "FILE LIST REQUEST";
 
-                case ServerRequestType.FileListResponse:
+                case RequestType.FileListResponse:
                     return "FILE LIST RESPONSE";
 
-                case ServerRequestType.NoFilesAvailableForDownload:
+                case RequestType.NoFilesAvailableForDownload:
                     return "REQUESTED FOLDER IS EMPTY";
 
-                case ServerRequestType.RequestedFolderDoesNotExist:
+                case RequestType.RequestedFolderDoesNotExist:
                     return "REQUESTED FOLDER DOES NOT EXIST";
 
-                case ServerRequestType.ShutdownServerCommand:
+                case RequestType.ShutdownServerCommand:
                     return "SHUTDOWN SERVER";
 
-                case ServerRequestType.FileTransferComplete:
+                case RequestType.FileTransferComplete:
                     return "FILE TRANSFER COMPLETE";
 
-                case ServerRequestType.RetryLimitExceeded:
+                case RequestType.RetryLimitExceeded:
                     return "RETRY LIMIT EXCEEDED";
 
-                case ServerRequestType.RetryLockoutExpired:
+                case RequestType.RetryLockoutExpired:
                     return "RETRY LOCKOUT EXPIRED";
 
-                case ServerRequestType.RequestedFileDoesNotExist:
+                case RequestType.RequestedFileDoesNotExist:
                     return "REQUESTED FILE DOES NOT EXIST";
 
                 default:
@@ -136,11 +136,11 @@ namespace AaronLuna.AsyncFileServer.Model
             }
         }
 
-        public static bool IsLongRunningProcess(this ServerRequestType requestType)
+        public static bool IsLongRunningProcess(this RequestType requestType)
         {
             switch (requestType)
             {
-                case ServerRequestType.FileTransferAccepted:
+                case RequestType.FileTransferAccepted:
                     return true;
 
                 default:
@@ -148,16 +148,16 @@ namespace AaronLuna.AsyncFileServer.Model
             }
         }
 
-        public static bool IsFileTransferResponse(this ServerRequestType responseType)
+        public static bool IsFileTransferResponse(this RequestType responseType)
         {
             switch (responseType)
             {
-                case ServerRequestType.FileTransferAccepted:
-                case ServerRequestType.FileTransferRejected:
-                case ServerRequestType.FileTransferStalled:
-                case ServerRequestType.FileTransferComplete:
-                case ServerRequestType.RetryOutboundFileTransfer:
-                case ServerRequestType.RequestedFileDoesNotExist:
+                case RequestType.FileTransferAccepted:
+                case RequestType.FileTransferRejected:
+                case RequestType.FileTransferStalled:
+                case RequestType.FileTransferComplete:
+                case RequestType.RetryOutboundFileTransfer:
+                case RequestType.RequestedFileDoesNotExist:
                     return true;
 
                 default:
@@ -165,12 +165,12 @@ namespace AaronLuna.AsyncFileServer.Model
             }
         }
 
-        public static bool IsFileTransferError(this ServerRequestType responseType)
+        public static bool IsFileTransferError(this RequestType responseType)
         {
             switch (responseType)
             {
-                case ServerRequestType.RetryLimitExceeded:
-                case ServerRequestType.RequestedFileDoesNotExist:
+                case RequestType.RetryLimitExceeded:
+                case RequestType.RequestedFileDoesNotExist:
                     return true;
 
                 default:

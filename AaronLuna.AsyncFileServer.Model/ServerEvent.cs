@@ -33,7 +33,7 @@
         public int TotalRequestBytesReceived { get; set; }
         public int RequestBytesRemaining { get; set; }
         public byte[] RequestBytes { get; set; }
-        public ServerRequestType RequestType { get; set; }
+        public RequestType RequestType { get; set; }
         public int RequestId { get; set; }
         public int ItemsInQueueCount { get; set; }
 
