@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\aaronluna-common\AaronLuna.Common\AaronLuna.Common.csproj" />
+    <ProjectReference Include="..\AaronLuna.AsyncSocketServer\AaronLuna.AsyncSocketServer.csproj" />
+    <ProjectReference Include="..\console-progress-bar\ConsoleProgressBar\AaronLuna.ConsoleProgressBar.csproj" />
+  </ItemGroup>
+
+</Project>

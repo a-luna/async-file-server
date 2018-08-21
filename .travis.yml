@@ -7,4 +7,4 @@ dotnet: 2.1.302
 script:
  - dotnet --info
  - dotnet restore
- - dotnet test -v n AaronLuna.AsyncFileServerTest/AaronLuna.AsyncFileServerTest.csproj
+ - dotnet test -v n AaronLuna.AsyncSocketServerTest/AaronLuna.AsyncSocketServerTest.csproj
