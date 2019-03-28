@@ -19,9 +19,10 @@ namespace AaronLuna.AsyncSocketServer.Requests
         readonly SocketSettings _settings;
         readonly ServerInfo _localServerInfo;
         readonly List<Request> _processedRequests;
+        readonly List<Request> _inProgressRequests;
         readonly List<Request> _sentRequests;
-        readonly List<Request> _badRequests;
-        List<Request> _pendingRequests;
+        readonly List<Request> _failedRequests;
+        readonly List<Request> _pendingRequests;
         readonly RequestSender _requestSender;
         RequestSender _transferRequestSender;
         Socket _socket;
@@ -37,9 +38,10 @@ namespace AaronLuna.AsyncSocketServer.Requests
             _settings = settings;
 
             _pendingRequests = new List<Request>();
+            _inProgressRequests = new List<Request>();
             _processedRequests = new List<Request>();
             _sentRequests = new List<Request>();
-            _badRequests = new List<Request>();
+            _failedRequests = new List<Request>();
 
             _requestSender = new RequestSender(localServerInfo, settings);
             _requestSender.EventOccurred += HandleServerEvent;
@@ -75,10 +77,10 @@ namespace AaronLuna.AsyncSocketServer.Requests
 
         public override string ToString()
         {
-            var totalRequests = _processedRequests.Count + _sentRequests.Count + _badRequests.Count;
+            var totalRequests = _processedRequests.Count + _sentRequests.Count + _failedRequests.Count;
 
-            var errors = _badRequests.Count > 0
-                ? $", {_badRequests.Count} Error"
+            var errors = _failedRequests.Count > 0
+                ? $", {_failedRequests.Count} Error"
                 : string.Empty;
 
             var details = totalRequests > 0
@@ -93,18 +95,21 @@ namespace AaronLuna.AsyncSocketServer.Requests
         {
             if (!(registrant is AsyncServer server)) return;
 
-            server.SocketConnectionAccepted += ProcessRequest;
+            server.SocketConnectionAccepted += ReceiveRequest;
             server.SuccessfullyProcessedRequest += HandleSuccessfulyProcessedRequest;
             server.InboundFileTransferInProgress += HandleInboundFileTransferInProgress;
             server.OutboundFileTransferInProgress += HandleOutboundFileTransferInProgress;
         }
 
-        async void ProcessRequest(object sender, Socket socket)
+        async void ReceiveRequest(object sender, Socket socket)
         {
             var requestReceiver = new RequestReceiver(_settings);
             requestReceiver.EventOccurred += HandleServerEvent;
             requestReceiver.SocketEventOccurred += HandleSocketEvent;
             requestReceiver.ReceivedFileBytes += HandleFileBytesReceived;
+
+            EventOccurred?.Invoke(this,
+                new ServerEvent { EventType = EventType.ReceiveRequestFromRemoteServerStarted });
 
             var receiveRequest = await
                 requestReceiver.ReceiveRequestAsync(socket).ConfigureAwait(false);
@@ -116,18 +121,27 @@ namespace AaronLuna.AsyncSocketServer.Requests
             }
 
             var encodedRequest = receiveRequest.Value;
+
             var newRequest = DecodeRequest(encodedRequest);
+            AddNewPendingRequest(newRequest);
+
+            EventOccurred?.Invoke(this,
+                new ServerEvent { EventType = EventType.ReceiveRequestFromRemoteServerComplete });
 
             if (FileTransferInProgress())
             {
-                HandlePendingRequest(newRequest);
+                EventOccurred?.Invoke(this, new ServerEvent
+                {
+                    EventType = EventType.PendingRequestInQueue,
+                    ItemsInQueueCount = _pendingRequests.Count
+                });
+
                 return;
             }
 
             _socket = requestReceiver.GetTransferSocket();
 
             ProcessRequest(newRequest);
-            AddProcessedRequestToList(newRequest);
         }
 
         public async Task<Result> SendRequestAsync(Request outboundRequest)
@@ -136,7 +150,7 @@ namespace AaronLuna.AsyncSocketServer.Requests
             if (sendRequest.Success) return Result.Ok();
 
             outboundRequest.Status = RequestStatus.Error;
-            AddBadRequestToList(outboundRequest);
+            HandleFailedRequest(outboundRequest);
             ReportError(sendRequest.Error);
 
             return Result.Fail(sendRequest.Error);
@@ -152,7 +166,7 @@ namespace AaronLuna.AsyncSocketServer.Requests
             if (sendRequest.Success) return Result.Ok();
 
             outboundRequest.Status = RequestStatus.Error;
-            AddBadRequestToList(outboundRequest);
+            HandleFailedRequest(outboundRequest);
             ReportError(sendRequest.Error);
 
             return Result.Fail(sendRequest.Error);
@@ -196,17 +210,6 @@ namespace AaronLuna.AsyncSocketServer.Requests
             return newRequest;
         }
 
-        void HandlePendingRequest(Request newRequest)
-        {
-            AddPendingRequestToList(newRequest);
-
-            EventOccurred?.Invoke(this, new ServerEvent
-            {
-                EventType = EventType.PendingRequestInQueue,
-                ItemsInQueueCount = _pendingRequests.Count
-            });
-        }
-
         void ProcessRequest(Request newRequest)
         {
             EventOccurred?.Invoke(this, new ServerEvent
@@ -219,15 +222,15 @@ namespace AaronLuna.AsyncSocketServer.Requests
             });
 
             newRequest.Status = RequestStatus.InProgress;
+            HandleInProgressRequest(newRequest);
 
-            var result = _processRequestFunctions[newRequest.Type].Invoke(newRequest);
-            if (result.Failure)
-            {
-                newRequest.Status = RequestStatus.Error;
-                AddBadRequestToList(newRequest);
+            var processRequest = _processRequestFunctions[newRequest.Type].Invoke(newRequest);
+            if (processRequest.Success) return;
 
-                ErrorOccurred?.Invoke(this, result.Error);
-            }
+            newRequest.Status = RequestStatus.Error;
+            HandleFailedInProgressRequest(newRequest);
+
+            ReportError(processRequest.Error);
         }
 
         void ProcessPendingRequests()
@@ -240,17 +243,13 @@ namespace AaronLuna.AsyncSocketServer.Requests
                 ItemsInQueueCount = _pendingRequests.Count
             });
 
-            var processedRequestIds = new List<int>();
-            foreach (var request in _pendingRequests)
+            var pendingIds = _pendingRequests.Select(r => r.Id).ToList();
+            foreach (var id in pendingIds)
             {
-                ProcessRequest(request);
-                AddProcessedRequestToList(request);
-                processedRequestIds.Add(request.Id);
-            }
+                var pendingRequest = _pendingRequests.FirstOrDefault(r => r.Id == id);
+                if (pendingRequest == null) continue;
 
-            foreach (var requestId in processedRequestIds)
-            {
-                RemovePendingRequests(requestId);
+                ProcessRequest(pendingRequest);
             }
 
             EventOccurred?.Invoke(this, new ServerEvent
@@ -269,7 +268,7 @@ namespace AaronLuna.AsyncSocketServer.Requests
             }
         }
 
-        void AddPendingRequestToList(Request request)
+        void AddNewPendingRequest(Request request)
         {
             lock (LockAllRequests)
             {
@@ -277,27 +276,38 @@ namespace AaronLuna.AsyncSocketServer.Requests
             }
         }
 
-        void AddProcessedRequestToList(Request request)
+        void HandleInProgressRequest(Request request)
         {
             lock (LockAllRequests)
             {
+                _pendingRequests.RemoveAll(r => r.Id == request.Id);
+                _inProgressRequests.Add(request);
+            }
+        }
+
+        void HandleSuccessfullyProcessedRequest(Request request)
+        {
+            lock (LockAllRequests)
+            {
+                _inProgressRequests.RemoveAll(r => r.Id == request.Id);
                 _processedRequests.Add(request);
             }
         }
 
-        void RemovePendingRequests(int requestId)
+        void HandleFailedInProgressRequest(Request request)
         {
             lock (LockAllRequests)
             {
-                _pendingRequests.RemoveAll(r => r.Id == requestId);
+                _inProgressRequests.RemoveAll(r => r.Id == request.Id);
+                _failedRequests.Add(request);
             }
         }
 
-        void AddBadRequestToList(Request request)
+        void HandleFailedRequest(Request request)
         {
             lock (LockAllRequests)
             {
-                _badRequests.Add(request);
+                _failedRequests.Add(request);
             }
         }
 
@@ -314,7 +324,20 @@ namespace AaronLuna.AsyncSocketServer.Requests
 
         void HandleSuccessfulyProcessedRequest(object sender, Request processedRequest)
         {
+            //var shutdownSocket = ShutdownSocket(_socket);
+            //if (shutdownSocket.Failure)
+            //{
+            //    ReportError(shutdownSocket.Error);
+            //    processedRequest.Status = RequestStatus.Error;
+            //    HandleFailedInProgressRequest(processedRequest);
+
+            //    return;
+            //}
+
             ShutdownSocket(_socket);
+
+            processedRequest.Status = RequestStatus.Processed;
+            HandleSuccessfullyProcessedRequest(processedRequest);
 
             EventOccurred?.Invoke(this, new ServerEvent
             {
@@ -323,8 +346,6 @@ namespace AaronLuna.AsyncSocketServer.Requests
                 RemoteServerIpAddress = processedRequest.RemoteServerInfo.SessionIpAddress,
                 RemoteServerPortNumber = processedRequest.RemoteServerInfo.PortNumber
             });
-
-            processedRequest.Status = RequestStatus.Processed;
         }
 
         void HandleInboundFileTransferInProgress(object sender, bool inboundFileTransferInProgress)
@@ -396,7 +417,7 @@ namespace AaronLuna.AsyncSocketServer.Requests
             var allRequests = new List<Request>();
             allRequests.AddRange(_processedRequests.Select(r => r.Duplicate()));
             allRequests.AddRange(_sentRequests.Select(r => r.Duplicate()));
-            allRequests.AddRange(_badRequests.Select(r => r.Duplicate()));
+            allRequests.AddRange(_failedRequests.Select(r => r.Duplicate()));
 
             return allRequests.OrderBy(r => r.TimeStamp).ToList();
         }

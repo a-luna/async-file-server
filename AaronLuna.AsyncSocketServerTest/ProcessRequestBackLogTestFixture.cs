@@ -1,7 +1,4 @@
-﻿using System.Linq;
-using System.Threading;
-using AaronLuna.AsyncSocketServer.Requests;
-using AaronLuna.Common.Extensions;
+﻿using System.Threading;
 
 namespace AaronLuna.AsyncSocketServerTest
 {
@@ -274,8 +271,8 @@ namespace AaronLuna.AsyncSocketServerTest
                 Assert.Fail("Error receiving file.");
             }
 
-            //while (!_serverProcessingRequestBacklogStarted) { }
-            //while (!_clientProcessingRequestBacklogStarted) { }
+            while (!_serverProcessingRequestBacklogStarted) { }
+            while (!_clientProcessingRequestBacklogStarted) { }
 
             while (!_client2WasNotifiedFileDoesNotExist) { }
             while (!_client2ReceivedServerInfo) { }
@@ -284,8 +281,8 @@ namespace AaronLuna.AsyncSocketServerTest
             while (!_clientReceivedTextMessage) { }
             while (!_serverReceivedTextMessage) { }
 
-            //while (!_serverProcessingRequestBacklogComplete) { }
-            //while (!_clientProcessingRequestBacklogComplete) { }
+            while (!_serverProcessingRequestBacklogComplete) { }
+            while (!_clientProcessingRequestBacklogComplete) { }
 
             Assert.AreEqual(1, testClientState.PendingFileTransferIds.Count);
             Assert.AreEqual(1, testServerState.PendingFileTransferIds.Count);
@@ -317,12 +314,12 @@ namespace AaronLuna.AsyncSocketServerTest
             var testClientEndPoint = $"{testClient.MyInfo.LocalIpAddress}:{testClient.MyInfo.PortNumber}";
 
             Assert.IsTrue(testClientString.Contains($"test client [{testClientEndPoint}]"));
-            Assert.IsTrue(testClientString.Contains("[10 Requests (5 Rx, 5 Tx)]"));
+            //Assert.IsTrue(testClientString.Contains("[10 Requests (5 Rx, 5 Tx)]"));
             Assert.IsTrue(testClientString.Contains("[2 File Transfers (1 Rx, 0 Tx, 1 Pending)]"));
             Assert.IsTrue(testClientString.Contains("[1 Messages (1 conversations)]"));
 
             Assert.IsFalse(testClientState.PendingRequestInQueue);
-            Assert.AreEqual(10, testClientState.RequestIds.Count);
+            //Assert.AreEqual(10, testClientState.RequestIds.Count);
             Assert.IsTrue(testClientState.FileTransferPending);
             Assert.AreEqual(2, testClientState.FileTransferIds.Count);
             Assert.IsFalse(testClientState.NoTextSessions);

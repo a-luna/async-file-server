@@ -36,9 +36,6 @@ namespace AaronLuna.AsyncSocketServer.Requests
             _buffer = new byte[_bufferSize];
             _unreadBytes = new List<byte>();
 
-            EventOccurred?.Invoke(this,
-                new ServerEvent { EventType = EventType.ReceiveRequestFromRemoteServerStarted });
-
             var getRequestLength = await ReceiveLengthOfIncomingRequest().ConfigureAwait(false);
             if (getRequestLength.Failure)
             {
@@ -54,9 +51,6 @@ namespace AaronLuna.AsyncSocketServer.Requests
             }
 
             var encodedRequest = getRequest.Value;
-
-            EventOccurred?.Invoke(this,
-                new ServerEvent { EventType = EventType.ReceiveRequestFromRemoteServerComplete });
 
             return Result.Ok(encodedRequest);
         }
